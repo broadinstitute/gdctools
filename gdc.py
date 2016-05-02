@@ -229,8 +229,12 @@ def get_files(project_id, data_category, page_size=500):
     acc_filter = _eq_filter("access", "open")
     qfilter = _and_filter([proj_filter, data_filter, acc_filter])
 
+    fields = [ 'file_id', 'file_name', 'cases.submitter_id', 'cases.samples.sample_id',
+               'data_type', 'data_category', 'data_format', 'experimental_strategy',
+               'platform','tags', 'center.namespace']
+
     params = {
-                'fields' : 'file_id,file_name,cases.submitter_id,cases.samples.sample_id,data_type,data_category,data_format',
+                'fields' : ','.join(fields),
                 'expand' : 'cases,annotations,cases.samples',
                 'filters' : json.dumps(qfilter),
              }
