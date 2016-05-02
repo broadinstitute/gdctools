@@ -16,18 +16,20 @@ def build_translation_dict(translation_file):
         reader = csv.DictReader(tsvfile, delimiter='\t')
         d = dict()
 
-        undef_rows = 0
+        #Duplicate detection
+        dupes = false
         for row in reader:
             annot = row.pop("Firehose_annotation")
             converter_name = row.pop("converter")
 
             #Only add complete rows
-            if all([v!='' for v in row.values()]):
+            #Give a warning if overwriting an existing tag, and don't add the new one
+            if key not in d:
                 key = frozenset(row.items())
                 d[key] = (annot, converter(converter_name))
             else:
-                undef_rows += 1
-    print("{0} annotations loaded, {1} ignored".format(len(d), undef_rows))
+                dupes = true
+    if dupes: print("WARNING: duplicate annotation definitions detected")
     return d
 
 
