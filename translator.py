@@ -15,12 +15,19 @@ def build_translation_dict(translation_file):
     with open(translation_file, 'rU') as tsvfile:
         reader = csv.DictReader(tsvfile, delimiter='\t')
         d = dict()
+
+        undef_rows = 0
         for row in reader:
             annot = row.pop("Firehose_annotation")
             converter_name = row.pop("converter")
-            key = frozenset(row.items())
-            d[key] = (annot, converter(converter_name))
 
+            #Only add complete rows
+            if all([v!='' for v in row.values()]):
+                key = frozenset(row.items())
+                d[key] = (annot, converter(converter_name))
+            else:
+                undef_rows += 1
+    print("{0} annotations loaded, {1} ignored".format(len(d), undef_rows))
     return d
 
 
@@ -107,7 +114,7 @@ def main():
     # files = gdc.get_files("TCGA-UVM", "Gene expression")
     # print(json.dumps(files[:10], indent=2))
     d = build_translation_dict("GDC_translation_table.tsv")
-    print(d)
+    #print(d)
 
 if __name__ == '__main__':
     main()
