@@ -221,13 +221,16 @@ def sample_sets(project, outfile):
 
 
 
-def get_files(project_id, data_category, page_size=500):
+def get_files(project_id, data_category, no_ffpe=True, page_size=500):
     endpoint = 'https://gdc-api.nci.nih.gov/files'
 
     proj_filter = _eq_filter("cases.project.project_id", project_id)
     data_filter = _eq_filter("data_category", data_category)
     acc_filter = _eq_filter("access", "open")
-    qfilter = _and_filter([proj_filter, data_filter, acc_filter])
+    filter_list = [proj_filter, data_filter, acc_filter]
+    if no_ffpe:
+        filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
+    qfilter = _and_filter(filter_list)
 
     fields = [ 'file_id', 'file_name', 'cases.submitter_id', 'cases.samples.sample_id',
                'data_type', 'data_category', 'data_format', 'experimental_strategy',
