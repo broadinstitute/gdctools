@@ -24,24 +24,34 @@ def get_files(case_id, project_id, data_category, page_size=500):
 
     proj_filter = _eq_filter("cases.project.project_id", project_id)
     data_filter = _eq_filter("data_category", data_category)
+    data_type_filter = _eq_filter("data_type", "Masked Copy Number Segment")
     acc_filter = _eq_filter("access", "open")
     case_filter = _eq_filter("cases.submitter_id", case_id)
-    center_filter = _neq_filter("center.namespace", "hudsonalpha.org")
-    qfilter = _and_filter([proj_filter, data_filter, acc_filter, case_filter,
-                           center_filter])
+    center_filter = _eq_filter("center.namespace", "unc.edu")
+    platform_filter = _eq_filter("platform", "HuEx-1_0-st-v2")
+    strategy_filter = _eq_filter("experimental_strategy",
+                                  "Exon array")
+    ffpe_filter = _eq_filter("cases.samples.is_ffpe", "false")
+    filename_filter = _eq_filter("file_name", "lbl.gov_OV.HuEx-1_0-st-v2.11.gene.txt")
+    qfilter = _and_filter([proj_filter, data_filter, acc_filter, case_filter,])# ffpe_filter])
+                           #platform_filter])#, data_type_filter, center_filter, strategy_filter])
 
     params = {
-                'fields' : 'file_name,data_type,' + \
-                           'data_category,data_format,center.namespace,' + \
-                           'tags,experimental_strategy,platform,' + \
-                           'cases.samples.portions.analytes.aliquots.submitter_id',
-                'expand' : 'archive',
-                #'expand' : 'cases,annotations,cases.samples',
+                'fields' : 'file_name,data_type,data_category,data_format,' + \
+                           'center.namespace,tags,experimental_strategy,' + \
+                           'platform,access,cases.samples.is_ffpe,origin,' + \
+                           ('cases.submitter_id' if \
+                            data_category == 'Clinical' else \
+                            'cases.samples.portions.submitter_id' if \
+                            data_category == 'Protein expression' else \
+                            'cases.samples.portions.analytes.aliquots.submitter_id'),
+                'expand' : 'archive,metadata_files,associated_entities,center',# + \
+                           #',cases,annotations,cases.samples',
                 'filters' : json.dumps(qfilter),
              }
 
     return _query_paginator(endpoint, params, page_size)
 
 if __name__ == '__main__':
-    pprint(get_files("TCGA-13-1489", 'TCGA-OV', 'Gene expression'))
+    pprint(get_files("TCGA-A2-A0EU", 'TCGA-BRCA', 'Simple Nucleotide Variation'))
     #pprint(data_categories('TCGA-OV'))
