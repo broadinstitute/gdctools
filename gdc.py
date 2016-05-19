@@ -1,16 +1,19 @@
 #! /usr/bin/env python
-from __future__ import print_function
 
+from __future__ import print_function
 import requests
 import subprocess
 import json
 import os
 import sys
 
-COHORT = "TCGA-UVM"
-ROOT_FOLDER = "TCGA_UVM"
-
-CATEGORIES = {
+DATA_TYPES_WE_SUPPORT=[
+    'Clinical',
+    'Biospecimen',
+    'Simple Nucleotide Variation',
+    'Copy Number Variation'
+]
+ANNOTATION_CATEGORIES = {
                 'Redaction' : {
                     'Tumor tissue origin incorrect',
                     'Tumor type incorrect',
@@ -48,31 +51,34 @@ CATEGORIES = {
 
 }
 
-def download_project(project):
-    COHORT = project
-    ROOT_FOLDER = project.replace('-', '_')
+def get_project(project):
+    cohort = project
+    root_folder = project.replace('-', '_')
     
-    if not os.path.isdir(ROOT_FOLDER):
-        os.mkdir(ROOT_FOLDER)
+    if not os.path.isdir(root_folder):
+        os.mkdir(root_folder)
 
-    dcats = data_categories(COHORT)
+    data_types_for_this_cohort = get_data_categories(cohort)
 
-    ## Get cases
-    cases = cases_in_project(COHORT)
-    with open(ROOT_FOLDER + "/cases.txt", 'w') as cf:
+    cases = get_cases_in_project(cohort)
+    with open(root_folder + "/cases.txt", 'w') as cf:
         for c in cases:
             print(c["submitter_id"], file=cf)
 
+    for data_type in DATA_TYPES_WE_SUPPORT:
+        if not data_type in data_types_for_this_cohort:
+            print("Data type {0} not available in cohort {1}, skipping".format(
+                        data_type,cohort))
+            continue
 
-    for data_type in dcats:
-        folder = ROOT_FOLDER + "/" + data_type.replace(' ', '_')
+        print("Retrieving files for data type: %s" % data_type)
+        folder = root_folder+ "/" + data_type.replace(' ', '_')
         if not os.path.isdir(folder):
             os.mkdir(folder)
-        files_to_download = get_files(COHORT, data_type)
-
+        files_to_download = get_files(cohort, data_type)
         total = len(files_to_download)
 
-        print("\n\n\t\tDownloading {0} to {1} ({2} files)...\n\n".format(
+        print("\n\tDownloading {0} to {1} ({2} files)...\n".format(
             data_type, folder, total))
 
         i = 1
@@ -90,7 +96,7 @@ def download_project(project):
 
 
             # Skip actual download
-            # curl_download(uuid, folder + "/" + file_name)
+            get_file(uuid, folder + "/" + file_name)
             mapping += file_name + '\t' + tcga_id + '\t' + sample_id + '\n'
             i += 1
 
@@ -107,14 +113,12 @@ def download_project(project):
                 redactfile.write('\t'.join([file_name, uuid, tcga_id]) + '\n')
 
     # Get the redacted samples
-    redacted_cases = get_redacted_cases(COHORT)
-    with open(ROOT_FOLDER + '/redacted_cases.txt', 'w') as redactions:
+    redacted_cases = get_redacted_cases(cohort)
+    with open(root_folder + '/redacted_cases.txt', 'w') as redactions:
         for case in redacted_cases:
             redactions.write(case['submitter_id'] + '\n')
 
     print("DONE.")
-
-
 
 def get_redacted_files(project, data_category):
     endpoint = 'https://gdc-api.nci.nih.gov/files'
@@ -136,7 +140,7 @@ def get_redacted_files(project, data_category):
 def _file_has_redact(file_d):
     if "annotations" in file_d:
         for annot in file_d['annotations']:
-            if annot['category'] in CATEGORIES['Redaction']:
+            if annot['category'] in ANNOTATION_CATEGORIES['Redaction']:
                 return True
     return False
 
@@ -155,17 +159,17 @@ def get_redacted_cases(project):
     def _case_redacted(case_d):
         if "annotations" in case_d:
             for annot in case_d['annotations']:
-                if annot['category'] in CATEGORIES['Redaction']:
+                if annot['category'] in ANNOTATION_CATEGORIES['Redaction']:
                     return True
         return False 
 
 
     return filter(_case_redacted, _query_paginator(endpoint, params, 500))
 
-
-def curl_download(uuid, file_name):
+def get_file(uuid, file_name):
     """Download a single file from GDC."""
     curl_args =  ["curl", "-o", file_name, "https://gdc-api.nci.nih.gov/data/" + uuid]
+    print("Download command:  %s " % str(curl_args))
     return subprocess.check_call(curl_args)
 
 def get_cases_samples(project):
@@ -218,17 +222,13 @@ def sample_sets(project, outfile):
                     stype = sample_type_dict[samp['sample_type_id']]
                     f.write(project + '-' + stype + '\t' + samp['submitter_id'] + '\n')
 
-
-
-
-def get_files(project_id, data_category, no_ffpe=True, page_size=500):
+def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     endpoint = 'https://gdc-api.nci.nih.gov/files'
-
     proj_filter = _eq_filter("cases.project.project_id", project_id)
     data_filter = _eq_filter("data_category", data_category)
     acc_filter = _eq_filter("access", "open")
     filter_list = [proj_filter, data_filter, acc_filter]
-    if no_ffpe:
+    if exclude_ffpe and data_category not in ['Clinical', 'BioSpecimen']:
         filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
     qfilter = _and_filter(filter_list)
 
@@ -277,7 +277,8 @@ def _query_paginator(endpoint, params, size, from_idx=1):
 
     return all_hits
 
-def data_categories(project):
+def get_data_categories(project):
+
     endpoint = 'https://gdc-api.nci.nih.gov/projects'
     filt = _eq_filter("project_id", project)
     params = { 
@@ -286,17 +287,15 @@ def data_categories(project):
              }
 
     r = requests.get(endpoint, params=params)
-
     hits = r.json()['data']['hits']
 
     if len(hits) != 1:
         raise ValueError("Uh oh, there was more than one project for this name!")
 
     categories = [obj['data_category'] for obj in hits[0]['summary']['data_categories']]
-
     return categories
 
-def cases_in_project(project):
+def get_cases_in_project(project):
     endpoint = 'https://gdc-api.nci.nih.gov/cases'
 
     filt = _eq_filter("project.project_id", project)
@@ -307,6 +306,7 @@ def cases_in_project(project):
                 #'size' : "50" 
              }
 
+    print("Retrieving cases for project: %s" % project)
     return _query_paginator(endpoint, params, 200)
 
 def _eq_filter(field, value):
@@ -322,10 +322,8 @@ def download_PAAD():
     if not os.path.isdir(ROOT_FOLDER):
         os.mkdir(ROOT_FOLDER)
 
-    dcats = data_categories(COHORT)
-
-    ## Get cases
-    cases = cases_in_project(COHORT)
+    dcats = get_data_categories(COHORT)
+    cases = get_cases_in_project(COHORT)
     with open(ROOT_FOLDER + "/cases.txt", 'w') as cf:
         for c in cases:
             print(c["submitter_id"], file=cf)
@@ -339,7 +337,7 @@ def download_PAAD():
 
         total = len(files_to_download)
 
-        print("\n\n\t\tDownloading {0} to {1} ({2} files)...\n\n".format(
+        print("\n\tDownloading {0} to {1} ({2} files)...\n".format(
             data_type, folder, total))
 
         i = 1
@@ -352,7 +350,7 @@ def download_PAAD():
             tcga_id = f['cases'][0]['submitter_id']
 
             # Skip actual download
-            curl_download(uuid, folder + "/" + file_name)
+            get_file(uuid, folder + "/" + file_name)
             mapping += file_name + '\t' + tcga_id + '\n'
             i += 1
 
@@ -380,13 +378,11 @@ def get_annotation(fdict):
     """
     pass
 
-
 def main():
-    files = get_files("TCGA-UVM", "Clinical")
-
-    print(json.dumps(files, indent=2))
+    #files = get_files("TCGA-UVM", "Clinical")
+    #print(json.dumps(files, indent=2))
     # cohort = sys.argv[1]
-    # download_project("TCGA-UVM")
+    get_project("TCGA-UVM")
 
     #cases = get_sample_sets("TCGA-UVM")
     #print(json.dumps(cases, indent=2))
