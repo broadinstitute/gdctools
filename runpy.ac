@@ -1,0 +1,5 @@
+#!/bin/bash
+
+Python=%PYTHON%
+This=`basename $0`
+exec $Python ${This}.py "$@"
