@@ -27,6 +27,7 @@ TOOLS= \
 
 CORE_SRC_FILES=\
 	GDCcli.py \
+	GDCtool.py \
 	GDCutils.py
 
 PKG_SRC_FILES=\
@@ -141,13 +142,21 @@ test: default
 	@echo
 	$(PYTHON) GDCtool.py
 
-test3:
+USE=/broad/tools/scripts/useuse
+test3: default
 	@# Python 3 compatibility
-	@. /broad/tools/scripts/useuse && \
+	if [ -d $(USE) ] ; then \
+		. $(USE) && \
 		reuse -q Python-3.4 && \
-		$(MAKE) -e test
+		$(MAKE) -e test ; \
+	fi
 
-testi:
+VERTEST="import gdctools as g; print('Version: ' + g.GDCutils.GDCT_VERSION)"
+testl: default
+	@# Test the package locally, as if it were installed
+	@$(PYTHON) -c  $(VERTEST)
+
+testi: 
 	@# Test the installed package
-	(cd /tmp ; $(PYTHON) -c "from gdctools import *; print('Version: ' + GDCT_version) ")
+	@(cd /tmp ; $(PYTHON) -c $(VERTEST))
 
