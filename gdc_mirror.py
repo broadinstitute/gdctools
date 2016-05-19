@@ -14,7 +14,6 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 # }}}
 
-#from __future__ import print_function
 import sys
 from GDCtool import GDCtool
 
