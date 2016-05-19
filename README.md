@@ -2,7 +2,9 @@
 Python and UNIX CLI utilities to simplify interaction with the NIH/NCI
 Genomics Data Commons.
 
-Corresponding Author: Michael S. Noble (mnoble@broadinstitute.org)
+Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)
+Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
+                      David Heiman      (dheiman@broadinstitute.org)
 
 The Genomics Data Commons (GDC) is the next-generation storage warehouse for
 genomic data.  It was inspired by lessons learned and technologies developed
