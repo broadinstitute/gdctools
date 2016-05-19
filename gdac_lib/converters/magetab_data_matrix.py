@@ -4,8 +4,8 @@ import tempfile
 from gdac_lib.converters import converterUtils
 from gdac_lib.utilities import ioUtilities
 
-def process(infile, extension, hyb2tcga, outdir, ref_dir, test_short, 
-            tmp_dir_root, debug_max_count, annotationInfo, gdac_bin_dir):
+def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
+            annotationInfo, gdac_bin_dir, test_short=False, debug_max_count=25):
     ref_file = converterUtils.constructPath(ref_dir, annotationInfo.getId(),
                                             'ref')
     
