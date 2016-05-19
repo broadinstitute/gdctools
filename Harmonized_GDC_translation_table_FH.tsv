@@ -1,0 +1,5 @@
+Firehose_annotation	converter	data_category	data_type	experimental_strategy	platform	center_namespace	tags
+clinical__biospecimen	clinical	Biospecimen	Biospecimen Supplement				
+clinical__primary	clinical	Clinical	Clinical Supplement				
+CNV__snp6	seg_broad	Copy Number Variation	Copy Number Segment	Genotyping array	Affymetrix SNP 6.0		
+CNV_no_germline__snp6	seg_broad	Copy Number Variation	Masked Copy Number Segment	Genotyping array	Affymetrix SNP 6.0		
