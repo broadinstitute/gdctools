@@ -97,7 +97,8 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
 
     #print("Downloading file {0} to {1}".format(file_dict['file_name'], mirror_path))
     if not dry_run:
-        pass #Actually do it
+        gdc.curl_download(file_dict['file_id'],
+                          os.path.join(mirror_path, file_dict['file_name']))
 
     dice_path = os.path.join(diced_root, annot)
     #print("Dicing file {0} to {1}".format(file_dict['file_name'], dice_path))
