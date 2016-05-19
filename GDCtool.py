@@ -34,9 +34,9 @@ class GDCtool(object):
 
     def status(self):
         # Emit system info (as header comments suitable for TSV, etc) ...
-        gprint('#')
-        gprint('# %-22s = %s' % (self.__class__.__name__ + ' version ', \
-                                                self.cli.version))
+        gprint('#')  # @UndefinedVariable
+        gprint('# %-22s = %s' % (self.__class__.__name__ + ' version ',  # @UndefinedVariable
+                                 self.cli.version))
 
 if __name__ == "__main__":
     tool = GDCtool()

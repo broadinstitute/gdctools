@@ -97,8 +97,8 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
 
     #print("Downloading file {0} to {1}".format(file_dict['file_name'], mirror_path))
     if not dry_run:
-        gdc.curl_download(file_dict['file_id'],
-                          os.path.join(mirror_path, file_dict['file_name']))
+        gdc.get_file(file_dict['file_id'],
+                     os.path.join(mirror_path, file_dict['file_name']))
 
     dice_path = os.path.join(diced_root, annot)
     #print("Dicing file {0} to {1}".format(file_dict['file_name'], dice_path))
@@ -140,6 +140,18 @@ def patient_id(file_dict):
     
     return file_dict['cases'][0]['submitter_id']
 
+def sample_type(file_dict):
+    '''Return the sample_type associated with the file. Raise an exception if
+    more than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    
+    return file_dict['cases'][0]['samples'][0]["sample_type"]
+        
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
     
