@@ -4,23 +4,19 @@ import csv
 from gdac_lib.converters import converterUtils
 from gdac_lib.utilities import ioUtilities
 
-def process(infile, extension, hyb2tcga, outdir, test_short, debug_max_count, dialect):
-    for (n, (hyb_id, tcga_id)) in enumerate(hyb2tcga.iteritems()):
-        if test_short and (n == debug_max_count):
-            break
-        
-        outfile = converterUtils.constructPath(outdir, tcga_id, extension)
-        
-        rawfile = open(infile, 'rb')
-        csvfile = csv.DictReader(rawfile, dialect='excel-tab')
-        
-        converter = find_converter(dialect)
-        seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
-        
-        ioUtilities.safeMakeDirs(outdir)
-        converterUtils.writeCsvFile(outfile, seg_file_data)
-        
-        rawfile.close()
+def process(infile, extension, hyb_id, tcga_id, outdir, dialect):
+    outfile = converterUtils.constructPath(outdir, tcga_id, extension)
+    
+    rawfile = open(infile, 'rb')
+    csvfile = csv.DictReader(rawfile, dialect='excel-tab')
+    
+    converter = find_converter(dialect)
+    seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
+    
+    ioUtilities.safeMakeDirs(outdir)
+    converterUtils.writeCsvFile(outfile, seg_file_data)
+    
+    rawfile.close()
 
 def find_converter(dialect):
     """

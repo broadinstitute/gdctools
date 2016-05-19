@@ -232,9 +232,14 @@ def get_files(project_id, data_category, no_ffpe=True, page_size=500):
         filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
     qfilter = _and_filter(filter_list)
 
-    fields = [ 'file_id', 'file_name', 'cases.submitter_id', 'cases.samples.sample_id',
-               'data_type', 'data_category', 'data_format', 'experimental_strategy',
-               'platform','tags', 'center.namespace']
+    fields = ['file_id', 'file_name', 'cases.samples.sample_id', 'data_type',
+              'data_category', 'data_format', 'experimental_strategy',
+              'platform','tags', 'center.namespace', 'cases.submitter_id']
+    
+    if data_category == 'Protein Expression':
+        fields.append('cases.samples.portions.submitter_id')
+    elif data_category != 'Clinical' and data_category != 'Biospecimen':
+        fields.append('cases.samples.portions.analytes.aliquots.submitter_id')
 
     params = {
                 'fields' : ','.join(fields),
