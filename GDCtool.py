@@ -18,7 +18,7 @@ import sys
 import os
 import traceback
 from GDCcli import GDCcli
-from GDCutils import *
+from GDCcore import *
 
 class GDCtool(object):
     ''' Base class for each tool '''

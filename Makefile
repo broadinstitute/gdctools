@@ -27,8 +27,9 @@ TOOLS= \
 
 CORE_SRC_FILES=\
 	GDCcli.py \
+	GDCcore.py \
 	GDCtool.py \
-	GDCutils.py
+	GDCversion.py
 
 PKG_SRC_FILES=\
 	$(CORE_SRC_FILES) \
@@ -38,7 +39,7 @@ PKG_SRC_FILES=\
 PKG_SRC_NAMES=$(PKG_SRC_FILES:%.py=%)
 LINKS=$(TOOLS:%=bin/%)
 RUNPY=bin/runpy
-GENERATED_STUFF = gdctools.py GDCutils.py README
+GENERATED_STUFF = gdctools.py GDCversion.py README
 
 # -------------------------------------------------------------------------
 #							General Targets
@@ -109,7 +110,7 @@ gdctools.py:
 		echo "import `basename $$file .py`"  >> $@ ; \
 	done
 
-GDCutils.py: GDCutils.py.ac
+GDCversion.py: GDCversion.py.ac
 	sed "s/%VERSION%/$(VERSION)/" $@.ac > $@
 
 #pypi: gather
@@ -151,7 +152,7 @@ test3: default
 		$(MAKE) -e test ; \
 	fi
 
-VERTEST="import gdctools as g; print('Version: ' + g.GDCutils.GDCT_VERSION)"
+VERTEST="import gdctools as g; print('Version: ' + g.GDCcore.GDCT_VERSION)"
 testl: default
 	@# Test the package locally, as if it were installed
 	@$(PYTHON) -c  $(VERTEST)

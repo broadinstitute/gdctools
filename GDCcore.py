@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import sys
 
-GDCT_VERSION = "%VERSION%"
+from GDCversion import GDCT_VERSION
 __interactive__ = os.isatty(sys.stdout.fileno())
 
 def eprint(*args, **kwargs):
