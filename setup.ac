@@ -23,7 +23,7 @@ README = README.replace("**","")
 setup(
 	name         = 'gdctools',
     version      = %VERSION%,
-    author       = 'Michael S. Noble',
+    author       = 'Michael S. Noble, Timothy DeFreitas, David Heiman',
     author_email = 'mnoble@broadinstitute.org', 
     url          = 'https://github.com/broadinstitute/gdctools',
     packages     = find_packages(),
