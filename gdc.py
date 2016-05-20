@@ -233,7 +233,7 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     qfilter = _and_filter(filter_list)
 
     fields = ['file_id', 'file_name', 'cases.samples.sample_id', 'data_type',
-              'data_category', 'data_format', 'experimental_strategy',
+              'data_category', 'data_format', 'experimental_strategy', 'md5sum',
               'platform','tags', 'center.namespace', 'cases.submitter_id']
     
     if data_category == 'Protein Expression':
