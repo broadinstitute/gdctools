@@ -314,6 +314,17 @@ def get_cases_in_project(project):
     print("Retrieving cases for project: %s" % project)
     return _query_paginator(endpoint, params, 200)
 
+def get_projects(program, page_size=500):
+    endpoint = 'https://gdc-api.nci.nih.gov/projects'
+    
+    filt = _eq_filter('program.name', program)
+    
+    params = {'fields': 'project_id', 'filters': json.dumps(filt)}
+    
+    print("Retrieving projects for program: %s" % program)
+
+    return [obj['project_id'] for obj in _query_paginator(endpoint, params, page_size)]
+
 def _eq_filter(field, value):
     return {"op" : "=", "content" : {"field" : field, "value" : [value]}}
 
