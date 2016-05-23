@@ -5,11 +5,11 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-GDCtool.py: this file is part of mdbtools.  See the <root>/COPYRIGHT
+GDCtool.py: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 @author: Michael S. Noble
-@date:  2016-03-04
+@date:  2016-05-20
 '''
 
 # }}}
