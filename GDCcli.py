@@ -24,7 +24,7 @@ signal(SIGPIPE, SIG_DFL)
 
 class GDCcli(argparse.ArgumentParser):
     ''' Encapsulates interactions with the command line, making it easy for
-    all mdbtools to share a core set of common CLI self.args.  '''
+    all gdctools to share a core set of common CLI self.args.  '''
 
     ALL_REMAINING_ARGS = argparse.REMAINDER
 
