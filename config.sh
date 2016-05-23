@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# config.sh: Help determine installation location for mdbtools package
+# config.sh: Help determine installation location for gdctools package,
+#            by identifying existing Python installations as candidates.
 
 InstallDir=
 
