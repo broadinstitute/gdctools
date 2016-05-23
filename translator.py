@@ -254,7 +254,7 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 
 def main():
     logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     RAW_ROOT="/xchip/gdac_data/gdc_mirror"
     DICED_ROOT="/xchip/gdac_data/gdc_diced"
     # For testing...
