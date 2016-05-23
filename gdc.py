@@ -238,7 +238,7 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     
     if data_category == 'Protein Expression':
         fields.append('cases.samples.portions.submitter_id')
-    elif data_category != 'Clinical' and data_category != 'Biospecimen':
+    elif data_category not in ['Clinical', 'Biospecimen']:
         fields.append('cases.samples.portions.analytes.aliquots.submitter_id')
 
     params = {
