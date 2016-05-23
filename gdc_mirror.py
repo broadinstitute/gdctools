@@ -172,13 +172,24 @@ class gdc_mirror(GDCtool):
                         logging.info("File " + name + " already exists, skipping download")
                     else:
                         logging.info("Downloading file " + name ) 
-                        #Save md5 checksum
-                        md5sum = file_d['md5sum']
-                        with open(md5path, 'w') as mf:
-                            mf.write(md5sum + "  " + name )
 
-                        #Download file
-                        gdc.get_file(uuid, savepath)
+                        retry_count = 3
+                        while retry_count > 0:
+                            try:
+                                #Download file
+                                gdc.get_file(uuid, savepath)
+                                break
+                            except subprocess.CalledProcessError as e:
+                                logging.warning("Curl call failed: " + str(e))
+                                retry_count = retry_count - 1
+
+                        if retry_count == 0:
+                            logging.error("Error downloading file " + savepath + ", too many retries (3)")
+                        else:
+                            #Save md5 checksum on success
+                            md5sum = file_d['md5sum']
+                            with open(md5path, 'w') as mf:
+                                mf.write(md5sum + "  " + name )
 
 
 
