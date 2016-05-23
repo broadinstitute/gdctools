@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import logging
 from __future__ import print_function
 import gdc
 import json
@@ -110,6 +111,48 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
 
     return annot
 
+def dice(file_dict, translation_dict, raw_root, diced_root, dry_run=True):
+    """Dice a single file from the GDC.
+
+    Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
+    true, a debug message will be displayed instead of performing the actual
+    dicing operation.
+    """
+    
+    ##Get the right annotation and converter for this file
+    annot, convert = get_annotation_converter(file_dict, translation_dict)
+
+    mirror_path = os.path.join(raw_root, file_dict['data_category'],
+                               file_dict['data_type'])
+    dice_path = os.path.join(diced_root, annot)
+    
+    logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
+    if not dry_run:
+        convert(file_dict, mirror_path, dice_path) #actually do it
+    
+def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
+    '''Load file metadata object(s) for given project. Default is current
+    date.'''
+    raw_project_root = raw_project_root.rstrip(os.path.sep)
+    project = os.path.basename(raw_project_root)
+    
+    for dirpath, dirnames, filenames in os.walk(raw_project_root, topdown=True):
+        # Only recurse down to meta subdirectories
+        if os.path.basename(os.path.dirname(dirpath)) == project:
+            for n, subdir in enumerate(dirnames):
+                if subdir != 'meta': del dirnames[n]
+        # Take the most recent version of the given datestamp
+        if os.path.basename(dirpath) == 'meta':
+            yield _load_metadata(os.path.join(dirpath,
+                                              sorted(filename for \
+                                                     filename in filenames if \
+                                                     datestamp in filename)[-1]))
+    
+
+def _load_metadata(json_file):
+    with open(json_file, 'r') as metadata:
+        return json.load(metadata)
+
 def _read_md5file(md5file):
     with open(md5file, 'r') as md5fd:
         for line in md5fd:
@@ -203,6 +246,8 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 
 
 def main():
+    logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
+                        level=logging.DEBUG)
     RAW_ROOT="/xchip/gdac_data/gdc_mirror"
     DICED_ROOT="/xchip/gdac_data/gdc_diced"
     # For testing...
@@ -213,11 +258,10 @@ def main():
         raw_project_root = os.path.join(RAW_ROOT, project)
         diced_project_root = os.path.join(DICED_ROOT, project)
         for category in gdc.get_data_categories(project):
-            files = gdc.get_files(project, category, exclude_ffpe=\
-                                  (category not in ['Clinical', 'Biospecimen']))
+            files = gdc.get_files(project, category)
             if len(files) > 0:
                 metadata_dir = os.path.join(raw_project_root, category,
-                                            'metadata')
+                                            'meta')
                 safeMakeDirs(metadata_dir, [6,4,4])
                 with open(os.path.join(metadata_dir, 'metadata.' + timestamp +
                                        '.json'), 'w') as meta_fd:
