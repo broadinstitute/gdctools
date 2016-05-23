@@ -73,7 +73,7 @@ def safeMakeDirs(dir_name, permissions=None):
     except OSError, value:
         error_num = value.errno
         # what is 183? don't know... came from legacy code.
-        if  error_num==errno.EEXIST or error_num==183 :
+        if  error_num==errno.EEXIST or error_num==183 or error_num==17:
             pass  # Directory already existed
         else:
             raise  # Reraise other errors

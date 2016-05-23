@@ -7,6 +7,8 @@ import os
 import sys
 from gdac_lib import converters
 from gdac_lib.Constants import GDAC_BIN_DIR
+from gdac_lib.utilities.CommonFunctions import timetuple2stamp
+from gdac_lib.utilities.ioUtilities import safeMakeDirs
 
 def build_translation_dict(translation_file):
     """Builds a translation dictionary from a translation table.
@@ -97,8 +99,8 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
 
     #print("Downloading file {0} to {1}".format(file_dict['file_name'], mirror_path))
     if not dry_run:
-        gdc.get_file(file_dict['file_id'],
-                     os.path.join(mirror_path, file_dict['file_name']))
+        mirror_file = os.path.join(mirror_path, file_dict['file_name'])
+        gdc.get_file(file_dict['file_id'], mirror_file)
 
     dice_path = os.path.join(diced_root, annot)
     #print("Dicing file {0} to {1}".format(file_dict['file_name'], dice_path))
@@ -107,6 +109,12 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
         convert(file_dict, mirror_path, dice_path) #actually do it
 
     return annot
+
+def _read_md5file(md5file):
+    with open(md5file, 'r') as md5fd:
+        for line in md5fd:
+            if len(line.strip()) > 1:
+                return line.split(' ', 1)[0]
 
 ## Parsing tags out of file dict
 def _parse_tags(tags_list):
@@ -195,18 +203,32 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 
 
 def main():
-    RAW_ROOT="/xchip/gdac_data/gdc_mirror/TCGA-UVM"
-    DICED_ROOT="/xchip/gdac_data/gdc_diced/TCGA-UVM"
+    RAW_ROOT="/xchip/gdac_data/gdc_mirror"
+    DICED_ROOT="/xchip/gdac_data/gdc_diced"
     # For testing...
     # cats = gdc.data_categories("TCGA-UVM")
-    files = gdc.get_files("TCGA-UVM", "Gene expression")
-    # print(json.dumps(files[:10], indent=2))
-    d = build_translation_dict("GDC_translation_table.tsv")
-    for f in files:
-        #print(json.dumps(f, indent=2))
-        a = download_and_dice(f, d, RAW_ROOT, DICED_ROOT)
-        if a == 'UNRECOGNIZED':
-            print(json.dumps(f, indent=2))
+    trans_dict = build_translation_dict("Harmonized_GDC_translation_table.tsv")
+    timestamp = timetuple2stamp()
+    for project in gdc.get_projects('TCGA'):
+        raw_project_root = os.path.join(RAW_ROOT, project)
+        diced_project_root = os.path.join(DICED_ROOT, project)
+        for category in gdc.get_data_categories(project):
+            files = gdc.get_files(project, category, exclude_ffpe=\
+                                  (category not in ['Clinical', 'Biospecimen']))
+            if len(files) > 0:
+                metadata_dir = os.path.join(raw_project_root, category,
+                                            'metadata')
+                safeMakeDirs(metadata_dir, [6,4,4])
+                with open(os.path.join(metadata_dir, 'metadata.' + timestamp +
+                                       '.json'), 'w') as meta_fd:
+                    print(json.dumps(files, indent=2), file=meta_fd)
+                # print(json.dumps(files[:10], indent=2))
+                for f in files:
+                    #print(json.dumps(f, indent=2))
+                    a = download_and_dice(f, trans_dict, raw_project_root,
+                                          diced_project_root)
+                    if a == 'UNRECOGNIZED':
+                        print(json.dumps(f, indent=2))
 
 if __name__ == '__main__':
     main()
