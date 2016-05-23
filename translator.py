@@ -260,7 +260,7 @@ def main():
     # For testing...
     # cats = gdc.data_categories("TCGA-UVM")
     trans_dict = build_translation_dict(resource_string(__name__,
-                                                        "Harmonized_GDC_translation_table.tsv"))
+                                                        "Harmonized_GDC_translation_table_FH.tsv"))
     timestamp = timetuple2stamp()
     for project in gdc.get_projects('TCGA'):
         raw_project_root = os.path.join(RAW_ROOT, project)
