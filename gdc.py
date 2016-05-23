@@ -169,7 +169,7 @@ def get_redacted_cases(project):
 def get_file(uuid, file_name):
     """Download a single file from GDC."""
     curl_args =  ["curl", "-o", file_name, "https://gdc-api.nci.nih.gov/data/" + uuid]
-    print("Download command:  %s " % str(curl_args))
+    #print("Download command:  %s " % str(curl_args))
     return subprocess.check_call(curl_args)
 
 def get_cases_samples(project):
@@ -297,7 +297,8 @@ def get_data_categories(project):
     if len(hits) != 1:
         raise ValueError("Uh oh, there was more than one project for this name!")
 
-    categories = [obj['data_category'] for obj in hits[0]['summary']['data_categories']]
+    #Some data types still have no data, like TCGA-LCML, so check to see if 'summary' is a valid field
+    categories = [obj['data_category'] for obj in hits[0]['summary']['data_categories']] if 'summary' in hits[0] else []
     return categories
 
 def get_cases_in_project(project):
@@ -321,7 +322,7 @@ def get_projects(program, page_size=500):
     
     params = {'fields': 'project_id', 'filters': json.dumps(filt)}
     
-    print("Retrieving projects for program: %s" % program)
+    #print("Retrieving projects for program: %s" % program)
 
     return [obj['project_id'] for obj in _query_paginator(endpoint, params, page_size)]
 
