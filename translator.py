@@ -1,6 +1,6 @@
 #! /usr/bin/env python
-import logging
 from __future__ import print_function
+import logging
 import gdc
 import json
 import csv
