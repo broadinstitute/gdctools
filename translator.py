@@ -119,16 +119,20 @@ def dice(file_dict, translation_dict, raw_root, diced_root, dry_run=True):
     dicing operation.
     """
     
-    ##Get the right annotation and converter for this file
-    annot, convert = get_annotation_converter(file_dict, translation_dict)
-
     mirror_path = os.path.join(raw_root, file_dict['data_category'],
-                               file_dict['data_type'])
-    dice_path = os.path.join(diced_root, annot)
+                               file_dict['data_type'], file_dict['file_name'])
     
-    logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
-    if not dry_run:
-        convert(file_dict, mirror_path, dice_path) #actually do it
+    if os.path.isfile(mirror_path):    
+        ##Get the right annotation and converter for this file
+        annot, convert = get_annotation_converter(file_dict, translation_dict)
+        if annot != 'UNRECOGNIZED':
+            dice_path = os.path.join(diced_root, annot)
+            logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
+            if not dry_run:
+                convert(file_dict, mirror_path, dice_path) #actually do it
+        else:
+            logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
+                                                               indent=2))
     
 def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
     '''Load file metadata object(s) for given project. Default is current
@@ -143,10 +147,10 @@ def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
                 if subdir != 'meta': del dirnames[n]
         # Take the most recent version of the given datestamp
         if os.path.basename(dirpath) == 'meta':
-            yield _load_metadata(os.path.join(dirpath,
-                                              sorted(filename for \
-                                                     filename in filenames if \
-                                                     datestamp in filename)[-1]))
+            json_files = sorted(filename for filename in filenames if \
+                                datestamp in filename)
+            if len(json_files) > 0:
+                yield _load_metadata(os.path.join(dirpath, json_files[-1]))
     
 
 def _load_metadata(json_file):
@@ -263,16 +267,17 @@ def main():
                 metadata_dir = os.path.join(raw_project_root, category,
                                             'meta')
                 safeMakeDirs(metadata_dir, [6,4,4])
-                with open(os.path.join(metadata_dir, 'metadata.' + timestamp +
-                                       '.json'), 'w') as meta_fd:
+                with open(os.path.join(metadata_dir, timestamp + '.json'),
+                          'w') as meta_fd:
                     print(json.dumps(files, indent=2), file=meta_fd)
                 # print(json.dumps(files[:10], indent=2))
                 for f in files:
                     #print(json.dumps(f, indent=2))
-                    a = download_and_dice(f, trans_dict, raw_project_root,
-                                          diced_project_root)
-                    if a == 'UNRECOGNIZED':
-                        print(json.dumps(f, indent=2))
+#                     a = download_and_dice(f, trans_dict, raw_project_root,
+#                                           diced_project_root)
+                    dice(f, trans_dict, raw_project_root, diced_project_root)
+#                     if a == 'UNRECOGNIZED':
+#                         print(json.dumps(f, indent=2))
 
 if __name__ == '__main__':
     main()
