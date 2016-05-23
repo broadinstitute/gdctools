@@ -68,7 +68,7 @@ def safeMakeDirs(dir_name, permissions=None):
         else:
             # Current process umask affects mode (mode & ~umask & 0777) so set to 0
             curUmask = os.umask(0)
-            os.makedirs(dir_name, getPythonMode(permissions))
+            os.makedirs(dir_name, permissions)
             os.umask(curUmask)
     except OSError, value:
         error_num = value.errno

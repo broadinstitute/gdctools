@@ -270,7 +270,7 @@ def main():
             if len(files) > 0:
                 metadata_dir = os.path.join(raw_project_root, category,
                                             'meta')
-                safeMakeDirs(metadata_dir, [6,4,4])
+                safeMakeDirs(metadata_dir, 0755)
                 with open(os.path.join(metadata_dir, timestamp + '.json'),
                           'w') as meta_fd:
                     print(json.dumps(files, indent=2), file=meta_fd)
