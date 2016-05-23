@@ -39,7 +39,7 @@ PKG_SRC_FILES=\
 PKG_SRC_NAMES=$(PKG_SRC_FILES:%.py=%)
 LINKS=$(TOOLS:%=bin/%)
 RUNPY=bin/runpy
-GENERATED_STUFF = gdctools.py GDCversion.py README _mapping
+GENERATED_STUFF = gdctools.py GDCversion.py README
 
 # -------------------------------------------------------------------------
 #							General Targets
