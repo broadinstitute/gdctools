@@ -96,7 +96,8 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
     ##Get the right annotation and converter for this file
     annot, convert = get_annotation_converter(file_dict, translation_dict)
 
-    mirror_path = os.path.join(raw_root, file_dict['data_category'], file_dict['data_type'])
+    mirror_path = os.path.join(raw_root, file_dict['data_category'],
+                               file_dict['data_type']).replace(' ', '_')
 
     #print("Downloading file {0} to {1}".format(file_dict['file_name'], mirror_path))
     if not dry_run:
@@ -120,7 +121,8 @@ def dice(file_dict, translation_dict, raw_root, diced_root, dry_run=True):
     """
     
     mirror_path = os.path.join(raw_root, file_dict['data_category'],
-                               file_dict['data_type'], file_dict['file_name'])
+                               file_dict['data_type'],
+                               file_dict['file_name']).replace(' ', '_')
     
     if os.path.isfile(mirror_path):    
         ##Get the right annotation and converter for this file
