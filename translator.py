@@ -6,7 +6,7 @@ import json
 import csv
 import os
 import sys
-from pkg_resources import resource_string #@UnresolvedImport
+from pkg_resources import resource_filename #@UnresolvedImport
 from gdac_lib import converters
 from gdac_lib.Constants import GDAC_BIN_DIR
 from gdac_lib.utilities.CommonFunctions import timetuple2stamp
@@ -259,8 +259,8 @@ def main():
     DICED_ROOT="/xchip/gdac_data/gdc_diced"
     # For testing...
     # cats = gdc.data_categories("TCGA-UVM")
-    trans_dict = build_translation_dict(resource_string(__name__,
-                                                        "Harmonized_GDC_translation_table_FH.tsv"))
+    trans_dict = build_translation_dict(resource_filename(__name__,
+                                                          "Harmonized_GDC_translation_table_FH.tsv"))
     timestamp = timetuple2stamp()
     for project in gdc.get_projects('TCGA'):
         raw_project_root = os.path.join(RAW_ROOT, project)
