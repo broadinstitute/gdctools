@@ -26,7 +26,7 @@ def process(infile, extension, hyb2tcga, outdir, gdac_bin_dir):
     converterUtils.writeCsvFile(filepath, csv_with_NAs)
     
     os.remove(tmp_out_filepath)
-    return [filepath]
+    return filepath
 
 def _clinical_xml_2_tsv(xml_in, tsv_out, gdac_bin_dir):
     #create tempfiles that vanish upon closing
