@@ -164,7 +164,10 @@ def get_entity_type(file_dict):
     '''Parse the dicer metadata for this file.
 
     Returns the Entity ID and entity type.'''
-    entity_type = "NOTIMPLEMENTED"
+    if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
+        pass #Do something else
+    else:
+        entity_type = sample_type(file_dict)
 
     return entity_type
 
