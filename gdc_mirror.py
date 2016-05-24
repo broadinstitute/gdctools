@@ -45,6 +45,9 @@ class gdc_mirror(GDCtool):
                          help='Mirror data from these cancer programs')
         cli.add_argument('-p', '--projects', nargs='+', metavar='project',
                          help='Mirror data from these projects')
+        cli.add_argument('-c', '--data-categories', nargs='+', metavar='category',
+                         help='Mirror only these data categories. Many data categories have spaces, use quotes to delimit')
+
         cli.add_argument('-m', '--meta-only', action='store_true',
                          help="Only retrieve metadata, skip file download")
 
@@ -150,8 +153,15 @@ class gdc_mirror(GDCtool):
         for project in self.projects:
             prgm = get_program(project)
             logging.info("Mirroring started for {0} ({1})".format(project, prgm))
-            data_categories = gdc.get_data_categories(project)
-            logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
+            if self.options.data_categories is not None:
+                data_categories = self.options.data_categories
+                logging.info("Data categories: " + ",".join(data_categories))
+            else:
+                logging.info("No data_categories specified, using GDC API to discover available categories")
+                data_categories = gdc.get_data_categories(project)
+                logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
+            
+
             proj_root = os.path.abspath(os.path.join(self.root_dir, prgm, project))
             logging.info("Mirroring data to " + proj_root)
             for cat in data_categories:
@@ -175,7 +185,6 @@ class gdc_mirror(GDCtool):
 
                 if self.options.meta_only:
                     logging.info("Metadata only option enabled, skipping file mirroring")
-
                 else:
                     total_files = len(file_metadata)
                     logging.info("Mirroring " + str(total_files) + " " + cat + " files")
