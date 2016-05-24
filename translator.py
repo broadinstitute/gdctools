@@ -219,7 +219,7 @@ def copy(file_dict, mirror_path, dice_path):
     pass
 
 def clinical(file_dict, mirror_path, dice_path):
-    print("Dicing with 'clinical'")
+#     print("Dicing with 'clinical'")
     infile = os.path.join(mirror_path, file_dict['file_name'])
     extension = 'clin'
     tcga_id = patient_id(file_dict)
@@ -280,7 +280,8 @@ def main():
                     #print(json.dumps(f, indent=2))
 #                     a = download_and_dice(f, trans_dict, raw_project_root,
 #                                           diced_project_root)
-                    dice(f, trans_dict, raw_project_root, diced_project_root)
+                    dice(f, trans_dict, raw_project_root, diced_project_root,
+                         dry_run=False)
 #                     if a == 'UNRECOGNIZED':
 #                         print(json.dumps(f, indent=2))
 
