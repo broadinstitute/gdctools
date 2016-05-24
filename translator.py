@@ -139,7 +139,6 @@ def dice(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=T
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
-    
 def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
 	meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
 	if os.path.isfile(meta_filename):
@@ -166,8 +165,12 @@ def get_entity_type(file_dict):
 
     return entity_type
 
-
-def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
+def _load_json_metadata(json_file):
+    with open(json_file, 'r') as metadata:
+        return json.load(metadata)
+        
+def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0],
+                 loader=_load_json_metadata):
     '''Load file metadata object(s) for given project. Default is current
     date.'''
     raw_project_root = raw_project_root.rstrip(os.path.sep)
@@ -180,16 +183,11 @@ def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
                 if subdir != 'meta': del dirnames[n]
         # Take the most recent version of the given datestamp
         if os.path.basename(dirpath) == 'meta':
-            json_files = sorted(filename for filename in filenames if \
+            meta_files = sorted(filename for filename in filenames if \
                                 datestamp in filename)
-            if len(json_files) > 0:
-                yield _load_metadata(os.path.join(dirpath, json_files[-1]))
+            if len(meta_files) > 0:
+                yield loader(os.path.join(dirpath, meta_files[-1]))
     
-
-def _load_metadata(json_file):
-    with open(json_file, 'r') as metadata:
-        return json.load(metadata)
-
 def _read_md5file(md5file):
     with open(md5file, 'r') as md5fd:
         for line in md5fd:
