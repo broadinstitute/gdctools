@@ -17,7 +17,7 @@ def process(infile, extension, hyb_id, tcga_id, outdir, dialect):
     converterUtils.writeCsvFile(outfile, seg_file_data)
     
     rawfile.close()
-    return {tcga_id: outfile}
+    return outfile
 
 def find_converter(dialect):
     """
