@@ -133,32 +133,32 @@ def dice(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=T
             dice_path = os.path.join(diced_root, annot)
             logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
             dice_meta_path = os.path.join(dice_path, "meta")
-	    if not dry_run:
-                diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
-		write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
+        if not dry_run:
+            diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+            write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
 def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
-	if not os.path.isdir(dice_meta_path):
-	    os.makedirs(dice_meta_path)
-	
-	meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
-	if os.path.isfile(meta_filename):
-	    #File exists, open in append mode
-	    metafile = open(meta_filename, 'a')
-	else:
-	    #File doesn't exist, create and add header
-	    metafile = open(meta_filename, 'w')
-            metafile.write('filename\tentity_id\tentity_type\n')
+    if not os.path.isdir(dice_meta_path):
+        os.makedirs(dice_meta_path)
         
-	entity_type = get_entity_type(file_dict)
-	
-	for entity_id in diced_files_dict:
-		filename = diced_files_dict[entity_id]
-		metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
+    meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
+    if os.path.isfile(meta_filename):
+        #File exists, open in append mode
+        metafile = open(meta_filename, 'a')
+    else:
+        #File doesn't exist, create and add header
+        metafile = open(meta_filename, 'w')
+        metafile.write('filename\tentity_id\tentity_type\n')
+        
+    entity_type = get_entity_type(file_dict)
 
-	metafile.close()
+    for entity_id in diced_files_dict:
+        filename = diced_files_dict[entity_id]
+        metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
+
+    metafile.close()
 
 def get_entity_type(file_dict):
     '''Parse the dicer metadata for this file.
@@ -257,8 +257,8 @@ def clinical(file_dict, mirror_path, dice_path):
     infile = mirror_path
     extension = 'clin'
     tcga_id = patient_id(file_dict)
-    return gdac_clin.process(infile, extension, {tcga_id: tcga_id}, dice_path,
-                      GDAC_BIN_DIR)
+    return {tcga_id: gdac_clin.process(infile, extension, {tcga_id: tcga_id},
+                                       dice_path, GDAC_BIN_DIR)}
 
 def maf(file_dict, mirror_path, dice_path):
     pass
@@ -271,7 +271,9 @@ def seg_broad(file_dict, mirror_path, dice_path):
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = aliquot_id(file_dict)
-    return gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path, 'seg_broad')
+    return {patient_id(file_dict):
+            gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path,
+                             'seg_broad')}
 
 def seg_harvard(file_dict, mirror_path, dice_path):
     pass
