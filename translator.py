@@ -140,6 +140,9 @@ def dice(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=T
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
 def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
+    if not os.path.isdir(dice_meta_path):
+        os.makedirs(dice_meta_path)
+        
     meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
     if os.path.isfile(meta_filename):
         #File exists, open in append mode
@@ -284,8 +287,8 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 def main():
     logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
                         level=logging.INFO)
-    RAW_ROOT="/xchip/gdac_data/gdc_mirror"
-    DICED_ROOT="/xchip/gdac_data/gdc_diced"
+    RAW_ROOT="/broad/hptmp/gdac/fh2gdc/gdctools/gdc_mirror_root/TCGA"
+    DICED_ROOT="/broad/hptmp/gdac/fh2gdc/gdctools/gdc_diced"
     # For testing...
     # cats = gdc.data_categories("TCGA-UVM")
     trans_dict = build_translation_dict(resource_filename(__name__,
@@ -294,7 +297,7 @@ def main():
     for project in gdc.get_projects('TCGA'):
         raw_project_root = os.path.join(RAW_ROOT, project)
         diced_project_root = os.path.join(DICED_ROOT, project)
-        for files in get_metadata(raw_project_root, '2016_05_23'):
+        for files in get_metadata(raw_project_root, '2016_05_24'):
 #         for category in gdc.get_data_categories(project):
 #             files = gdc.get_files(project, category)
             if len(files) > 0:
