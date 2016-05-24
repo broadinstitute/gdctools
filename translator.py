@@ -243,6 +243,16 @@ def sample_type(file_dict):
         raise
     
     return file_dict['cases'][0]['samples'][0]["sample_type"]
+
+def project_id(file_dict):
+    '''Return the project_id associated with the file. Raise an exception if
+    more than one case exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    return file_dict['cases'][0]['project']['project_id']
         
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
