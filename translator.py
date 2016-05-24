@@ -221,7 +221,7 @@ def copy(file_dict, mirror_path, dice_path):
 
 def clinical(file_dict, mirror_path, dice_path):
 #     print("Dicing with 'clinical'")
-    infile = os.path.join(mirror_path, file_dict['file_name'])
+    infile = mirror_path
     extension = 'clin'
     tcga_id = patient_id(file_dict)
     gdac_clin.process(infile, extension, {tcga_id: tcga_id}, dice_path,
@@ -234,7 +234,7 @@ def magetab_data_matrix(file_dict, mirror_path, dice_path):
     pass
 
 def seg_broad(file_dict, mirror_path, dice_path):
-    infile = os.path.join(mirror_path, file_dict['file_name'])
+    infile = mirror_path
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = aliquot_id(file_dict)
