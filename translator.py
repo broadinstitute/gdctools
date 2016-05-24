@@ -114,7 +114,7 @@ def download_and_dice(file_dict, translation_dict, raw_root, diced_root, dry_run
 
     return annot
 
-def dice(file_dict, translation_dict, raw_root, diced_root, dry_run=True):
+def dice(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=True):
     """Dice a single file from the GDC.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
@@ -132,12 +132,41 @@ def dice(file_dict, translation_dict, raw_root, diced_root, dry_run=True):
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
             logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
-            if not dry_run:
-                convert(file_dict, mirror_path, dice_path) #actually do it
+            dice_meta_path = os.path.join(dice_path, "meta")
+	    if not dry_run:
+                diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+		writed_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
     
+def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
+	meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
+	if os.path.isfile(meta_filename):
+	    #File exists, open in append mode
+	    metafile = open(meta_filename, 'a')
+	else:
+	    #File doesn't exist, create and add header
+	    metafile = open(meta_filename, 'w')
+            metafile.write('filename\tentity_id\tentity_type\n')
+        
+	entity_type = get_entity_type(file_dict)
+	
+	for entity_id in diced_files_dict:
+		filename = diced_files_dict[entity_id]
+		metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
+
+	metafile.close()
+
+def get_entity_type(file_dict):
+    '''Parse the dicer metadata for this file.
+
+    Returns the Entity ID and entity type.'''
+    entity_type = "NOTIMPLEMENTED"
+
+    return entity_type
+
+
 def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0]):
     '''Load file metadata object(s) for given project. Default is current
     date.'''
@@ -281,7 +310,7 @@ def main():
 #                     a = download_and_dice(f, trans_dict, raw_project_root,
 #                                           diced_project_root)
                     dice(f, trans_dict, raw_project_root, diced_project_root,
-                         dry_run=False)
+		         timestamp, dry_run=False)
 #                     if a == 'UNRECOGNIZED':
 #                         print(json.dumps(f, indent=2))
 
