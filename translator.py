@@ -7,7 +7,8 @@ import csv
 import os
 import sys
 from pkg_resources import resource_filename #@UnresolvedImport
-from gdac_lib import converters
+from gdac_lib.converters import seg as gdac_seg
+from gdac_lib.converters import clinical as gdac_clin
 from gdac_lib.Constants import GDAC_BIN_DIR
 from gdac_lib.utilities.CommonFunctions import timetuple2stamp
 from gdac_lib.utilities.ioUtilities import safeMakeDirs
@@ -223,8 +224,8 @@ def clinical(file_dict, mirror_path, dice_path):
     infile = os.path.join(mirror_path, file_dict['file_name'])
     extension = 'clin'
     tcga_id = patient_id(file_dict)
-    converters.clinical.process(infile, extension, {tcga_id: tcga_id},
-                                dice_path, GDAC_BIN_DIR)
+    gdac_clin.process(infile, extension, {tcga_id: tcga_id}, dice_path,
+                      GDAC_BIN_DIR)
 
 def maf(file_dict, mirror_path, dice_path):
     pass
@@ -237,8 +238,7 @@ def seg_broad(file_dict, mirror_path, dice_path):
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = aliquot_id(file_dict)
-    converters.seg.process(infile, extension, hyb_id, tcga_id, dice_path,
-                           'seg_broad')
+    gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path, 'seg_broad')
 
 def seg_harvard(file_dict, mirror_path, dice_path):
     pass
