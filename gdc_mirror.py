@@ -41,9 +41,9 @@ class gdc_mirror(GDCtool):
         #Optional overrides of config file
         cli.add_argument('-l', '--log-directory', help='Folder to store logfiles')
         cli.add_argument('-r', '--root-directory', help='Root of mirrored data folder tree')
-        cli.add_argument('-g', '--programs', nargs='+',
+        cli.add_argument('-g', '--programs', nargs='+', metavar='program',
                          help='Mirror data from these cancer programs')
-        cli.add_argument('-p', '--projects', nargs='+', 
+        cli.add_argument('-p', '--projects', nargs='+', metavar='project',
                          help='Mirror data from these projects')
 
         cli.add_argument('config', nargs='?', default=None,
