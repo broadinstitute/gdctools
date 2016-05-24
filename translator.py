@@ -265,15 +265,16 @@ def main():
     for project in gdc.get_projects('TCGA'):
         raw_project_root = os.path.join(RAW_ROOT, project)
         diced_project_root = os.path.join(DICED_ROOT, project)
-        for category in gdc.get_data_categories(project):
-            files = gdc.get_files(project, category)
+        for files in get_metadata(raw_project_root, '2016_05_23'):
+#         for category in gdc.get_data_categories(project):
+#             files = gdc.get_files(project, category)
             if len(files) > 0:
-                metadata_dir = os.path.join(raw_project_root, category,
-                                            'meta')
-                safeMakeDirs(metadata_dir)
-                with open(os.path.join(metadata_dir, timestamp + '.json'),
-                          'w') as meta_fd:
-                    print(json.dumps(files, indent=2), file=meta_fd)
+#                 metadata_dir = os.path.join(raw_project_root, category,
+#                                             'meta')
+#                 safeMakeDirs(metadata_dir)
+#                 with open(os.path.join(metadata_dir, timestamp + '.json'),
+#                           'w') as meta_fd:
+#                     print(json.dumps(files, indent=2), file=meta_fd)
                 # print(json.dumps(files[:10], indent=2))
                 for f in files:
                     #print(json.dumps(f, indent=2))
