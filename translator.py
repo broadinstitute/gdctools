@@ -1,11 +1,12 @@
 #! /usr/bin/env python
-import logging
 from __future__ import print_function
+import logging
 import gdc
 import json
 import csv
 import os
 import sys
+from pkg_resources import resource_filename #@UnresolvedImport
 from gdac_lib import converters
 from gdac_lib.Constants import GDAC_BIN_DIR
 from gdac_lib.utilities.CommonFunctions import timetuple2stamp
@@ -253,12 +254,13 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 
 def main():
     logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
     RAW_ROOT="/xchip/gdac_data/gdc_mirror"
     DICED_ROOT="/xchip/gdac_data/gdc_diced"
     # For testing...
     # cats = gdc.data_categories("TCGA-UVM")
-    trans_dict = build_translation_dict("Harmonized_GDC_translation_table.tsv")
+    trans_dict = build_translation_dict(resource_filename(__name__,
+                                                          "Harmonized_GDC_translation_table_FH.tsv"))
     timestamp = timetuple2stamp()
     for project in gdc.get_projects('TCGA'):
         raw_project_root = os.path.join(RAW_ROOT, project)
@@ -268,7 +270,7 @@ def main():
             if len(files) > 0:
                 metadata_dir = os.path.join(raw_project_root, category,
                                             'meta')
-                safeMakeDirs(metadata_dir, [6,4,4])
+                safeMakeDirs(metadata_dir)
                 with open(os.path.join(metadata_dir, timestamp + '.json'),
                           'w') as meta_fd:
                     print(json.dumps(files, indent=2), file=meta_fd)
