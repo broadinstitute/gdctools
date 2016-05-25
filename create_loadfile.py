@@ -79,11 +79,15 @@ class create_loadfile(GDCtool):
                 if not os.path.isdir(proj_load_root):
                     os.makedirs(proj_load_root)
 
-                samples_loadfile_name = ".".join(["tcga_all_samples", timestamp, "Sample", "loadfile", "txt"])
-
+                samples_loadfile_name = ".".join([project,timestamp, "Sample", "loadfile", "txt"])
+                sset_loadfile_name = ".".join([project, timestamp, "Sample_Set", "loadfile", "txt"])
                 samples_loadfile = os.path.join(proj_load_root, samples_loadfile_name)
+                sset_loadfile = os.path.join(proj_load_root, sset_loadfile_name)
+
                 logging.info("Writing samples loadfile to " + samples_loadfile)
                 write_master_load_dict(master_load_dict, annots, samples_loadfile)
+                logging.info("Writing sample set loadfile to " + sset_loadfile)
+                write_sample_set_loadfile(samples_loadfile, sset_loadfile)
 
 
 
@@ -188,6 +192,19 @@ def write_master_load_dict(ld, annots, outfile):
             line += "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
             out.write(line)
 
+def write_sample_set_loadfile(sample_loadfile, outfile):
+    sset_data = "sample_set_id\tsample_id\n"
+    with open(samples_loadfile) as slf:
+        reader = csv.DictReader(slf, delimiter='\t')
+        for row in reader:
+            samp_id = row['sample_id']
+            #This sample belongs to the cohort sample set
+            sset_data += samp_id.split("-")[0] + "\t" + samp_id + "\n"
+            #And the type-specific set
+            sset_data += samp_id.split("-")[0] + "-" + samp_id.split("-")[-1] + "\t" + samp_id + "\n"
+
+    with open(outfile, "w") as out:
+        out.write(sset_data)
 
 if __name__ == "__main__":
     create_loadfile().execute()
