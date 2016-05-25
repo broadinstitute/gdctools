@@ -24,6 +24,7 @@ PIP=$(DEST)/bin/pip
 
 TOOLS= \
 	gdc_mirror
+	gdc_dice
 
 CORE_SRC_FILES=\
 	GDCcli.py \
