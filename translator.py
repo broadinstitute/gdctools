@@ -166,13 +166,13 @@ def get_entity_type(file_dict):
     Returns the Entity ID and entity type.'''
     if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
         proj_id = project_id(file_dict)
-	#TODO: Make this more generic
-	if proj_id == 'TCGA-LAML':
+        #TODO: Make this more generic
+        if proj_id == 'TCGA-LAML':
             entity_type = "Primary Blood Derived Cancer - Peripheral Blood" 
-	elif proj_id == 'TCGA-SKCM':
-	    entity_type = 'Metastatic'
-	else:
-            entity_type = 'Primary Tumor'
+        elif proj_id == 'TCGA-SKCM':
+            entity_type = 'Metastatic'
+        else:
+                entity_type = 'Primary Tumor'
     else:
         entity_type = sample_type(file_dict)
 
