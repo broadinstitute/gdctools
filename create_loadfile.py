@@ -21,6 +21,7 @@ import gdc
 import logging
 import os
 import csv
+from gdac_lib.utilities.CommonFunctions import timetuple2stamp
 
 class create_loadfile(GDCtool):
 
@@ -40,19 +41,48 @@ class create_loadfile(GDCtool):
                          'If omitted, the latest version will be used')
 
     def create_loadfiles(self):
+        timestamp = timetuple2stamp()
+
         #Iterate over programs/projects in diced root
         diced_root = os.path.abspath(self.options.dice_directory)
         load_root = os.path.abspath(self.options.loadfile_directory)
-        print(diced_root)
-        print(load_root)
+
+
         for program in immediate_subdirs(diced_root):
             prog_root = os.path.join(diced_root, program)
             projects = immediate_subdirs(prog_root)
-            
+
+            #This dictionary contains all the data for the loadfile. 
+            #Keys are the entity_ids, values are dictionaries for the columns in a loadfile
+            master_load_dict = dict()
+
             for project in projects:
+                logging.info("Generating loadfile data for " + project)
                 proj_path = os.path.join(prog_root, project)
+                # Keep track of the created annotations
+                annots = set()
                 for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
-                    print(annot, reader)
+                    logging.info("Reading data for " + annot)
+                    annots.add(annot)
+                    for row in reader:
+                        #Add entry for this entity into the master load dict
+                        #eid = row['entity_id']
+                        samp_id = sample_id(project, row)
+
+                        if samp_id not in master_load_dict:
+                            master_load_dict[samp_id] = master_load_entry(project, row)
+
+                        #Filenames in metadata begin with diced root, 
+                        filepath = os.path.join(os.path.basename(diced_root), row['filename'])
+                        master_load_dict[samp_id][annot] = filepath
+
+            prog_load_root = os.path.join(load_root, program)
+            samples_loadfile_name = ".".join(["tcga_all_samples", timestamp, "Sample", "loadfile", "txt"])
+
+            samples_loadfile = os.path.join(prog_load_root, samples_loadfile_name)
+            logging.info("Writing samples loadfile to " + samples_loadfile)
+
+            write_master_load_dict(master_load_dict, annots, samples_loadfile)
 
 
 
@@ -90,6 +120,73 @@ def get_diced_metadata(project_root, datestamp=None):
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
             if os.path.isdir(os.path.join(path, d))]
+
+#TODO: This should come from a config file
+def sample_type_lookup(etype):
+    '''Convert long form sample types into letter codes.'''
+    lookup = {
+        "Blood Derived Normal" : ("NB", "10"),
+        "Primary Tumor" : ("TP", "01"),
+        "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
+        "Metastatic" : ("TM", "06")
+
+    }
+
+    return lookup[etype]
+
+def sample_id(project, meta_row_dict):
+    '''Create a sample id from a row dict'''
+    if not project.startswith("TCGA-"):
+        raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
+
+    cohort = project.replace("TCGA-", "")
+    entity_id = row_dict['entity_id']
+    indiv_base = entity_id.replace("TCGA-", "")
+    entity_type = row_dict['entity_type']
+    sample_type, sample_code = sample_type_lookup(entity_type)
+
+    samp_id = "-".join([cohort, indiv_base, sample_type])
+    return samp_id
+
+def master_load_entry(project, row_dict):
+    d = dict()
+    if not project.startswith("TCGA-"):
+        raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
+
+    cohort = project.replace("TCGA-", "")
+    entity_id = row_dict['entity_id']
+    indiv_base = entity_id.replace("TCGA-", "")
+    entity_type = row_dict['entity_type']
+    sample_type, sample_code = sample_type_lookup(entity_type)
+
+    samp_id = "-".join([cohort, indiv_base, sample_type])
+    indiv_id = "-".join([cohort, indiv_base])
+    tcga_sample_id = "-".join([entity_id, sample_code])
+
+    d['sample_id'] = samp_id
+    d['individual_id'] = individual_id
+    d['sample_type'] = sample_type
+    d['tcga_sample_id'] = tcga_sample_id
+
+    return d
+
+def write_master_load_dict(ld, annots, outfile):
+    _FIRST_HEADERS = ["sample_id", "individual_id", "sample_type", "tcga_sample_id"]
+    annots = sorted(annots)
+    with open(outfile, 'w') as out:
+        #Header line
+        out.write("\t".join(_FIRST_HEADERS) + "\t" + "\t".join(annots)+"\n")
+
+
+        #Loop over sample ids, writing entries in outfile
+        #NOTE: requires at least one annot
+        for sid in ld:
+            this_dict = ld[sid]
+            line = "\t".join([this_dict[h] for h in _FIRST_HEADERS]) + "\t"
+            line = "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
+            out.write(line)
+
+
 
 
 if __name__ == "__main__":
