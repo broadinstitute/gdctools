@@ -18,7 +18,7 @@ from __future__ import print_function
 from GDCtool import GDCtool
 import translator
 import gdc
-
+import logging
 import os
 import csv
 
@@ -43,14 +43,16 @@ class create_loadfile(GDCtool):
         #Iterate over programs/projects in diced root
         diced_root = os.path.abspath(self.options.dice_directory)
         load_root = os.path.abspath(self.options.loadfile_directory)
-
+        print(diced_root)
+        print(load_root)
         for program in immediate_subdirs(diced_root):
             prog_root = os.path.join(diced_root, program)
             projects = immediate_subdirs(prog_root)
             
             for project in projects:
-                for annot, reader in get_diced_metadata(project, self.options.datestamp):
-                    print(annot, len(reader))
+                proj_path = os.path.join(prog_root, project)
+                for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
+                    print(annot, reader)
 
 
 
@@ -77,9 +79,8 @@ def get_diced_metadata(project_root, datestamp=None):
             #If provided, only use the metadata for a given date, otherwise use the latest metadata file
             meta_files =  sorted(filename for filename in filenames \
                                  if datestamp is None or datestamp in filename)
-
-            annot="Unknown"
-            print(dirpath)
+            #Annot name is the parent folder
+            annot=os.path.basename(os.path.dirname(dirpath))
             
             if len(meta_files) > 0:
                 with open(os.path.join(dirpath, meta_files[-1])) as f:
