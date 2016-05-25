@@ -40,9 +40,9 @@ class gdc_dicer(GDCtool):
                 'and generate a Firehose-compatible loadfile\n'
         cli.description = desc
 
-        cli.add_argument('-m', '--mirror-directory', nargs=1,
+        cli.add_argument('-m', '--mirror-directory',
                          help='Root folder of mirrored GDC data')
-        cli.add_argument('-d', '--dice-directory', nargs=1, 
+        cli.add_argument('-d', '--dice-directory', 
                          help='Root ')
         cli.add_argument('--dry-run', action='store_true', 
                          help="Show expected operations, but don't perform dicing")
@@ -84,7 +84,7 @@ class gdc_dicer(GDCtool):
                 if self.options.datestamp is None:
                     metadata = translator.get_metadata(raw_project_root)
                 else:
-                    metadata = translator.get_metadata(raw_project_root, datestamp)
+                    metadata = translator.get_metadata(raw_project_root, self.options.datestamp)
 
                 for files in metadata:
                     if len(files) > 0:
