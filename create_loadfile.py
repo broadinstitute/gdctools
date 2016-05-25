@@ -71,18 +71,19 @@ class create_loadfile(GDCtool):
 
                         if samp_id not in master_load_dict:
                             master_load_dict[samp_id] = master_load_entry(project, row)
-
                         #Filenames in metadata begin with diced root, 
-                        filepath = os.path.join(os.path.basename(diced_root), row['filename'])
+                        filepath = os.path.join(os.path.dirname(diced_root), row['filename'])
                         master_load_dict[samp_id][annot] = filepath
 
-            prog_load_root = os.path.join(load_root, program)
-            samples_loadfile_name = ".".join(["tcga_all_samples", timestamp, "Sample", "loadfile", "txt"])
+                proj_load_root = os.path.join(load_root, program, project)
+                if not os.path.isdir(proj_load_root):
+                    os.makedirs(proj_load_root)
 
-            samples_loadfile = os.path.join(prog_load_root, samples_loadfile_name)
-            logging.info("Writing samples loadfile to " + samples_loadfile)
+                samples_loadfile_name = ".".join(["tcga_all_samples", timestamp, "Sample", "loadfile", "txt"])
 
-            write_master_load_dict(master_load_dict, annots, samples_loadfile)
+                samples_loadfile = os.path.join(proj_load_root, samples_loadfile_name)
+                logging.info("Writing samples loadfile to " + samples_loadfile)
+                write_master_load_dict(master_load_dict, annots, samples_loadfile)
 
 
 
@@ -128,13 +129,14 @@ def sample_type_lookup(etype):
         "Blood Derived Normal" : ("NB", "10"),
         "Primary Tumor" : ("TP", "01"),
         "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
-        "Metastatic" : ("TM", "06")
+        "Metastatic" : ("TM", "06"),
+        "Solid Tissue Normal": ("NT", "11")
 
     }
 
     return lookup[etype]
 
-def sample_id(project, meta_row_dict):
+def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
     if not project.startswith("TCGA-"):
         raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
@@ -164,7 +166,7 @@ def master_load_entry(project, row_dict):
     tcga_sample_id = "-".join([entity_id, sample_code])
 
     d['sample_id'] = samp_id
-    d['individual_id'] = individual_id
+    d['individual_id'] = indiv_id
     d['sample_type'] = sample_type
     d['tcga_sample_id'] = tcga_sample_id
 
@@ -183,10 +185,8 @@ def write_master_load_dict(ld, annots, outfile):
         for sid in ld:
             this_dict = ld[sid]
             line = "\t".join([this_dict[h] for h in _FIRST_HEADERS]) + "\t"
-            line = "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
+            line += "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
             out.write(line)
-
-
 
 
 if __name__ == "__main__":
