@@ -194,7 +194,7 @@ def write_master_load_dict(ld, annots, outfile):
 
 def write_sample_set_loadfile(sample_loadfile, outfile):
     sset_data = "sample_set_id\tsample_id\n"
-    with open(samples_loadfile) as slf:
+    with open(sample_loadfile) as slf:
         reader = csv.DictReader(slf, delimiter='\t')
         for row in reader:
             samp_id = row['sample_id']
