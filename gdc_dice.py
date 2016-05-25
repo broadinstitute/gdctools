@@ -36,8 +36,7 @@ class gdc_dicer(GDCtool):
         super(gdc_dicer, self).__init__(version="0.1.0")
         cli = self.cli
 
-        desc =  'Dice data from a Genomic Data Commons (GDC) mirror'\
-                'and generate a Firehose-compatible loadfile\n'
+        desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
 
         cli.add_argument('-m', '--mirror-directory',
