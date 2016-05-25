@@ -23,7 +23,7 @@ PIP=$(DEST)/bin/pip
 #PYLINT = $(__PATH__)/pylint_wrap		# FIXME: code should be lint-ed
 
 TOOLS= \
-	gdc_mirror
+	gdc_mirror \
 	gdc_dice
 
 CORE_SRC_FILES=\
