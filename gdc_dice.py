@@ -313,6 +313,60 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
 
+def aliquot_id(file_dict):
+    '''Return the aliquot associated with the file. Raise an exception if more
+    than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+        _check_dict_array_size(file_dict['cases'][0]['samples'][0], 'portions')
+        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0],
+                               'analytes')
+        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0],
+                               'aliquots')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    
+    return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
+
+def patient_id(file_dict):
+    '''Return the patient_id associated with the file. Raise an exception if
+    more than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    
+    return file_dict['cases'][0]['submitter_id']
+
+def sample_type(file_dict):
+    '''Return the sample_type associated with the file. Raise an exception if
+    more than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    
+    return file_dict['cases'][0]['samples'][0]["sample_type"]
+
+def project_id(file_dict):
+    '''Return the project_id associated with the file. Raise an exception if
+    more than one case exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+    return file_dict['cases'][0]['project']['project_id']
+        
+def _check_dict_array_size(d, name, size=1):
+    assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
+    
+
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
             if os.path.isdir(os.path.join(path, d))]
