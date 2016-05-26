@@ -310,6 +310,8 @@ def tsv2idtsv(file_dict, mirror_path, dice_path):
 def tsv2magetab(file_dict, mirror_path, dice_path):
     pass
 
+def _parse_tags(tags_list):
+    return frozenset('' if len(tags_list)==0 else tags_list)
 
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
