@@ -15,23 +15,22 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 # }}}
 from __future__ import print_function
 
-
 import sys
 import os
 import logging
 import time
 import ConfigParser
 import json
-import requests
 import subprocess
 
 from GDCtool import GDCtool
-import gdc
+import lib.api as api
+
 
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.3.0")
+        super(gdc_mirror, self).__init__(version="0.4.0")
         cli = self.cli
 
         desc =  'Create local mirror of the data from arbitrary programs '\
@@ -58,6 +57,7 @@ class gdc_mirror(GDCtool):
         '''Creates a timestamp for the current mirror'''
         self.timestamp = time.strftime('%Y_%m_%d__%H_%M_%S')
         return self.timestamp 
+
 
     def init_logging(self):
         logfile_name = ".".join(["gdcMirror", self.timestamp, "log"])
@@ -115,6 +115,7 @@ class gdc_mirror(GDCtool):
 
     def mirror(self):
         logging.info("GDC Mirror Version: %s", self.cli.version)
+        logging.info("Command: " + " ".join(sys.argv))
         if self.options.config is not None:
             logging.info("Configuration File: %s", os.path.abspath(self.options.config))
 
@@ -134,7 +135,7 @@ class gdc_mirror(GDCtool):
 
         if self.programs is None and self.projects is None:
             logging.info("No programs or projects specified, using GDC API to discover available programs")
-            self.programs = get_GDC_programs()
+            self.programs = api.get_programs()
             logging.info(str(len(self.programs)) + " program(s) found: " + ",".join(self.programs))
 
         #Get projects/cohorts from config, or dynamically
@@ -142,23 +143,21 @@ class gdc_mirror(GDCtool):
             logging.info("No projects specified, using GDC API to discover available projects")
             self.projects = []
             for prgm in self.programs:
-                new_projects = gdc.get_projects(prgm)
+                new_projects = api.get_projects(prgm)
 
                 logging.info(str(len(new_projects)) + " project(s) found for " + prgm + ": " + ",".join(new_projects))
                 self.projects.extend(new_projects)
         logging.info("Mirroring " + str(len(self.projects)) + " total projects")
 
-
-
         for project in self.projects:
-            prgm = get_program(project)
+            prgm = api.get_program(project)
             logging.info("Mirroring started for {0} ({1})".format(project, prgm))
             if self.options.data_categories is not None:
                 data_categories = self.options.data_categories
                 logging.info("Data categories: " + ",".join(data_categories))
             else:
                 logging.info("No data_categories specified, using GDC API to discover available categories")
-                data_categories = gdc.get_data_categories(project)
+                data_categories = api.get_data_categories(project)
                 logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
             
 
@@ -175,7 +174,7 @@ class gdc_mirror(GDCtool):
                     logging.info("Creating metadata folder: " + meta_dir)
                     os.makedirs(meta_dir)
 
-                file_metadata = gdc.get_files(project, cat)
+                file_metadata = api.get_files(project, cat)
                 
                 # Save metadata in json format for dicing reference, in <data_category>/meta/
                 metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
@@ -215,7 +214,7 @@ class gdc_mirror(GDCtool):
                             while retry_count > 0:
                                 try:
                                     #Download file
-                                    gdc.get_file(uuid, savepath)
+                                    api.get_file(uuid, savepath)
                                     break
                                 except subprocess.CalledProcessError as e:
                                     logging.warning("Curl call failed: " + str(e))
@@ -231,7 +230,6 @@ class gdc_mirror(GDCtool):
         logging.info("Mirror completed successfully.")
 
 
-
     def execute(self):
         super(gdc_mirror, self).execute()
         opts = self.options
@@ -239,29 +237,6 @@ class gdc_mirror(GDCtool):
         self.set_timestamp()
         self.init_logging()
         self.mirror()
-
-## API Calls
-# TODO: Consolidate api calls into gdc-api.py or equivalent
-
-def get_GDC_programs():
-    ##TODO: No direct API, hard-coded for now...
-    return ["TCGA", "TARGET"]
-
-def get_program(project):
-    endpoint = 'https://gdc-api.nci.nih.gov/projects'
-    filt = gdc._eq_filter("project_id", project)
-    params = { 
-                'fields' : 'program.name',
-                'filters' : json.dumps(filt)
-             }
-
-    r = requests.get(endpoint, params=params)
-    hits = r.json()['data']['hits']
-
-    if len(hits) != 1:
-        raise ValueError("Uh oh, there was more than one project for this name!")
-    return hits[0]['program']['name']
-
 
 
 if __name__ == "__main__":
