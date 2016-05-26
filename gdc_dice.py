@@ -25,6 +25,7 @@ from lib.convert import seg as gdac_seg
 from lib.convert import clinical as gdac_clin
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
 from lib.util.common import timetuple2stamp
+from lib import meta
 
 from GDCtool import GDCtool
 
@@ -79,9 +80,9 @@ class gdc_dicer(GDCtool):
                 raw_project_root = os.path.join(mirror_prog_root, project)
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
-                timestamp = get_mirror_timestamp(raw_project_root, self.options.datestamp)
+                timestamp = meta.get_timestamp(raw_project_root, self.options.datestamp) #get_mirror_timestamp(raw_project_root, self.options.datestamp)
                 logging.info("Timestamp: " + timestamp)
-                metadata = get_metadata(raw_project_root, self.options.datestamp)
+                metadata = iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
 
                 for files in metadata:
                     if len(files) > 0:
@@ -127,28 +128,6 @@ def build_translation_dict(translation_file):
     if dupes: print("WARNING: duplicate annotation definitions detected")
     return d
 
-def _load_json_metadata(json_file):
-    with open(json_file, 'r') as metadata:
-        return json.load(metadata)
-        
-def get_metadata(raw_project_root, datestamp=timetuple2stamp().split('__')[0],
-                 loader=_load_json_metadata):
-    '''Load file metadata object(s) for given project. Default is current
-    date.'''
-    raw_project_root = raw_project_root.rstrip(os.path.sep)
-    project = os.path.basename(raw_project_root)
-    
-    for dirpath, dirnames, filenames in os.walk(raw_project_root, topdown=True):
-        # Only recurse down to meta subdirectories
-        if os.path.basename(os.path.dirname(dirpath)) == project:
-            for n, subdir in enumerate(dirnames):
-                if subdir != 'meta': del dirnames[n]
-        # Take the most recent version of the given datestamp
-        if os.path.basename(dirpath) == 'meta':
-            meta_files = sorted(filename for filename in filenames if \
-                                datestamp in filename)
-            if len(meta_files) > 0:
-                yield loader(os.path.join(dirpath, meta_files[-1]))
 
 def dice_one(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=True):
     """Dice a single file from the GDC.
@@ -223,34 +202,6 @@ def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
 
     metafile.close()
-
-def get_mirror_timestamp(proj_root, datestamp):
-    """Get the timestamp of the last mirror run on the given date.
-
-    Does this by iterating over the meta folders and grabs the latest value.
-
-    TODO: Move the meta iterator to a util file
-    """
-    raw_project_root = proj_root.rstrip(os.path.sep)
-    project = os.path.basename(raw_project_root)
-
-    latest_tstamp = None
-
-    for dirpath, dirnames, filenames in os.walk(raw_project_root, topdown=True):
-        # Only recurse down to meta subdirectories
-        if os.path.basename(os.path.dirname(dirpath)) == project:
-            for n, subdir in enumerate(dirnames):
-                if subdir != 'meta': del dirnames[n]
-        # Take the most recent version of the given datestamp
-        if os.path.basename(dirpath) == 'meta':
-            meta_files = sorted(filename for filename in filenames if \
-                                datestamp in filename)
-            if len(meta_files) > 0 :
-                # meta filenames = "metadata.<timestamp>.json"
-                timestamp = meta_files[-1].split(".")[1]
-                if latest_tstamp is None or timestamp > latest_tstamp:
-                    latest_tstamp = timestamp
-    return latest_tstamp
 
 ## Converter mappings
 def converter(converter_name):

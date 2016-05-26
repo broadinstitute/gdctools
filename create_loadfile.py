@@ -21,7 +21,6 @@ import gdc
 import logging
 import os
 import csv
-from gdac_lib.utilities.CommonFunctions import timetuple2stamp
 
 class create_loadfile(GDCtool):
 
@@ -41,7 +40,6 @@ class create_loadfile(GDCtool):
                          'If omitted, the latest version will be used')
 
     def create_loadfiles(self):
-        timestamp = timetuple2stamp()
 
         #Iterate over programs/projects in diced root
         diced_root = os.path.abspath(self.options.dice_directory)
@@ -59,6 +57,7 @@ class create_loadfile(GDCtool):
             for project in projects:
                 logging.info("Generating loadfile data for " + project)
                 proj_path = os.path.join(prog_root, project)
+                timestamp = meta.get_timestamp(proj_path, self.options.datestamp)
                 # Keep track of the created annotations
                 annots = set()
                 for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
