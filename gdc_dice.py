@@ -21,14 +21,13 @@ import os
 import sys
 from pkg_resources import resource_filename #@UnresolvedImport
 
-from gdac_lib.converters import seg as gdac_seg
-from gdac_lib.converters import clinical as gdac_clin
-from gdac_lib.Constants import GDAC_BIN_DIR
-from gdac_lib.utilities.CommonFunctions import timetuple2stamp
-from gdac_lib.utilities.ioUtilities import safeMakeDirs
+from lib.convert import seg as gdac_seg
+from lib.convert import clinical as gdac_clin
+from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
+from lib.util.common import timetuple2stamp
 
 from GDCtool import GDCtool
-#import translator
+
 
 class gdc_dicer(GDCtool):
 
