@@ -16,8 +16,6 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 from __future__ import print_function
 
 from GDCtool import GDCtool
-import translator
-import gdc
 import logging
 import os
 import csv
@@ -25,7 +23,7 @@ import csv
 class create_loadfile(GDCtool):
 
     def __init__(self):
-        super(create_loadfile, self).__init__(version="0.1.0")
+        super(create_loadfile, self).__init__(version="0.2.0")
         cli = self.cli
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
