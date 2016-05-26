@@ -363,9 +363,28 @@ def project_id(file_dict):
         raise
     return file_dict['cases'][0]['project']['project_id']
         
+
+def get_entity_type(file_dict):
+    '''Parse the dicer metadata for this file.
+
+    Returns the Entity ID and entity type.'''
+    if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
+        proj_id = project_id(file_dict)
+        #TODO: Make this more generic
+        if proj_id == 'TCGA-LAML':
+            entity_type = "Primary Blood Derived Cancer - Peripheral Blood" 
+        elif proj_id == 'TCGA-SKCM':
+            entity_type = 'Metastatic'
+        else:
+                entity_type = 'Primary Tumor'
+    else:
+        entity_type = sample_type(file_dict)
+
+    return entity_type
+
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
-    
+
 
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
