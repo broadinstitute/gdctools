@@ -82,7 +82,7 @@ class gdc_dicer(GDCtool):
                 logging.info("Dicing " + project + " to " + diced_project_root)
                 timestamp = meta.get_timestamp(raw_project_root, self.options.datestamp) #get_mirror_timestamp(raw_project_root, self.options.datestamp)
                 logging.info("Timestamp: " + timestamp)
-                metadata = iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
+                metadata = meta.iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
 
                 for files in metadata:
                     if len(files) > 0:
