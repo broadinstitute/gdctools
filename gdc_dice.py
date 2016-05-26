@@ -253,6 +253,23 @@ def get_mirror_timestamp(proj_root, datestamp):
                     latest_tstamp = timestamp
     return latest_tstamp
 
+def converter(converter_name):
+    """Returns the converter function by name using a dictionary lookup."""
+    CONVERTERS = {
+        'clinical' : clinical,
+        'copy' : copy,
+        'magetab_data_matrix': magetab_data_matrix,
+        'maf': maf,
+        'seg_broad': seg_broad,
+        'seg_harvard': seg_harvard,
+        'seg_harvardlowpass': seg_harvardlowpass,
+        'seg_mskcc2' : seg_mskcc2,
+        'tsv2idtsv' : tsv2idtsv,
+        'tsv2magetab': tsv2magetab 
+    }
+
+    return CONVERTERS[converter_name]
+
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
             if os.path.isdir(os.path.join(path, d))]
