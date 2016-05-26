@@ -1,8 +1,8 @@
 import os
 import csv
 import tempfile
-from gdac_lib.converters import converterUtils
-from gdac_lib.utilities import ioUtilities
+from lib.convert import util as converterUtils
+from lib.util import io as ioUtilities
 
 def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
             annotationInfo, gdac_bin_dir, test_short=False, debug_max_count=25):

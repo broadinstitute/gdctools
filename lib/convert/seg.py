@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import csv
-from gdac_lib.converters import converterUtils
-from gdac_lib.utilities import ioUtilities
+from lib.convert import util as converterUtils
+from lib.util import io as ioUtilities
 
 def process(infile, extension, hyb_id, tcga_id, outdir, dialect):
     outfile = converterUtils.constructPath(outdir, tcga_id, extension)

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import csv
-from gdac_lib.converters import converterUtils
-from gdac_lib.utilities import ioUtilities
+from lib.convert import util as converterUtils
+from lib.util import io as ioUtilities
 
 def process(infile, extension, hyb2tcga, outdir):
     if len(hyb2tcga) != 1:

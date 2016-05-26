@@ -4,7 +4,8 @@ import os
 import csv
 import subprocess
 import tempfile
-from gdac_lib.utilities import ioUtilities
+
+from lib.util import io as ioUtilities
 
 def writeCsvFile(filename, data):
     """
