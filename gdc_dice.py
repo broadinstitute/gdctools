@@ -81,7 +81,7 @@ class gdc_dicer(GDCtool):
                 raw_project_root = os.path.join(mirror_prog_root, project)
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
-                timestamp = get_mirror_timestamp(raw_project_root)
+                timestamp = get_mirror_timestamp(raw_project_root, self.options.datestamp)
                 logging.info("Timestamp: " + timestamp)
                 metadata = translator.get_metadata(raw_project_root, self.options.datestamp)
 
