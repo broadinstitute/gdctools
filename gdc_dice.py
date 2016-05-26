@@ -253,6 +253,7 @@ def get_mirror_timestamp(proj_root, datestamp):
                     latest_tstamp = timestamp
     return latest_tstamp
 
+## Converter mappings
 def converter(converter_name):
     """Returns the converter function by name using a dictionary lookup."""
     CONVERTERS = {
@@ -269,6 +270,46 @@ def converter(converter_name):
     }
 
     return CONVERTERS[converter_name]
+
+#Converters
+def copy(file_dict, mirror_path, dice_path):
+    print("Dicing with 'copy'")
+    pass
+
+def clinical(file_dict, mirror_path, dice_path):
+#     print("Dicing with 'clinical'")
+    infile = mirror_path
+    extension = 'clin'
+    tcga_id = patient_id(file_dict)
+    return {tcga_id: gdac_clin.process(infile, extension, {tcga_id: tcga_id},
+                                       dice_path, GDAC_BIN_DIR)}
+
+def maf(file_dict, mirror_path, dice_path):
+    pass
+
+def magetab_data_matrix(file_dict, mirror_path, dice_path):
+    pass
+
+def seg_broad(file_dict, mirror_path, dice_path):
+    infile = mirror_path
+    extension = 'seg'
+    hyb_id = file_dict['file_name'].split('.',1)[0]
+    tcga_id = aliquot_id(file_dict)
+    return {patient_id(file_dict):
+            gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path,
+                             'seg_broad')}
+
+def seg_harvard(file_dict, mirror_path, dice_path):
+    pass
+def seg_harvardlowpass(file_dict, mirror_path, dice_path):
+    pass
+def seg_mskcc2(file_dict, mirror_path, dice_path):
+    pass
+def tsv2idtsv(file_dict, mirror_path, dice_path):
+    pass
+def tsv2magetab(file_dict, mirror_path, dice_path):
+    pass
+
 
 def immediate_subdirs(path):
     return [d for d in os.listdir(path) 
