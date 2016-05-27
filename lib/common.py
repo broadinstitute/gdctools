@@ -5,7 +5,55 @@ import os
 import fnmatch
 import csv
 import errno
+import logging
+import sys
+from lib.constants import LOGGING_FMT
+
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
+
+# Initialize logging to stdout and to logfile
+# see http://stackoverflow.com/a/13733863
+def init_logging(logfile=None, link_latest=True):
+    '''Initialize logging to stdout and to a logfile'''
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    log_formatter = logging.Formatter(LOGGING_FMT)
+
+    # Write logging data to file
+    if logfile is not None:
+        file_handler = logging.FileHandler(logfile)
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(log_formatter)
+        root_logger.addHandler(file_handler)
+
+        # Symlink a '*.latest.log' to logfile
+        if link_latest:
+            lf_base = os.path.basename(logfile)
+            #Logfiles should be of the format *.<timestamp>.log
+            timestamp = lf_base.split('.')[-2]
+            latest_log = logfile.replace(timestamp, "latest")
+            silent_rm(latest_log)
+            os.symlink(logfile, latest_log)
+
+
+    # Write logging data to console
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(log_formatter)
+    root_logger.addHandler(console_handler)
+
+
+
+
+def silent_rm(filename):
+    try:
+        os.remove(filename)
+    except OSError as e:
+        #ENOENT means file doesn't exist, ignore 
+        if e.errno != errno.ENOENT:
+            raise
+
 
 def timestamp2tuple(timestamp):
     '''Takes a timestamp of the format YYYY_MM_DD__HH_MM_SS and converts it to

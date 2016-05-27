@@ -25,6 +25,8 @@ import subprocess
 
 from GDCtool import GDCtool
 import lib.api as api
+from lib.constants import LOGGING_FMT
+from lib.common import timetuple2stamp, init_logging
 
 
 class gdc_mirror(GDCtool):
@@ -55,36 +57,27 @@ class gdc_mirror(GDCtool):
 
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
-        self.timestamp = time.strftime('%Y_%m_%d__%H_%M_%S')
+        self.timestamp = timetuple2stamp()
         return self.timestamp 
 
 
-    def init_logging(self):
-        logfile_name = ".".join(["gdcMirror", self.timestamp, "log"])
-        if not os.path.isdir(self.log_dir):
-            os.makedirs(self.log_dir)
-        logfile_path = os.path.join(self.log_dir, logfile_name)
-        logging.basicConfig(filename=logfile_path, 
-                            format='%(asctime)s::%(levelname)s  %(message)s',
-                            datefmt='%Y-%m-%d %I:%M:%S %p', 
-                            level=logging.INFO)
-        
-        #Create a symlink indicating this is the latest log
-        latest_path = os.path.join(self.log_dir, "gdcMirror.latest.log")
-        try:
-            os.unlink(latest_path)
-        except OSError:
-            #Symlink didn't exist, no problem
-            pass
-        os.symlink(os.path.abspath(logfile_path), latest_path)
+    def init_logs(self):
+        if self.log_dir is not None:
+            logfile_name = ".".join(["gdcMirror", self.timestamp, "log"])
+            if not os.path.isdir(self.log_dir):
+                os.makedirs(self.log_dir)
+            logfile_path = os.path.join(self.log_dir, logfile_name)
+        else:
+            logfile_path = None # Logfile is disabled
+        init_logging(logfile_path, True)
 
 
     def parseConfig(self, config_file):
         """Read options from config, and optionally override them with args"""
         #Initialize defaults 
         cwd = os.getcwd()
-        self.log_dir = os.path.join(cwd, 'gdc_mirror_log')
         self.root_dir = os.path.join(cwd, "gdc_mirror_root")
+        self.log_dir = None
         self.programs = self.projects = None
 
         if config_file is not None:
@@ -235,7 +228,7 @@ class gdc_mirror(GDCtool):
         opts = self.options
         self.parseConfig(opts.config)
         self.set_timestamp()
-        self.init_logging()
+        self.init_logs()
         self.mirror()
 
 
