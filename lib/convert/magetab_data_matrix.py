@@ -2,7 +2,7 @@ import os
 import csv
 import tempfile
 from lib.convert import util as converterUtils
-from lib.util import io as ioUtilities
+from lib.common import safeMakeDirs, getTabFileHeader
 
 def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
             annotationInfo, gdac_bin_dir, test_short=False, debug_max_count=25):
@@ -21,7 +21,7 @@ def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
     if is_single_sample_file:
         datafile = infile
         
-        header_line = ioUtilities.getTabFileHeader(datafile)
+        header_line = getTabFileHeader(datafile)
         
         if header_line[-1] in hyb2tcga.keys():
             new_header = [hyb2tcga.get(hdr, hdr) for hdr in header_line]
@@ -36,7 +36,7 @@ def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
                                                                        new_header)
             csvfile_with_NAs = converterUtils.map_blank_to_na(csvfile_with_hdr)
             
-            ioUtilities.safeMakeDirs(outdir)
+            safeMakeDirs(outdir)
             converterUtils.writeCsvFile(filepath, csvfile_with_NAs)
             
             rawfile.close()
@@ -61,7 +61,7 @@ def process(infile, extension, hyb2tcga, outdir, ref_dir, tmp_dir_root,
                 os.remove(datafile)
                 continue
 
-            header_line = ioUtilities.getTabFileHeader(datafile)
+            header_line = getTabFileHeader(datafile)
 
             if header_line[-1] not in hyb2tcga.keys():
                 #unidentified samples, not in sdrf... silently skip them.

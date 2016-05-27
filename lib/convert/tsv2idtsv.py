@@ -2,7 +2,7 @@
 
 import csv
 from lib.convert import util as converterUtils
-from lib.util import io as ioUtilities
+from lib.common import safeMakeDirs
 
 def process(infile, extension, hyb2tcga, outdir):
     if len(hyb2tcga) != 1:
@@ -17,7 +17,7 @@ def process(infile, extension, hyb2tcga, outdir):
     csvfile_with_ids = tsv2idtsv(csvfile, tcga_id)
     csvfile_with_NAs = converterUtils.map_blank_to_na(csvfile_with_ids)
     
-    ioUtilities.safeMakeDirs(outdir)
+    safeMakeDirs(outdir)
     converterUtils.writeCsvFile(filepath, csvfile_with_NAs)
     
     rawfile.close()

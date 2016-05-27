@@ -4,7 +4,7 @@ import tempfile
 import subprocess
 
 from lib.convert import util as converterUtils
-from lib.util import io as ioUtilities
+from lib.common import safeMakeDirs
 
 def process(infile, extension, hyb2tcga, outdir, gdac_bin_dir):
     if len(hyb2tcga) != 1:
@@ -15,7 +15,7 @@ def process(infile, extension, hyb2tcga, outdir, gdac_bin_dir):
     
     tmp_out_filepath = filepath + '.tmp'
     
-    ioUtilities.safeMakeDirs(outdir)
+    safeMakeDirs(outdir)
     _clinical_xml_2_tsv(infile, tmp_out_filepath, gdac_bin_dir)
     
     rawfile = open(tmp_out_filepath, 'rb')
@@ -37,7 +37,7 @@ def _clinical_xml_2_tsv(xml_in, tsv_out, gdac_bin_dir):
     cmd_str = 'Rscript -e \'source("%s"); set.seed(0); options(error=expression(q(status=1))); ClinicalParser("%s","%s"); q()\'' % (rsrc_path, xml_in, tsv_out)
     
     out_file_dir = os.path.dirname(tsv_out)
-    ioUtilities.safeMakeDirs(out_file_dir)
+    safeMakeDirs(out_file_dir)
     
     try:
         subprocess.check_call(cmd_str, shell=True, stdout=stdout_file, stderr=stderr_file)

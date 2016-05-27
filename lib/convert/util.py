@@ -5,7 +5,7 @@ import csv
 import subprocess
 import tempfile
 
-from lib.util import io as ioUtilities
+from lib.common import safeMakeDirs, getTabFileHeader
 
 def writeCsvFile(filename, data):
     """
@@ -40,7 +40,7 @@ def split_columns(infile, num_info_columns, num_sample_columns,
         ])
     
     out_file_dir = os.path.dirname(out_file_prelim_path)
-    ioUtilities.safeMakeDirs(out_file_dir)
+    safeMakeDirs(out_file_dir)
 
     p = subprocess.Popen(cmd_str, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     stdout, stderr = p.communicate()
@@ -68,7 +68,7 @@ def change_header(infile,outfile,gdac_bin_dir,header1,header2=None):
         cmd_str = " ".join([cmd_str, "'" + header2 + "'"])
         
     out_file_dir = os.path.dirname(outfile)
-    ioUtilities.safeMakeDirs(out_file_dir)
+    safeMakeDirs(out_file_dir)
 
     p = subprocess.Popen(cmd_str, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     stdout, stderr = p.communicate()
@@ -182,5 +182,5 @@ def map_blank_to_na(csvfile):
         yield map(blank_to_na, row)
 
 def detect_single_sample_file(infile, num_header_columns, num_data_columns):
-    header_line = ioUtilities.getTabFileHeader(infile)
+    header_line = getTabFileHeader(infile)
     return len(header_line) == (num_header_columns + num_data_columns)

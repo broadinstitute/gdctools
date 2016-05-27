@@ -2,7 +2,7 @@
 
 import csv
 from lib.convert import util as converterUtils
-from lib.util import io as ioUtilities
+from lib.common import safeMakeDirs
 
 def process(infile, extension, hyb_id, tcga_id, outdir, dialect):
     outfile = converterUtils.constructPath(outdir, tcga_id, extension)
@@ -13,7 +13,7 @@ def process(infile, extension, hyb_id, tcga_id, outdir, dialect):
     converter = find_converter(dialect)
     seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
     
-    ioUtilities.safeMakeDirs(outdir)
+    safeMakeDirs(outdir)
     converterUtils.writeCsvFile(outfile, seg_file_data)
     
     rawfile.close()

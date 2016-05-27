@@ -24,7 +24,7 @@ from pkg_resources import resource_filename #@UnresolvedImport
 from lib.convert import seg as gdac_seg
 from lib.convert import clinical as gdac_clin
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
-from lib.util.common import timetuple2stamp
+from lib.common import timetuple2stamp, immediate_subdirs
 from lib import meta
 
 from GDCtool import GDCtool
@@ -335,10 +335,6 @@ def get_entity_type(file_dict):
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
 
-
-def immediate_subdirs(path):
-    return [d for d in os.listdir(path) 
-            if os.path.isdir(os.path.join(path, d))]
 
 if __name__ == "__main__":
     gdc_dicer().execute()

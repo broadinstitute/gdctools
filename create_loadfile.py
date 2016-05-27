@@ -19,6 +19,7 @@ from GDCtool import GDCtool
 import logging
 import os
 import csv
+from lib.common import immediate_subdirs
 
 class create_loadfile(GDCtool):
 
@@ -118,10 +119,6 @@ def get_diced_metadata(project_root, datestamp=None):
                 with open(os.path.join(dirpath, meta_files[-1])) as f:
                     #Return the annotation name, and a dictReader for the metadata
                     yield  annot, csv.DictReader(f, delimiter='\t')
-
-def immediate_subdirs(path):
-    return [d for d in os.listdir(path) 
-            if os.path.isdir(os.path.join(path, d))]
 
 #TODO: This should come from a config file
 def sample_type_lookup(etype):
