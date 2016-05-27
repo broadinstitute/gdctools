@@ -88,7 +88,7 @@ class gdc_dicer(GDCtool):
             logfile_name = ".".join(["gdcDicer", self.mirror_timestamp, "log"])
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
-            logfile_path = os.path.join(log_dir, logfile_name)
+            logfile_path = os.path.abspath(os.path.join(log_dir, logfile_name))
         else:
             logfile_path = None # Logfile is disabled
 
@@ -131,10 +131,6 @@ class gdc_dicer(GDCtool):
                 for files in metadata:
                     if len(files) > 0:
                         for f in files:
-                            fname = os.path.join(raw_root, file_dict['data_category'],
-                               file_dict['data_type'],
-                               file_dict['file_name']).replace(' ', '_')
-                            logging.info("Dicing file: " + fname)
                             dice_one(f, trans_dict, raw_project_root, diced_project_root,
                                      timestamp, dry_run=self.options.dry_run)
 
