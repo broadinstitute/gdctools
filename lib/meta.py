@@ -55,3 +55,14 @@ def iter_mirror_file_dicts(root_dir, datestamp=None):
     for metafname in metadata_filenames(root_dir, datestamp):
         with open(metafname) as jsonf:
             yield json.load(jsonf)
+
+def md5_matches(file_dict, md5file):
+    """Returns true if the one-line md5file matches the md5 data in file_dict"""
+    filename = file_dict['file_name']
+    md5_basename = os.path.basename(md5file)
+    if filename + ".md5" != md5_basename: return False
+
+    with open(md5file) as md5f:
+        line = md5f.next()
+        md5value, fname = line.strip().split('  ')
+        return fname == filename and md5value == file_dict['md5sum']

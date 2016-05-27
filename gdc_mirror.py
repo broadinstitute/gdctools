@@ -27,6 +27,7 @@ from GDCtool import GDCtool
 import lib.api as api
 from lib.constants import LOGGING_FMT
 from lib.common import timetuple2stamp, init_logging
+from lib.meta import md5_matches
 
 
 class gdc_mirror(GDCtool):
@@ -187,6 +188,7 @@ class gdc_mirror(GDCtool):
                         name = file_d['file_name']
                         dtype = file_d['data_type']
 
+
                         type_folder = os.path.join(data_dir, dtype.replace(' ', '_'))
                         
                         #if the data type folder doesn't yet exist, create it
@@ -199,7 +201,7 @@ class gdc_mirror(GDCtool):
 
                         #If we don't already have a checksum for this file, download both the file and md5
                         #TODO: verify MD5 matches file metadata, to confirm file identity
-                        if os.path.isfile(md5path):
+                        if os.path.isfile(md5path) and md5_matches(file_d, md5path):
                             logging.info("File " + name + " already exists, skipping download")
                         else:
                             logging.info("Downloading file {0}, {1} of {2}".format(name, file_num, total_files))

@@ -133,6 +133,7 @@ class gdc_dicer(GDCtool):
                         for f in files:
                             dice_one(f, trans_dict, raw_project_root, diced_project_root,
                                      timestamp, dry_run=self.options.dry_run)
+        logging.info("Dicing completed successfuly")
 
 
     def execute(self):
