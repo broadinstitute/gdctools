@@ -39,7 +39,6 @@ class create_loadfile(GDCtool):
                          'If omitted, the latest version will be used')
 
     def create_loadfiles(self):
-
         #Iterate over programs/projects in diced root
         diced_root = os.path.abspath(self.options.dice_directory)
         load_root = os.path.abspath(self.options.loadfile_directory)
@@ -54,9 +53,9 @@ class create_loadfile(GDCtool):
             master_load_dict = dict()
 
             for project in projects:
-                logging.info("Generating loadfile data for " + project)
                 proj_path = os.path.join(prog_root, project)
                 timestamp = meta.get_timestamp(proj_path, self.options.datestamp)
+                logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
                 # Keep track of the created annotations
                 annots = set()
                 for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
@@ -73,21 +72,20 @@ class create_loadfile(GDCtool):
                         filepath = os.path.join(os.path.dirname(diced_root), row['filename'])
                         master_load_dict[samp_id][annot] = filepath
 
-                proj_load_root = os.path.join(load_root, program, project)
-                if not os.path.isdir(proj_load_root):
-                    os.makedirs(proj_load_root)
+                
+                load_date_root = os.path.join(load_root, program, self.options.datestamp)
+                if not os.path.isdir(load_date_root):
+                    os.makedirs(load_date_root)
 
-                samples_loadfile_name = ".".join([project,timestamp, "Sample", "loadfile", "txt"])
+                samples_loadfile_name = ".".join([project, timestamp, "Sample", "loadfile", "txt"])
                 sset_loadfile_name = ".".join([project, timestamp, "Sample_Set", "loadfile", "txt"])
-                samples_loadfile = os.path.join(proj_load_root, samples_loadfile_name)
-                sset_loadfile = os.path.join(proj_load_root, sset_loadfile_name)
+                samples_loadfile = os.path.join(load_date_root, samples_loadfile_name)
+                sset_loadfile = os.path.join(load_date_root, sset_loadfile_name)
 
                 logging.info("Writing samples loadfile to " + samples_loadfile)
                 write_master_load_dict(master_load_dict, annots, samples_loadfile)
                 logging.info("Writing sample set loadfile to " + sset_loadfile)
                 write_sample_set_loadfile(samples_loadfile, sset_loadfile)
-
-
 
 
     def execute(self):
