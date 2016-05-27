@@ -39,6 +39,7 @@ class gdc_dicer(GDCtool):
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
 
+        cli.add_argument('-l', '--log-directory', help='Folder to store logfiles')
         cli.add_argument('-m', '--mirror-directory',
                          help='Root folder of mirrored GDC data')
         cli.add_argument('-d', '--dice-directory', 
@@ -54,12 +55,56 @@ class gdc_dicer(GDCtool):
                          'If omitted, the latest version will be used')
 
 
+    def init_logs(self):
+        '''Discover timestamp and initialize logs'''
+
+        # Loop through projects to discover the timestamps from the mirror
+        latest_tstamps = set()
+        if self.options.programs is not None:
+            programs = self.options.programs
+        else:
+            programs = immediate_subdirs(mirror_root)
+        for program in programs:
+            mirror_prog_root = os.path.join(mirror_root, program)
+            if self.options.projects is not None:
+                projects = self.options.projects
+            else:
+                projects = immediate_subdirs(mirror_prog_root)
+
+            for project in projects:
+                latest_tstamps.add(meta.get_timestamp(os.path.join(mirror_prog_root, project), self.options.datestamp))
+
+        # If the Mirror completed successfuly, the timestamps should all be the same
+        if len(latest_tstamps) != 1:
+            raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
+        
+        #Set the mirror_timestamp for this run
+        self.mirror_timestamp = latest_tstamps.pop()
+
+
+        if self.options.log_directory is not None:
+            log_dir = self.options.log_directory
+            logfile_name = ".".join(["gdcDicer", self.mirror_timestamp, "log"])
+            if not os.path.isdir(log_dir):
+                os.makedirs(log_dir)
+            logfile_path = os.path.join(log_dir, logfile_name)
+        else:
+            logfile_path = None # Logfile is disabled
+
+        init_logging(logfile_path, True)
+
+
+
     def dice(self):
+        logging.info("GDC Dicer Version: %s", self.cli.version)
+        logging.info("Command: " + " ".join(sys.argv))
         mirror_root = self.options.mirror_directory
         diced_root = self.options.dice_directory
         trans_dict = build_translation_dict(resource_filename(__name__,
                                                        "Harmonized_GDC_translation_table_FH.tsv"))
-
+        #Set in init_logs()
+        timestamp = self.mirror_timestamp
+        logging.info("Mirror timestamp: " + timestamp)
         #Iterable of programs, either user specified or discovered from folder names in the diced root
         if self.options.programs is not None:
             programs = self.options.programs
@@ -80,13 +125,15 @@ class gdc_dicer(GDCtool):
                 raw_project_root = os.path.join(mirror_prog_root, project)
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
-                timestamp = meta.get_timestamp(raw_project_root, self.options.datestamp) #get_mirror_timestamp(raw_project_root, self.options.datestamp)
-                logging.info("Timestamp: " + timestamp)
                 metadata = meta.iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
 
                 for files in metadata:
                     if len(files) > 0:
                         for f in files:
+                            fname = os.path.join(raw_root, file_dict['data_category'],
+                               file_dict['data_type'],
+                               file_dict['file_name']).replace(' ', '_')
+                            logging.info("Dicing file: " + fname)
                             dice_one(f, trans_dict, raw_project_root, diced_project_root,
                                      timestamp, dry_run=self.options.dry_run)
 
@@ -94,8 +141,7 @@ class gdc_dicer(GDCtool):
     def execute(self):
         super(gdc_dicer, self).execute()
         opts = self.options
-        logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
-                            level=logging.INFO)
+        self.init_logs()
         self.dice()
 
 def build_translation_dict(translation_file):
