@@ -57,6 +57,7 @@ class gdc_dicer(GDCtool):
 
     def init_logs(self):
         '''Discover timestamp and initialize logs'''
+        mirror_root = self.options.mirror_directory
 
         # Loop through projects to discover the timestamps from the mirror
         latest_tstamps = set()
