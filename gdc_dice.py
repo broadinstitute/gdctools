@@ -24,7 +24,7 @@ from pkg_resources import resource_filename #@UnresolvedImport
 from lib.convert import seg as gdac_seg
 from lib.convert import clinical as gdac_clin
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
-from lib.common import timetuple2stamp, immediate_subdirs
+from lib.common import timetuple2stamp, immediate_subdirs, init_logging
 from lib import meta
 
 from GDCtool import GDCtool
