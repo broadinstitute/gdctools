@@ -100,7 +100,7 @@ def get_file(uuid, file_name):
     return subprocess.check_call(curl_args)
 
 
-def _query_paginator(endpoint, params, size, from_idx=1):
+def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
     '''Returns list of hits, iterating over server paging'''
     p = params.copy()
     p['from'] = from_idx
@@ -113,7 +113,7 @@ def _query_paginator(endpoint, params, size, from_idx=1):
     data = r.json()['data']
     all_hits = data['hits']
     pagination = data['pagination']
-    total = pagination['total']
+    total = pagination['total'] if to_idx == -1 else to_idx
     
     for from_idx in range(size+1, total, size):
         #Iterate over pages to get the remaning hits
@@ -124,7 +124,7 @@ def _query_paginator(endpoint, params, size, from_idx=1):
 
         all_hits.extend(hits)
 
-    return all_hits
+    return all_hits[:total] # Chop off hits on the last page if they exceed to_idx
 
 ## Helpers to generate valid query filters
 def _eq_filter(field, value):
