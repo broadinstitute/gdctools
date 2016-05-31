@@ -20,6 +20,7 @@ import logging
 import os
 import csv
 from lib.common import immediate_subdirs
+from lib.meta import get_timestamp
 
 class create_loadfile(GDCtool):
 
@@ -54,7 +55,7 @@ class create_loadfile(GDCtool):
 
             for project in projects:
                 proj_path = os.path.join(prog_root, project)
-                timestamp = meta.get_timestamp(proj_path, self.options.datestamp)
+                timestamp = get_timestamp(proj_path, self.options.datestamp)
                 logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
                 # Keep track of the created annotations
                 annots = set()
@@ -126,7 +127,11 @@ def sample_type_lookup(etype):
         "Primary Tumor" : ("TP", "01"),
         "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
         "Metastatic" : ("TM", "06"),
-        "Solid Tissue Normal": ("NT", "11")
+        "Solid Tissue Normal": ("NT", "11"),
+        "Recurrent Tumor" : ("TR", "02"),
+        "Buccal Cell Normal": ("NBC", "12"),
+        "Bone Marrow Normal" : ("NBM", "14"),
+        "Additional - New Primary" : ("TAP", "05")
 
     }
 
