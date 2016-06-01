@@ -5,12 +5,23 @@ import sys
 
 def path_iter(elem, prefix=""):
     '''Iterates over nodes in an Element Tree with full node paths'''
+
+    #Some fields may be repeated by specifying a sequence number 
+    # Use this dictionary to keep track of the last sequence number assigned to each unique path
+    path_sequences = dict()
+
     for child in elem:
         tag = child.tag.split("}")[1] # Split off the xmlns info  --> ${xmlns:abc}tag_name
         child_path = (prefix + "." + tag) if prefix != "" else tag
 
         #If this is a member of a sequence, append the sequence number. "1" is omitted
-        seq = child.attrib.get("sequence", "1")
+        if child_path in path_sequences:
+            seq = str(path_sequences[child_path] + 1)
+            path_sequences[child_path] += 1
+        else:
+            seq = child.attrib.get("sequence", "1")
+            path_sequences[child_path] = int(seq)
+
         if seq != "1": child_path += "-" + seq
 
         if len(list(child)) == 0:
