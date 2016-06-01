@@ -22,7 +22,7 @@ import sys
 from pkg_resources import resource_filename #@UnresolvedImport
 
 from lib.convert import seg as gdac_seg
-from lib.convert import clinical as gdac_clin
+from lib.convert import py_clinical as gdac_clin
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
 from lib.common import timetuple2stamp, immediate_subdirs, init_logging
 from lib import meta
@@ -78,7 +78,7 @@ class gdc_dicer(GDCtool):
         # If the Mirror completed successfuly, the timestamps should all be the same
         if len(latest_tstamps) != 1:
             raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
-        
+        print(latest_tstamps)
         #Set the mirror_timestamp for this run
         self.mirror_timestamp = latest_tstamps.pop()
 
@@ -192,9 +192,9 @@ def dice_one(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_r
             dice_path = os.path.join(diced_root, annot)
             logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
             dice_meta_path = os.path.join(dice_path, "meta")
-        if not dry_run:
-            diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
-            write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
+            if not dry_run:
+                diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+                write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
