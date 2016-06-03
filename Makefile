@@ -25,6 +25,7 @@ PIP=$(DEST)/bin/pip
 TOOLS= \
 	gdc_mirror \
 	gdc_dice \
+	create_legacy \
 	create_loadfile
 
 CORE_SRC_FILES=\
