@@ -59,6 +59,10 @@ def gprint(*args, **kwargs):
         print('gdctools: ', file=sys.stdout, end='')
     print(*args, file=sys.stdout, **kwargs)
 
+def gabort(errCode=1, *args, **kwargs):
+    gprint(*args, **kwargs)
+    sys.exit(errCode)
+
 # --- Below is code borrowed from fbget (FireBrowse client bindings) ---
 # --- Needs more scrubbing/pruning -------------------------------------
 
