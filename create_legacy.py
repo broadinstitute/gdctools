@@ -38,13 +38,9 @@ class create_legacy(GDCtool):
         desc += 'As such, this tool is not intended for general use.\n'
         cli.description = desc
 
-        # Optional arguments (if any)
         cli.add_argument('-d', '--dir', default='.', help=\
             'directory housing a set of GDC-based loadfiles, from which '\
             'the legacy files will be generated [default: .]')
-
-        # Positional (required) arguments (if any)
-        #opts.add_argument('-w', '--what', default='all',
 
     def execute(self):
         super(create_legacy, self).execute()
@@ -68,21 +64,23 @@ class create_legacy(GDCtool):
         outfile = stem + "all_samples.%s.Sample.loadfile.txt"  % DATESTAMP
         outfile = open(outfile, 'w')
         outfile.write(LEGACY_ANNOTATION_NAMES)
+
+        print("Generating aggregate samples file: "+outfile)
         for fname in SAMPLE_FILES:
-            print("Processing sample file: "+fname)
             infile = open(fname, 'r')
             infile.next() # skip header
             for line in infile:
                 outfile.write(line)
 
-        # Generate the file containing all sample set definitions
+        # Generate the file containing all sample set definitions; and while
+        # we're iterating, save each unique sample set name (from column 1)
         outfile = stem + "sample_sets.%s.Sample_Set.loadfile.txt" % DATESTAMP
         outfile = open(outfile, 'w')
         outfile.write("sample_set_id\tsample_id")
-
-        # And while we're iterating, pull out each sample set name (column 1)
         COL1 = re.compile(r'([^\t]+)\t')
         sset_names = {}
+
+        print("Generating aggregate sample sets file: "+outfile)
         for fname in SAMPLE_SET_FILES:
             infile = open(fname, 'r')
             infile.next() # skip header
@@ -97,6 +95,8 @@ class create_legacy(GDCtool):
         outfile = "normalized.samplestamp.%s.Sample_Set.loadfile.txt" % DATESTAMP
         outfile = open(outfile, 'w')
         outfile.write(LEGACY_SAMPLE_STAMP_NAMES)
+
+        print("Generating fake samplestamp annotation file: "+outfile)
         for sset_name in sset_names:
             fields = sset_name.split("-")
             disease_name = fields[0]
