@@ -57,15 +57,15 @@ class create_legacy(GDCtool):
         stem = "normalized.tcga_"
         DATESTAMP = SAMPLE_FILES[0].split('.')[1]
 
-        print("There are %d sample files" % len(SAMPLE_FILES))
+        print("There are %d projects (i.e. cohorts)" % len(SAMPLE_FILES))
         print("DATESTAMP IS " + DATESTAMP)
 
         # Generate the file containing all samples
         outfile = stem + "all_samples.%s.Sample.loadfile.txt"  % DATESTAMP
+        print("Generating aggregate samples: "+outfile)
         outfile = open(outfile, 'w')
         outfile.write(LEGACY_ANNOTATION_NAMES)
 
-        print("Generating aggregate samples file: "+outfile)
         for fname in SAMPLE_FILES:
             infile = open(fname, 'r')
             infile.next() # skip header
@@ -75,12 +75,12 @@ class create_legacy(GDCtool):
         # Generate the file containing all sample set definitions; and while
         # we're iterating, save each unique sample set name (from column 1)
         outfile = stem + "sample_sets.%s.Sample_Set.loadfile.txt" % DATESTAMP
+        print("Generating aggregate sample sets: "+outfile)
         outfile = open(outfile, 'w')
-        outfile.write("sample_set_id\tsample_id")
+        outfile.write("sample_set_id\tsample_id\n")
         COL1 = re.compile(r'([^\t]+)\t')
         sset_names = {}
 
-        print("Generating aggregate sample sets file: "+outfile)
         for fname in SAMPLE_SET_FILES:
             infile = open(fname, 'r')
             infile.next() # skip header
@@ -93,10 +93,10 @@ class create_legacy(GDCtool):
         # Generate fake samplestamp annotations
         sset_names = sorted(sset_names.keys())
         outfile = "normalized.samplestamp.%s.Sample_Set.loadfile.txt" % DATESTAMP
+        print("Generating fake samplestamp annotations: "+outfile)
         outfile = open(outfile, 'w')
         outfile.write(LEGACY_SAMPLE_STAMP_NAMES)
 
-        print("Generating fake samplestamp annotation file: "+outfile)
         for sset_name in sset_names:
             fields = sset_name.split("-")
             disease_name = fields[0]
