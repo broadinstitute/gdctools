@@ -49,11 +49,11 @@ class create_loadfile(GDCtool):
             prog_root = os.path.join(diced_root, program)
             projects = immediate_subdirs(prog_root)
 
-            #This dictionary contains all the data for the loadfile. 
-            #Keys are the entity_ids, values are dictionaries for the columns in a loadfile
-            master_load_dict = dict()
-
             for project in projects:
+                #This dictionary contains all the data for the loadfile. 
+                #Keys are the entity_ids, values are dictionaries for the columns in a loadfile
+                master_load_dict = dict()
+                
                 proj_path = os.path.join(prog_root, project)
                 timestamp = get_timestamp(proj_path, self.options.datestamp)
                 logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
