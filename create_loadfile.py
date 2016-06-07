@@ -21,6 +21,7 @@ import os
 import csv
 from lib.common import immediate_subdirs
 from lib.meta import get_timestamp
+from lib.report import draw_heatmaps
 
 class create_loadfile(GDCtool):
 
@@ -87,6 +88,9 @@ class create_loadfile(GDCtool):
                 write_master_load_dict(master_load_dict, annots, samples_loadfile)
                 logging.info("Writing sample set loadfile to " + sset_loadfile)
                 write_sample_set_loadfile(samples_loadfile, sset_loadfile)
+                
+                logging.info("Writing sample heatmaps")
+                write_heatmaps(master_load_dict, annots, project, load_date_root)
 
 
     def execute(self):
@@ -188,6 +192,24 @@ def write_master_load_dict(ld, annots, outfile):
             line = "\t".join([this_dict[h] for h in _FIRST_HEADERS]) + "\t"
             line += "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
             out.write(line)
+
+def write_heatmaps(ld, annots, project, timestamp, outdir):
+    rownames, matrix = _build_heatmap_matrix(ld, annots)
+    draw_heatmaps(rownames, matrix, project, timestamp, outdir)
+
+def _build_heatmap_matrix(ld, annots):
+    '''Build a 2d matrix and rownames from annotations and load dict'''
+    rownames = list(annots)
+    matrix = [[] for row in rownames]
+    for r in len(rownames):
+        for sid in sorted(ld.keys()):
+            # append 1 if data is present, else 0
+            matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
+    
+    return rownames, matrix
+    
+    
+
 
 def write_sample_set_loadfile(sample_loadfile, outfile):
     sset_data = "sample_set_id\tsample_id\n"
