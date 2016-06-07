@@ -73,6 +73,7 @@ class gdc_mirror(GDCtool):
         init_logging(logfile_path, True)
 
 
+    #TODO: Move config parsing to GDCtool
     def parseConfig(self, config_file):
         """Read options from config, and optionally override them with args"""
         #Initialize defaults 
@@ -85,13 +86,12 @@ class gdc_mirror(GDCtool):
             cfg = ConfigParser.ConfigParser()
             cfg.read(config_file)
 
-            # self.config = cfg
 
             #Optional configuration parameters
-            if cfg.has_option('general', 'LOG_DIRECTORY'):
-                self.log_dir = cfg.get('general', 'LOG_DIRECTORY')
-            if cfg.has_option('general', 'MIRROR_ROOT_DIR'):
-                self.root_dir = cfg.get('general', 'MIRROR_ROOT_DIR')
+            if cfg.has_option('mirror', 'LOG_DIR'):
+                self.log_dir = cfg.get('mirror', 'LOG_DIR')
+            if cfg.has_option('mirror', 'ROOT_DIR'):
+                self.root_dir = cfg.get('mirror', 'ROOT_DIR')
 
             #Get list of programs, projects
             if cfg.has_option('mirror', 'PROGRAMS'):
@@ -115,17 +115,6 @@ class gdc_mirror(GDCtool):
 
         if not os.path.isdir(self.root_dir):
             os.makedirs(self.root_dir)
-
-        ## Mirror Pseudocode:
-        # Get Program(s) + Project(s) from CFG, or if not present, issue API call to get all available
-        # For each project prj:
-        #    cats = get_data_categories()
-        #    For each cat in cats:
-        #       file_metadata = get_files(prj, cat)
-        #       Save file_metadata json to <root>/<prgm>/<prj>/<cat>/meta/metadata.<timestamp>.json
-        #       For each file:
-        #           Download each file to <root>/<prgm>/<prj>/<cat>/<type>/<file>
-        #           Save MD5 checksum to  <root>/<prgm>/<prj>/<cat>/<type>/<file>.md5
 
         if self.projects is None:
             if self.programs is None:
@@ -155,88 +144,86 @@ class gdc_mirror(GDCtool):
             
             with lock_context(prgm_root, "mirror"):
                 for project in projects:
-                    logging.info("Mirroring started for {0} ({1})".format(project, prgm))
-                    if self.options.data_categories is not None:
-                        data_categories = self.options.data_categories
-                        logging.info("Data categories: " + ",".join(data_categories))
-                    else:
-                        logging.info("No data_categories specified, using GDC API to discover available categories")
-                        data_categories = api.get_data_categories(project)
-                        logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
+                    self.mirror_project(prgm_root, prgm, project)
 
-                    proj_root = os.path.join(prgm_root, project)
-                    logging.info("Mirroring data to " + proj_root)
-                    for cat in data_categories:
-                        #Replace spaces with underscores for better folder names
-                        data_dir = os.path.join(proj_root, cat.replace(' ', '_'))
-                        logging.info("Mirroring: {0} - {1} data".format(project, cat))
-                        meta_dir = os.path.join(data_dir, "meta")
-                        if not os.path.isdir(data_dir):
-                            logging.info("Creating folder: " + data_dir)
-                            os.makedirs(data_dir)
-                        if not os.path.isdir(meta_dir):
-                            logging.info("Creating metadata folder: " + meta_dir)
-                            os.makedirs(meta_dir)
-
-                        file_metadata = api.get_files(project, cat)
-                        
-                        # Save metadata in json format for dicing reference, in <data_category>/meta/
-                        metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
-                        metadata_path = os.path.join(meta_dir, metadata_filename)
-                        with open(metadata_path, 'w') as f:
-                            f.write(json.dumps(file_metadata, indent=2))
-
-                        if self.options.meta_only:
-                            logging.info("Metadata only option enabled, skipping file mirroring")
-                        else:
-                            total_files = len(file_metadata)
-                            logging.info("Mirroring " + str(total_files) + " " + cat + " files")
-                            file_num = 0
-                            for file_d in file_metadata:
-                                file_num += 1
-                                uuid = file_d['file_id']
-                                name = file_d['file_name']
-                                dtype = file_d['data_type']
-
-
-                                type_folder = os.path.join(data_dir, dtype.replace(' ', '_'))
-                                
-                                #if the data type folder doesn't yet exist, create it
-                                if not os.path.isdir(type_folder):
-                                    os.makedirs(type_folder)
-
-                                # Download actual files to <data_category>/<data_type>/<file>[.md5]
-                                savepath = os.path.join(type_folder, name)
-                                md5path = savepath + ".md5"
-
-                                #If we don't already have a checksum for this file, download both the file and md5
-                                #TODO: verify MD5 matches file metadata, to confirm file identity
-                                if os.path.isfile(md5path) and md5_matches(file_d, md5path):
-                                    logging.info("File " + name + " already exists, skipping download")
-                                else:
-                                    logging.info("Downloading file {0}, {1} of {2}".format(name, file_num, total_files))
-                                    retry_count = 3
-                                    while retry_count > 0:
-                                        try:
-                                            #Download file
-                                            api.get_file(uuid, savepath)
-                                            break
-                                        except subprocess.CalledProcessError as e:
-                                            logging.warning("Curl call failed: " + str(e))
-                                            retry_count = retry_count - 1
-
-                                    if retry_count == 0:
-                                        logging.error("Error downloading file " + savepath + ", too many retries (3)")
-                                    else:
-                                        #Save md5 checksum on success
-                                        md5sum = file_d['md5sum']
-                                        with open(md5path, 'w') as mf:
-                                            mf.write(md5sum + "  " + name )
         logging.info("Mirror completed successfully.")
-    def mirror_project(self):
+    
+    @staticmethod
+    def __download_if_missing(file_d, folder, n, total, retry_count=3):
+
+        uuid = file_d['file_id']
+        name = file_d['file_name']
+        savepath = os.path.join(folder, name)
+        md5path = savepath + ".md5"
+        logging.info("Mirroring file {0} : {1} of {2}".format(savepath,n,total))
+
+        #Only download if not present
+        if not (os.path.isfile(md5path) and md5_matches(file_d, md5path)):
+            while retry_count > 0:
+                try:
+                    #Download file
+                    api.get_file(uuid, savepath)
+                    break
+                except subprocess.CalledProcessError as e:
+                    logging.warning("Curl call failed: " + str(e))
+                    retry_count = retry_count - 1
+
+            if retry_count == 0:
+                logging.error("Error downloading file {0}, too many retries ({1})".format(savepath, retry_count))
+            else:
+                #Save md5 checksum on success
+                md5sum = file_d['md5sum']
+                with open(md5path, 'w') as mf:
+                    mf.write(md5sum + "  " + name )
+
+
+    def mirror_project(self, prog_root, program, project):
         '''Mirror one project folder'''
-        pass
+        logging.info("Mirroring started for {0} ({1})".format(project, program))
+        if self.options.data_categories is not None:
+            data_categories = self.options.data_categories
+        else:
+            logging.info("No data_categories specified, using GDC API to discover available categories")
+            data_categories = api.get_data_categories(project)
+        logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
+
+        proj_root = os.path.join(prog_root, project)
+        logging.info("Mirroring data to " + proj_root)
+
+        for cat in data_categories:
+            self.mirror_category(proj_root, project, cat)
+
+
+    def mirror_category(self, proj_root, project, cat):
+        '''Mirror one data category in a project'''
+        data_dir = os.path.join(proj_root, cat.replace(' ', '_'))
+        logging.info("Mirroring: {0} - {1} data".format(project, cat))
+
+        #Create data and meta folders
+        meta_dir = os.path.join(data_dir, "meta")
+        if not os.path.isdir(data_dir):
+            logging.info("Creating folder: " + data_dir)
+            os.makedirs(data_dir)
+        if not os.path.isdir(meta_dir):
+            logging.info("Creating metadata folder: " + meta_dir)
+            os.makedirs(meta_dir)
+
+        file_metadata = api.get_files(project, cat)
         
+        # Save metadata in json format for dicing reference, in <data_category>/meta/
+        metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
+        metadata_path = os.path.join(meta_dir, metadata_filename)
+        with open(metadata_path, 'w') as f:
+            f.write(json.dumps(file_metadata, indent=2))
+
+        if self.options.meta_only:
+            logging.info("Metadata only option enabled, skipping file mirroring")
+        else:
+            total_files = len(file_metadata)
+            logging.info("Mirroring " + str(total_files) + " " + cat + " files")
+            
+            for n, file_d in enumerate(file_metadata):
+                self.__download_if_missing(file_d, data_dir, n, total_files)
 
     def execute(self):
         super(gdc_mirror, self).execute()
