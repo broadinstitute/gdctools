@@ -90,7 +90,7 @@ class create_loadfile(GDCtool):
                 write_sample_set_loadfile(samples_loadfile, sset_loadfile)
                 
                 logging.info("Writing sample heatmaps")
-                write_heatmaps(master_load_dict, annots, project, load_date_root)
+                write_heatmaps(master_load_dict, annots, project, timestamp, load_date_root)
 
 
     def execute(self):
@@ -201,7 +201,7 @@ def _build_heatmap_matrix(ld, annots):
     '''Build a 2d matrix and rownames from annotations and load dict'''
     rownames = list(annots)
     matrix = [[] for row in rownames]
-    for r in len(rownames):
+    for r in range(len(rownames)):
         for sid in sorted(ld.keys()):
             # append 1 if data is present, else 0
             matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
