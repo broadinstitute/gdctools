@@ -90,12 +90,14 @@ class create_legacy(GDCtool):
                 if sset_name:
                     sset_names[sset_name.group(1)] = 1
 
-        # Generate fake samplestamp annotations
+        # Generate fake samplestamp annotations (and empty stub files)
         sset_names = sorted(sset_names.keys())
         outfile = "normalized.samplestamp.%s.Sample_Set.loadfile.txt" % DATESTAMP
         print("Generating fake samplestamp annotations: "+outfile)
+
         outfile = open(outfile, 'w')
         outfile.write(LEGACY_SAMPLE_STAMP_NAMES)
+        cwd = os.getcwd()
 
         for sset_name in sset_names:
             fields = sset_name.split("-")
@@ -103,7 +105,11 @@ class create_legacy(GDCtool):
             sample_type = fields[-1]        # Extract -TP, -NB etc
             if sample_type == sset_name:    # If not there, null out
                 sample_type = ""
-            outfile.write("%s\t/dev/null\ttrue\t%s\t%s\n" % (sset_name, disease_name, sample_type))
+            # Keep SVN Python/gdac/create_sdrf/createMergeDataFilesSDRF.py happy
+            stamp = "normalized.%s.%s.samplestamp.txt" % (disease_name, DATESTAMP)
+            stamp = os.path.join(cwd, stamp)
+            _ = open(stamp, 'w')
+            outfile.write("%s\t%s\ttrue\t%s\t%s\n" % (sset_name,stamp,disease_name,sample_type))
 
 if __name__ == "__main__":
     tool = create_legacy()
