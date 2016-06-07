@@ -7,6 +7,8 @@ import csv
 import errno
 import logging
 import sys
+import contextlib
+from fasteners import InterProcessLock
 from lib.constants import LOGGING_FMT
 
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
@@ -161,3 +163,20 @@ class RawDescriptionArgumentDefaultsHelpFormatter(RawDescriptionHelpFormatter):
                 if action.option_strings or action.nargs in defaulting_nargs:
                     help += ' (default: %(default)s)'
         return help
+        
+@contextlib.contextmanager
+def lock_context(path, name="common"):
+    '''Process level lock context, to prevent access to path by other processes
+    
+    Sample Usage: 
+    with lock_context(dice_root, "dicer"):
+        dice()
+        
+    '''
+    lockname = os.path.join(path, ".".join(["", name, "lock"]))
+    lock = InterProcessLock(lockname)
+    logging.info("Attempting to acquire lock: " + lockname)
+    with lock:
+        logging.info("Lock acquired.")
+        yield
+        logging.info("Releasing lock: " + lockname)
