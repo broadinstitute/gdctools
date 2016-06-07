@@ -36,7 +36,7 @@ def init_logging(logfile=None, link_latest=True):
             timestamp = lf_base.split('.')[-2]
             latest_log = logfile.replace(timestamp, "latest")
             silent_rm(latest_log)
-            os.symlink(logfile, latest_log)
+            os.symlink(os.path.abspath(logfile), latest_log)
 
 
     # Write logging data to console
