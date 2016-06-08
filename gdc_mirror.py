@@ -27,13 +27,13 @@ from GDCtool import GDCtool
 import lib.api as api
 from lib.constants import LOGGING_FMT
 from lib.common import timetuple2stamp, init_logging, lock_context
-from lib.meta import md5_matches
+from lib.meta import md5_matches, file_basename
 
 
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.5.0")
+        super(gdc_mirror, self).__init__(version="0.6.0")
         cli = self.cli
 
         desc =  'Create local mirror of the data from arbitrary programs '\
@@ -41,98 +41,76 @@ class gdc_mirror(GDCtool):
         cli.description = desc
 
         #Optional overrides of config file
-        cli.add_argument('-l', '--log-directory', help='Folder to store logfiles')
-        cli.add_argument('-r', '--root-directory', help='Root of mirrored data folder tree')
-        cli.add_argument('-g', '--programs', nargs='+', metavar='program',
-                         help='Mirror data from these cancer programs')
-        cli.add_argument('-p', '--projects', nargs='+', metavar='project',
-                         help='Mirror data from these projects')
-        cli.add_argument('-c', '--data-categories', nargs='+', metavar='category',
+        cli.add_argument('-l', '--log-dir', help='Folder to store logfiles')
+        cli.add_argument('-r', '--root-dir', help='Root of mirrored data folder tree')
+
+        cli.add_argument('-d', '--data-categories', nargs='+', metavar='category',
                          help='Mirror only these data categories. Many data categories have spaces, use quotes to delimit')
 
         cli.add_argument('-m', '--meta-only', action='store_true',
                          help="Only retrieve metadata, skip file download")
 
-        cli.add_argument('config', nargs='?', default=None,
-                         help='GDC mirror configuration file')
-
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
         self.timestamp = timetuple2stamp()
-        return self.timestamp 
+        return self.timestamp
 
 
     def init_logs(self):
-        if self.log_dir is not None:
+        log_dir = self.mirror_log_dir
+        if log_dir is not None:
             logfile_name = ".".join(["gdcMirror", self.timestamp, "log"])
-            if not os.path.isdir(self.log_dir):
-                os.makedirs(self.log_dir)
-            logfile_path = os.path.join(self.log_dir, logfile_name)
+            if not os.path.isdir(log_dir):
+                os.makedirs(log_dir)
+            logfile_path = os.path.join(log_dir, logfile_name)
         else:
             logfile_path = None # Logfile is disabled
         init_logging(logfile_path, True)
 
-
-    #TODO: Move config parsing to GDCtool
-    def parseConfig(self, config_file):
+    def parse_args(self):
         """Read options from config, and optionally override them with args"""
-        #Initialize defaults 
-        cwd = os.getcwd()
-        self.root_dir = os.path.join(cwd, "gdc_mirror_root")
-        self.log_dir = None
-        self.programs = self.projects = None
-
-        if config_file is not None:
-            cfg = ConfigParser.ConfigParser()
-            cfg.read(config_file)
-
-
-            #Optional configuration parameters
-            if cfg.has_option('mirror', 'LOG_DIR'):
-                self.log_dir = cfg.get('mirror', 'LOG_DIR')
-            if cfg.has_option('mirror', 'ROOT_DIR'):
-                self.root_dir = cfg.get('mirror', 'ROOT_DIR')
-
-            #Get list of programs, projects
-            if cfg.has_option('mirror', 'PROGRAMS'):
-                self.programs = cfg.get('mirror', 'PROGRAMS').strip().split(",")
-            if cfg.has_option('mirror', 'PROJECTS'):
-                self.projects = cfg.get('mirror', 'PROJECTS').strip().split(",")
-
-        # Config options can be overridden by cli args
+        # Config options that can be overridden by cli args
         opts = self.options
-        if opts.log_directory is not None: self.log_dir = opts.log_directory
-        if opts.root_directory is not None: self.root_dir = opts.root_directory
-        if opts.programs is not None: self.programs = opts.programs
-        if opts.projects is not None: self.projects = opts.projects
+        if opts.log_dir is not None: self.mirror_log_dir = opts.log_dir
+        if opts.root_dir is not None: self.mirror_root_dir = opts.root_dir
+        if opts.projects is not None: self.mirror_projects = opts.projects
+        if opts.programs is not None: self.mirror_programs = opts.programs
 
 
     def mirror(self):
         logging.info("GDC Mirror Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
         if self.options.config is not None:
-            logging.info("Configuration File: %s", os.path.abspath(self.options.config))
+            logging.info("Configuration File: %s",
+                         os.path.abspath(self.options.config))
 
-        if not os.path.isdir(self.root_dir):
-            os.makedirs(self.root_dir)
+        root_dir = self.mirror_root_dir
+        projects = self.mirror_projects
+        programs = self.mirror_programs
 
-        if self.projects is None:
-            if self.programs is None:
-                logging.info("No programs or projects specified, using GDC API to discover available programs")
-                self.programs = api.get_programs()
-                logging.info(str(len(self.programs)) + " program(s) found: " + ",".join(self.programs))
+        if not os.path.isdir(root_dir):
+            os.makedirs(root_dir)
 
-            logging.info("No projects specified, using GDC API to discover available projects")
-            self.projects = []
-            for prgm in self.programs:
+        if projects is None:
+            if programs is None:
+                logging.info("No programs or projects specified, using GDC API"\
+                             "to discover available programs")
+                programs = api.get_programs()
+                logging.info(str(len(programs)) +
+                                 " program(s) found: " + ",".join(programs))
+
+            logging.info("No projects specified, using GDC API to discover"\
+                         "available projects")
+            projects = []
+            for prgm in programs:
                 new_projects = api.get_projects(prgm)
-
-                logging.info(str(len(new_projects)) + " project(s) found for " + prgm + ": " + ",".join(new_projects))
-                self.projects.extend(new_projects)
+                logging.info(str(len(new_projects)) + " project(s) found for "
+                             + prgm + ": " + ",".join(new_projects))
+                projects.extend(new_projects)
 
         # Make list of which projects belong to each program
         program_projects = dict()
-        for project in self.projects:
+        for project in projects:
             prgm = api.get_program(project)
             if prgm not in program_projects: program_projects[prgm] = []
             program_projects[prgm].append(project)
@@ -140,22 +118,22 @@ class gdc_mirror(GDCtool):
         # Now loop over each program, acquiring lock
         for prgm in program_projects:
             projects = program_projects[prgm]
-            prgm_root = os.path.abspath(os.path.join(self.root_dir, prgm))
-            
+            prgm_root = os.path.abspath(os.path.join(root_dir, prgm))
+
             with lock_context(prgm_root, "mirror"):
                 for project in projects:
                     self.mirror_project(prgm_root, prgm, project)
 
         logging.info("Mirror completed successfully.")
-    
+
     @staticmethod
     def __download_if_missing(file_d, folder, n, total, retry_count=3):
 
         uuid = file_d['file_id']
-        name = file_d['file_name']
+        name = file_basename(file_d)
         savepath = os.path.join(folder, name)
         md5path = savepath + ".md5"
-        logging.info("Mirroring file {0} : {1} of {2}".format(savepath,n,total))
+        logging.info("Mirroring {0} | {1} of {2}".format(name,n,total))
 
         #Only download if not present
         if not (os.path.isfile(md5path) and md5_matches(file_d, md5path)):
@@ -209,7 +187,7 @@ class gdc_mirror(GDCtool):
             os.makedirs(meta_dir)
 
         file_metadata = api.get_files(project, cat)
-        
+
         # Save metadata in json format for dicing reference, in <data_category>/meta/
         metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
         metadata_path = os.path.join(meta_dir, metadata_filename)
@@ -221,14 +199,13 @@ class gdc_mirror(GDCtool):
         else:
             total_files = len(file_metadata)
             logging.info("Mirroring " + str(total_files) + " " + cat + " files")
-            
+
             for n, file_d in enumerate(file_metadata):
                 self.__download_if_missing(file_d, data_dir, n, total_files)
 
     def execute(self):
         super(gdc_mirror, self).execute()
-        opts = self.options
-        self.parseConfig(opts.config)
+        self.parse_args()
         self.set_timestamp()
         self.init_logs()
         self.mirror()

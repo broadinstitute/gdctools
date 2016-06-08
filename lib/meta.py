@@ -5,7 +5,7 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-meta.py: Functions for working with gdc metadata 
+meta.py: Functions for working with gdc metadata
 
 @author: Timothy DeFreitas
 @date:  2016_05_26
@@ -58,7 +58,7 @@ def iter_mirror_file_dicts(root_dir, datestamp=None):
 
 def md5_matches(file_dict, md5file):
     """Returns true if the one-line md5file matches the md5 data in file_dict"""
-    filename = file_dict['file_name']
+    filename = file_basename(file_dict)
     md5_basename = os.path.basename(md5file)
     if filename + ".md5" != md5_basename: return False
 
@@ -66,3 +66,9 @@ def md5_matches(file_dict, md5file):
         line = md5f.next()
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
+
+def file_basename(file_dict):
+    # Since GDC doesn't have unique filenames, prepend uuid
+    name = file_dict['file_name']
+    uuid = file_dict['file_id']
+    return uuid + "." + name
