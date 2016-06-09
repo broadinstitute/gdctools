@@ -44,6 +44,7 @@ class GDCcli(argparse.ArgumentParser):
         self.add_argument('--verbose', dest='verbose', action='count',
                 help='set verbosity level [%(default)s]')
         self.add_argument('--version',action='version',version=version)
+        self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
         self.add_argument('-c','--config',
                           help='GDCTool configuration file')
         self.add_argument('-g', '--programs', nargs='+', metavar='program',

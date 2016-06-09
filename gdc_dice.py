@@ -39,7 +39,6 @@ class gdc_dicer(GDCtool):
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
 
-        cli.add_argument('-l', '--log-dir', help='Folder to store logfiles')
         cli.add_argument('-m', '--mirror-dir',
                          help='Root folder of mirrored GDC data')
         cli.add_argument('-d', '--dice-dir',

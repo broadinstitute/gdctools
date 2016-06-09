@@ -41,7 +41,6 @@ class gdc_mirror(GDCtool):
         cli.description = desc
 
         #Optional overrides of config file
-        cli.add_argument('-l', '--log-dir', help='Folder to store logfiles')
         cli.add_argument('-r', '--root-dir', help='Root of mirrored data folder tree')
 
         cli.add_argument('-d', '--data-categories', nargs='+', metavar='category',
