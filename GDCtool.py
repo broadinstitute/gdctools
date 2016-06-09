@@ -75,13 +75,17 @@ class GDCtool(object):
         if config_file is not None:
             cfg = ConfigParser.ConfigParser()
             cfg.read(config_file)
-        CONFIGURABLES = [ 'mirror_root_dir', 'mirror_log_dir',
-                          'mirror_programs', 'mirror_projects',
-                          'dice_root_dir', 'dice_log_dir',
-                          'dice_programs', 'dice_projects']
 
-        for conf in CONFIGURABLES:
+        CONFIG_ITEMS = [ 'mirror_root_dir', 'mirror_log_dir',
+                          'dice_root_dir', 'dice_log_dir']
+        CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
+                         'dice_programs', 'dice_projects']
+
+        for conf in CONFIG_ITEMS:
             self.__configure(conf, cfg)
+
+        for conf in CONFIG_LISTS:
+            self.__configure(conf, cfg, True)
 
     def status(self):
         # Emit system info (as header comments suitable for TSV, etc) ...
