@@ -127,11 +127,15 @@ class gdc_mirror(GDCtool):
         logging.info("Mirror completed successfully.")
 
     @staticmethod
-    def __download_if_missing(file_d, folder, n, total, retry_count=3):
+    def __download_if_missing(file_d, cat_folder, n, total, retry_count=3):
 
         uuid = file_d['file_id']
         name = file_basename(file_d)
-        savepath = os.path.join(folder, name)
+        data_type = file_d['data_type'].replace(' ', '_')
+        type_path = os.path.join(cat_folder, data_type)
+        if not os.path.isdir(type_path):
+            os.makedirs(type_path)
+        savepath = os.path.join(cat_folder, data_type, name)
         md5path = savepath + ".md5"
         logging.info("Mirroring {0} | {1} of {2}".format(name,n,total))
 
