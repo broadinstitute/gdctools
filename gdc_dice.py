@@ -33,23 +33,19 @@ from GDCtool import GDCtool
 class gdc_dicer(GDCtool):
 
     def __init__(self):
-        super(gdc_dicer, self).__init__(version="0.2.0")
+        super(gdc_dicer, self).__init__(version="0.3.0")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
 
-        cli.add_argument('-l', '--log-directory', help='Folder to store logfiles')
-        cli.add_argument('-m', '--mirror-directory',
+        cli.add_argument('-l', '--log-dir', help='Folder to store logfiles')
+        cli.add_argument('-m', '--mirror-dir',
                          help='Root folder of mirrored GDC data')
-        cli.add_argument('-d', '--dice-directory', 
+        cli.add_argument('-d', '--dice-dir',
                          help='Root of diced data tree')
-        cli.add_argument('--dry-run', action='store_true', 
+        cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
-        cli.add_argument('-g', '--programs', nargs='+', metavar='program',
-                         help='Mirror data from these cancer programs')
-        cli.add_argument('-p', '--projects', nargs='+', metavar='project',
-                         help='Mirror data from these projects')
         cli.add_argument('datestamp',
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
@@ -57,18 +53,16 @@ class gdc_dicer(GDCtool):
 
     def init_logs(self):
         '''Discover timestamp and initialize logs'''
-        mirror_root = self.options.mirror_directory
+        mirror_root = self.mirror_root_dir
 
         # Loop through projects to discover the timestamps from the mirror
         latest_tstamps = set()
-        if self.options.programs is not None:
-            programs = self.options.programs
-        else:
-            programs = immediate_subdirs(mirror_root)
+        programs = immediate_subdirs(mirror_root) if self.dice_programs is None else self.dice_programs
+
         for program in programs:
             mirror_prog_root = os.path.join(mirror_root, program)
-            if self.options.projects is not None:
-                projects = self.options.projects
+            if self.dice_projects is not None:
+                projects = self.dice_projects
             else:
                 projects = immediate_subdirs(mirror_prog_root)
 
@@ -78,13 +72,12 @@ class gdc_dicer(GDCtool):
         # If the Mirror completed successfuly, the timestamps should all be the same
         if len(latest_tstamps) != 1:
             raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
-        print(latest_tstamps)
+
         #Set the mirror_timestamp for this run
         self.mirror_timestamp = latest_tstamps.pop()
 
-
-        if self.options.log_directory is not None:
-            log_dir = self.options.log_directory
+        if self.dice_log_dir is not None:
+            log_dir = self.dice_log_dir
             logfile_name = ".".join(["gdcDicer", self.mirror_timestamp, "log"])
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
@@ -94,21 +87,26 @@ class gdc_dicer(GDCtool):
 
         init_logging(logfile_path, True)
 
-
+    def parse_args(self):
+        opts = self.options
+        if opts.log_dir is not None: self.dice_log_dir = opts.log_dir
+        if opts.mirror_dir is not None: self.mirror_root_dir = opts.mirror_dir
+        if opts.dice_dir is not None: self.dice_root_dir = opts.dice_dir
+        self.datestamp = opts.datestamp
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        mirror_root = self.options.mirror_directory
-        diced_root = self.options.dice_directory
+        mirror_root = self.mirror_root_dir
+        diced_root = self.dice_root_dir
         trans_dict = build_translation_dict(resource_filename(__name__,
                                                        "Harmonized_GDC_translation_table_FH.tsv"))
         #Set in init_logs()
         timestamp = self.mirror_timestamp
         logging.info("Mirror timestamp: " + timestamp)
         #Iterable of programs, either user specified or discovered from folder names in the diced root
-        if self.options.programs is not None:
-            programs = self.options.programs
+        if self.dice_programs is not None:
+            programs = self.dice_programs
         else:
             programs = immediate_subdirs(mirror_root)
 
@@ -117,8 +115,8 @@ class gdc_dicer(GDCtool):
             mirror_prog_root = os.path.join(mirror_root, program)
 
 
-            if self.options.projects is not None:
-                projects = self.options.projects
+            if self.dice_projects is not None:
+                projects = self.dice_projects
             else:
                 projects = immediate_subdirs(mirror_prog_root)
 
@@ -139,13 +137,14 @@ class gdc_dicer(GDCtool):
     def execute(self):
         super(gdc_dicer, self).execute()
         opts = self.options
+        self.parse_args()
         self.init_logs()
         self.dice()
 
 def build_translation_dict(translation_file):
     """Builds a translation dictionary from a translation table.
 
-    First column of the translation_file is the Annotation name, 
+    First column of the translation_file is the Annotation name,
     remaining columns are signatures in the file metadata that indicate a file is of this annotation type.
     """
 
@@ -173,19 +172,16 @@ def build_translation_dict(translation_file):
     return d
 
 
-def dice_one(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=True):
+def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root, timestamp, dry_run=True):
     """Dice a single file from the GDC.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
     true, a debug message will be displayed instead of performing the actual
     dicing operation.
     """
+    mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
 
-    mirror_path = os.path.join(raw_root, file_dict['data_category'],
-                               file_dict['data_type'],
-                               file_dict['file_name']).replace(' ', '_')
-
-    if os.path.isfile(mirror_path):    
+    if os.path.isfile(mirror_path):
         ##Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
         if annot != 'UNRECOGNIZED':
@@ -208,7 +204,7 @@ def get_annotation_converter(file_dict, translation_dict):
         return "UNRECOGNIZED", None #TODO: handle this better
 
 def metadata_to_key(file_dict):
-    """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT""" 
+    """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT"""
 
     data_type = file_dict.get("data_type", '')
     data_category = file_dict.get("data_category", '')
@@ -238,7 +234,7 @@ def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         #File doesn't exist, create and add header
         metafile = open(meta_filename, 'w')
         metafile.write('filename\tentity_id\tentity_type\n')
-        
+
     entity_type = get_entity_type(file_dict)
 
     for entity_id in diced_files_dict:
@@ -260,7 +256,7 @@ def converter(converter_name):
         'seg_harvardlowpass': seg_harvardlowpass,
         'seg_mskcc2' : seg_mskcc2,
         'tsv2idtsv' : tsv2idtsv,
-        'tsv2magetab': tsv2magetab 
+        'tsv2magetab': tsv2magetab
     }
 
     return CONVERTERS[converter_name]
@@ -321,7 +317,7 @@ def aliquot_id(file_dict):
     except:
         print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
         raise
-    
+
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
 
 def patient_id(file_dict):
@@ -332,7 +328,7 @@ def patient_id(file_dict):
     except:
         print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
         raise
-    
+
     return file_dict['cases'][0]['submitter_id']
 
 def sample_type(file_dict):
@@ -344,7 +340,7 @@ def sample_type(file_dict):
     except:
         print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
         raise
-    
+
     return file_dict['cases'][0]['samples'][0]["sample_type"]
 
 def project_id(file_dict):
@@ -356,7 +352,7 @@ def project_id(file_dict):
         print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
         raise
     return file_dict['cases'][0]['project']['project_id']
-        
+
 
 def get_entity_type(file_dict):
     '''Parse the dicer metadata for this file.
@@ -366,7 +362,7 @@ def get_entity_type(file_dict):
         proj_id = project_id(file_dict)
         #TODO: Make this more generic
         if proj_id == 'TCGA-LAML':
-            entity_type = "Primary Blood Derived Cancer - Peripheral Blood" 
+            entity_type = "Primary Blood Derived Cancer - Peripheral Blood"
         elif proj_id == 'TCGA-SKCM':
             entity_type = 'Metastatic'
         else:
