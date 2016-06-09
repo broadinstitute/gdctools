@@ -72,3 +72,10 @@ def file_basename(file_dict):
     name = file_dict['file_name']
     uuid = file_dict['file_id']
     return uuid + "." + name
+
+def mirror_path(project_root, file_dict):
+    '''Return the file location relative to the project root'''
+    category = file_dict['data_category']
+    data_type = file_dict['data_type']
+    name = file_basename(file_dict)
+    return os.path.join(project_root, category, data_type, name).replace(' ', '_')

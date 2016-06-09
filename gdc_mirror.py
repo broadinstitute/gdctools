@@ -25,9 +25,9 @@ import subprocess
 
 from GDCtool import GDCtool
 import lib.api as api
+import lib.meta as meta
 from lib.constants import LOGGING_FMT
 from lib.common import timetuple2stamp, init_logging, lock_context
-from lib.meta import md5_matches, file_basename
 
 
 class gdc_mirror(GDCtool):
@@ -66,6 +66,7 @@ class gdc_mirror(GDCtool):
         else:
             logfile_path = None # Logfile is disabled
         init_logging(logfile_path, True)
+
 
     def parse_args(self):
         """Read options from config, and optionally override them with args"""
@@ -126,21 +127,22 @@ class gdc_mirror(GDCtool):
 
         logging.info("Mirror completed successfully.")
 
+
     @staticmethod
-    def __download_if_missing(file_d, cat_folder, n, total, retry_count=3):
+    def __download_if_missing(file_d, proj_root, n, total, retry_count=3):
 
         uuid = file_d['file_id']
-        name = file_basename(file_d)
-        data_type = file_d['data_type'].replace(' ', '_')
-        type_path = os.path.join(cat_folder, data_type)
-        if not os.path.isdir(type_path):
-            os.makedirs(type_path)
-        savepath = os.path.join(cat_folder, data_type, name)
+        savepath = meta.mirror_path(proj_root, file_d)
         md5path = savepath + ".md5"
-        logging.info("Mirroring {0} | {1} of {2}".format(name,n,total))
+        dirname, basename = os.path.split(savepath)
+        logging.info("Mirroring {0} | {1} of {2}".format(basename, n, total))
+
+        #Ensure <root>/<cat>/<type>/ exists
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
 
         #Only download if not present
-        if not (os.path.isfile(md5path) and md5_matches(file_d, md5path)):
+        if not (os.path.isfile(md5path) and meta.md5_matches(file_d, md5path)):
             while retry_count > 0:
                 try:
                     #Download file
@@ -156,7 +158,7 @@ class gdc_mirror(GDCtool):
                 #Save md5 checksum on success
                 md5sum = file_d['md5sum']
                 with open(md5path, 'w') as mf:
-                    mf.write(md5sum + "  " + name )
+                    mf.write(md5sum + "  " + basename )
 
 
     def mirror_project(self, prog_root, program, project):
@@ -205,7 +207,8 @@ class gdc_mirror(GDCtool):
             logging.info("Mirroring " + str(total_files) + " " + cat + " files")
 
             for n, file_d in enumerate(file_metadata):
-                self.__download_if_missing(file_d, data_dir, n, total_files)
+                self.__download_if_missing(file_d, proj_root, n, total_files)
+
 
     def execute(self):
         super(gdc_mirror, self).execute()
