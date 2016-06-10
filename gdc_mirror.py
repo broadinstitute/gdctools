@@ -152,7 +152,7 @@ class gdc_mirror(GDCtool):
         # Possible States:
         # 1. Fresh mirror, prev_path=None, md5=None --> Download file
         # 2. Existing Mirror, prev_md5 doesn't match --> Download new file
-        # 3. prev_md5 matches --> Symlink file to realpath(prev_path) 
+        # 3. prev_md5 matches --> Symlink file to realpath(prev_path)
 
         if prev_path is None or not meta.md5_matches(file_d, prev_path + ".md5"):
             logging.info("Downloading new file to " + savepath)
@@ -235,10 +235,8 @@ class gdc_mirror(GDCtool):
         metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
         metadata_path = os.path.join(tstamp_dir, metadata_filename)
 
-        # Open metadata in append mode, so that each category is added to the
-        # same metadata file
-        with open(metadata_path, 'a') as f:
-            f.write(json.dumps(file_metadata, indent=2))
+        # Merge existing metadata with this category 
+        meta.append_metadata(file_metadata, metadata_path)
 
         if self.options.meta_only:
             logging.info("Metadata only option enabled, skipping file mirroring")

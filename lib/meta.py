@@ -17,44 +17,43 @@ from __future__ import print_function
 import os
 import json
 
-def metadata_filenames(root_dir, datestamp=None):
-    '''Return an generator listing the latest metadata filenames.
+def append_metadata(file_dicts, metafile):
+    ''' Merge the list of filedicts with any filedicts in metafile,
+        Then overwrite the metafile with the combined contents'''
+    dicts = []
+    if os.path.isfile(metafile):
+        with open(metafile) as f:
+            dicts.extend(json.load(f))
 
-    Returns absolute paths. If no datestamp is provided yields the latest available.
-    root_dir: root of a project mirror or dicing
-    '''
-    root_dir = root_dir.rstrip(os.path.sep)
-    project = os.path.basename(root_dir)
+    # Add file_dicts and overwrite
+    dicts.extend(file_dicts)
+    with open(metafile, 'w') as out:
+        json.dump(dicts, out, indent=2)
 
 
-    for dirpath, dirnames, filenames in os.walk(root_dir, topdown=True):
-        # Only recurse down to meta subdirectories
-        if os.path.basename(os.path.dirname(dirpath)) == project:
-            for n, subdir in enumerate(dirnames):
-                if subdir != 'meta': del dirnames[n]
-        # Take the most recent version of the given datestamp
-        if os.path.basename(dirpath) == 'meta':
-            meta_files = sorted(filename for filename in filenames if \
-                                datestamp is None or datestamp in filename)
-            if len(meta_files) > 0 :
-                yield os.path.join(dirpath, meta_files[-1])
+def latest_metadata(stamp_dir):
+    metadata_files = [f for f in os.listdir(stamp_dir)
+                      if os.path.isfile(os.path.join(stamp_dir, f))
+                      and "metadata" in f]
+    # Get the chronologically latest one, in case there is more than one,
+    # Should just be a sanity check
+    latest = sorted(metadata_files)[-1]
+    latest = os.path.join(stamp_dir, latest)
+    with open(latest) as jsonf:
+        return json.load(jsonf)
 
-def get_timestamp(root_dir, datestamp=None):
-    '''Get the timestamp of the last mirror run on the given date. '''
+
+def get_timestamp(proj_dir, date_prefix=None):
+    '''Get the timestamp of the last project mirror run'''
     latest_tstamp = None
 
-    for metafname in metadata_filenames(root_dir, datestamp):
-        tstamp = os.path.basename(metafname).split('.')[1]
-        if latest_tstamp is None or tstamp > latest_tstamp:
-            latest_tstamp = tstamp
+    timestamps = [d for d in os.listdir(proj_dir)
+                      if os.path.isdir(os.path.join(proj_dir, d))]
+    if date_prefix is not None:
+        timestamps = filter(lambda d: d.startswith(date_prefix), timestamps)
 
-    return latest_tstamp
+    return sorted(timestamps)[-1]
 
-def iter_mirror_file_dicts(root_dir, datestamp=None):
-    '''Iterate over json metadata in a mirrored project'''
-    for metafname in metadata_filenames(root_dir, datestamp):
-        with open(metafname) as jsonf:
-            yield json.load(jsonf)
 
 def md5_matches(file_dict, md5file):
     """Returns true if the one-line md5file matches the md5 data in file_dict"""

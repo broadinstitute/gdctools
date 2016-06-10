@@ -109,27 +109,25 @@ class gdc_dicer(GDCtool):
         else:
             programs = immediate_subdirs(mirror_root)
 
+
         for program in programs:
             diced_prog_root = os.path.join(diced_root, program)
             mirror_prog_root = os.path.join(mirror_root, program)
-
 
             if self.dice_projects is not None:
                 projects = self.dice_projects
             else:
                 projects = immediate_subdirs(mirror_prog_root)
-
             for project in projects:
                 raw_project_root = os.path.join(mirror_prog_root, project)
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
-                metadata = meta.iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
+                stamp_root = os.path.join(raw_project_root, self.mirror_timestamp)
+                metadata = meta.latest_metadata(stamp_root)
 
-                for files in metadata:
-                    if len(files) > 0:
-                        for f in files:
-                            dice_one(f, trans_dict, raw_project_root, diced_project_root,
-                                     timestamp, dry_run=self.options.dry_run)
+                for file_dict in metadata:
+                    dice_one(file_dict, trans_dict, raw_project_root, diced_project_root,
+                             timestamp, dry_run=self.options.dry_run)
         logging.info("Dicing completed successfuly")
 
 
@@ -167,7 +165,8 @@ def build_translation_dict(translation_file):
                 d[key] = (annot, converter(converter_name))
             else:
                 dupes = True
-    if dupes: print("WARNING: duplicate annotation definitions detected")
+    if dupes:
+        logging.warning("duplicate annotation definitions detected")
     return d
 
 
@@ -178,7 +177,8 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root, timestam
     true, a debug message will be displayed instead of performing the actual
     dicing operation.
     """
-    mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
+    stamp_root = os.path.join(mirror_proj_root, timestamp)
+    mirror_path = meta.mirror_path(stamp_root, file_dict)
 
     if os.path.isfile(mirror_path):
         ##Get the right annotation and converter for this file
@@ -365,7 +365,7 @@ def get_entity_type(file_dict):
         elif proj_id == 'TCGA-SKCM':
             entity_type = 'Metastatic'
         else:
-                entity_type = 'Primary Tumor'
+            entity_type = 'Primary Tumor'
     else:
         entity_type = sample_type(file_dict)
 
