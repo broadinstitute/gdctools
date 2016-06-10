@@ -58,6 +58,8 @@ def iter_mirror_file_dicts(root_dir, datestamp=None):
 
 def md5_matches(file_dict, md5file):
     """Returns true if the one-line md5file matches the md5 data in file_dict"""
+    if not os.path.isfile(md5file):
+        return False
     filename = file_basename(file_dict)
     md5_basename = os.path.basename(md5file)
     if filename + ".md5" != md5_basename: return False
@@ -73,9 +75,12 @@ def file_basename(file_dict):
     uuid = file_dict['file_id']
     return uuid + "." + name
 
-def mirror_path(project_root, file_dict):
-    '''Return the file location relative to the project root'''
+def mirror_path(root, file_dict):
+    '''Return the file location relative to a root folder.
+
+    This location is equivalent to:
+    <root>/<category>/<type>/<uuid>.<filename>'''
     category = file_dict['data_category']
     data_type = file_dict['data_type']
     name = file_basename(file_dict)
-    return os.path.join(project_root, category, data_type, name).replace(' ', '_')
+    return os.path.join(root, category, data_type, name).replace(' ', '_')

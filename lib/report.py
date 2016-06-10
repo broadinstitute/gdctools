@@ -14,21 +14,26 @@ report.py: Functions for creating reports of Mirrored/Diced Data
 # }}}
 import os
 import numpy
+import subprocess
+import logging
 
 from matplotlib.figure import Figure, Rectangle
 from matplotlib.colors import ListedColormap, NoNorm
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import font_manager
 
+NOZZLE_PATH = "/xchip/tcga/Tools/gdac/bin/nozzle"
+_SUMMARY_REPORT_R = ""
+
 def draw_heatmaps(rownames, matrix, cohort, timestamp, outputDir):
     if not len(matrix) > 0:
         raise ValueError('input matrix must have nonzero length')
     if not len(matrix) == len(rownames):
         raise ValueError('Number of row names does not match input matrix')
-    
+
     #Sort heatmaps rows by row count
     sorted_rownames, sorted_matrix = __sort_rows(rownames, matrix)
-        
+
     green = '#338855'
     white = '#FFFFFF'
     cmap = ListedColormap([white, green])
@@ -39,7 +44,7 @@ def draw_heatmaps(rownames, matrix, cohort, timestamp, outputDir):
     ax.set_xlabel("Participant", weight="black")
     ax.set_xlim(0, len(sorted_matrix[0]))
     ax.set_yticks([0.5 + x for x in range(len(sorted_matrix))])
-    
+
     counts = [sum(row) for row in sorted_matrix]
     ax.set_yticklabels(["%s (%s)" % (data_type, count) for data_type, count in zip(sorted_rownames, counts)])
     ax.pcolor(numpy.array(sorted_matrix), cmap=cmap, norm=NoNorm(), edgecolor="k")
@@ -69,11 +74,15 @@ def draw_heatmaps(rownames, matrix, cohort, timestamp, outputDir):
 
 def __sort_rows(rownames, matrix):
     '''Sort the rows in matrix by the number of values in the row, in ascending order'''
-    
+
     row_dict = {rownames[i]:matrix[i] for i in range(len(rownames))}
     sorted_rows = sorted(row_dict.keys(), key=lambda k: sum(row_dict[k]))
-    
+
     sorted_mat = [row_dict[row] for row in sorted_rows]
-    
+
     return sorted_rows, sorted_mat
-    
+
+def generate_report(timestamp, blacklist, refdir, redactionsdir, samplestamp,
+                    samplecounts, samplesets, heatmap, outdir, aggregates,
+                    filteredSamplesPath):
+    pass

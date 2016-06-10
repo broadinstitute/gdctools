@@ -45,6 +45,8 @@ def init_logging(logfile=None, link_latest=True):
     console_handler.setFormatter(log_formatter)
     root_logger.addHandler(console_handler)
 
+    logging.info("Logfile:" + logfile)
+
 
 
 
@@ -52,7 +54,7 @@ def silent_rm(filename):
     try:
         os.remove(filename)
     except OSError as e:
-        #ENOENT means file doesn't exist, ignore 
+        #ENOENT means file doesn't exist, ignore
         if e.errno != errno.ENOENT:
             raise
 
@@ -81,12 +83,12 @@ def increment_file(filepath):
     return filepath
 
 def immediate_subdirs(path):
-    return [d for d in os.listdir(path) 
+    return [d for d in os.listdir(path)
             if os.path.isdir(os.path.join(path, d))]
 
 #===============================================================================
-# Makes directory structure, or ends gracefully if directory already exists. 
-# If permissions passed, then honor them, however os.makedirs ignores the 
+# Makes directory structure, or ends gracefully if directory already exists.
+# If permissions passed, then honor them, however os.makedirs ignores the
 # sticky bit. Use changeMod if this matters.
 #===============================================================================
 def safeMakeDirs(dir_name, permissions=None):
@@ -163,15 +165,15 @@ class RawDescriptionArgumentDefaultsHelpFormatter(RawDescriptionHelpFormatter):
                 if action.option_strings or action.nargs in defaulting_nargs:
                     help += ' (default: %(default)s)'
         return help
-        
+
 @contextlib.contextmanager
 def lock_context(path, name="common"):
     '''Process level lock context, to prevent access to path by other processes
-    
-    Sample Usage: 
+
+    Sample Usage:
     with lock_context(dice_root, "dicer"):
         dice()
-        
+
     '''
     lockname = os.path.join(path, ".".join(["", name, "lock"]))
     lock = InterProcessLock(lockname)

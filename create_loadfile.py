@@ -19,6 +19,7 @@ from GDCtool import GDCtool
 import logging
 import os
 import csv
+import ConfigParser
 from lib.common import immediate_subdirs
 from lib.meta import get_timestamp
 from lib.report import draw_heatmaps
@@ -32,13 +33,33 @@ class create_loadfile(GDCtool):
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
         cli.description = desc
 
-        cli.add_argument('-d', '--dice-directory', 
+        cli.add_argument('-d', '--dice-dir',
                          help='Root of diced data directory')
-        cli.add_argument('-l', '--loadfile-directory', 
+        cli.add_argument('-o', '--load-dir',
                          help='Where generated loadfiles will be placed')
         cli.add_argument('datestamp', nargs='?',
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
+
+
+    def parse_args(self):
+        opts = self.options
+
+        # Parse custom [load] section from config.
+        # This logic is intentionally omitted from GDCtool:parse_config, since
+        # loadfiles are only useful to FireHose, and this tool is not distributed
+        if opts.config is not None:
+            cfg = ConfigParser.ConfigParser()
+            cfg.read(opts.config)
+
+            if cfg.has_option('firehose', 'load_dir'):
+                self.load_dir = cfg.get('firehose', 'load_dir')
+            if cfg.has_option('firehose', 'heatmaps_dir'):
+                self.heatmaps_dir = cfg.get('firehose', 'heatmaps_dir')
+
+
+        if opts.dice_dir is not None: self.dice_root_dir = opts.dice_dir
+        if opts.load_dir is not None: self.load_dir = opts.load_dir
 
     def create_loadfiles(self):
         #Iterate over programs/projects in diced root
@@ -51,10 +72,10 @@ class create_loadfile(GDCtool):
             projects = immediate_subdirs(prog_root)
 
             for project in projects:
-                #This dictionary contains all the data for the loadfile. 
+                #This dictionary contains all the data for the loadfile.
                 #Keys are the entity_ids, values are dictionaries for the columns in a loadfile
                 master_load_dict = dict()
-                
+
                 proj_path = os.path.join(prog_root, project)
                 timestamp = get_timestamp(proj_path, self.options.datestamp)
                 logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
@@ -70,11 +91,11 @@ class create_loadfile(GDCtool):
 
                         if samp_id not in master_load_dict:
                             master_load_dict[samp_id] = master_load_entry(project, row)
-                        #Filenames in metadata begin with diced root, 
+                        #Filenames in metadata begin with diced root,
                         filepath = os.path.join(os.path.dirname(diced_root), row['filename'])
                         master_load_dict[samp_id][annot] = filepath
 
-                
+
                 load_date_root = os.path.join(load_root, program, self.options.datestamp)
                 if not os.path.isdir(load_date_root):
                     os.makedirs(load_date_root)
@@ -88,7 +109,7 @@ class create_loadfile(GDCtool):
                 write_master_load_dict(master_load_dict, annots, samples_loadfile)
                 logging.info("Writing sample set loadfile to " + sset_loadfile)
                 write_sample_set_loadfile(samples_loadfile, sset_loadfile)
-                
+
                 logging.info("Writing sample heatmaps")
                 write_heatmaps(master_load_dict, annots, project, timestamp, load_date_root)
 
@@ -106,7 +127,7 @@ def get_diced_metadata(project_root, datestamp=None):
     project = os.path.basename(project_root)
 
     for dirpath, dirnames, filenames in os.walk(project_root, topdown=True):
-        # Recurse to meta subdirectories 
+        # Recurse to meta subdirectories
         if os.path.basename(os.path.dirname(dirpath)) == project:
             for n, subdir in enumerate(dirnames):
                 if subdir != 'meta': del dirnames[n]
@@ -117,7 +138,7 @@ def get_diced_metadata(project_root, datestamp=None):
                                  if datestamp is None or datestamp in filename)
             #Annot name is the parent folder
             annot=os.path.basename(os.path.dirname(dirpath))
-            
+
             if len(meta_files) > 0:
                 with open(os.path.join(dirpath, meta_files[-1])) as f:
                     #Return the annotation name, and a dictReader for the metadata
@@ -205,10 +226,10 @@ def _build_heatmap_matrix(ld, annots):
         for sid in sorted(ld.keys()):
             # append 1 if data is present, else 0
             matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
-    
+
     return rownames, matrix
-    
-    
+
+
 
 
 def write_sample_set_loadfile(sample_loadfile, outfile):
