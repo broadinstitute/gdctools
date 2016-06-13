@@ -112,9 +112,10 @@ def patient_id(file_dict):
 
     return file_dict['cases'][0]['submitter_id']
 
-def sample_type(file_dict):
-    '''Return the sample_type associated with the file. Raise an exception if
-    more than one exists.'''
+def _sample_type(file_dict):
+    '''Return the sample type associated with the file. Raise an exception if
+    more than one exists. Doesn't handle special cases, use sample_type()
+    instead.'''
     try:
         _check_dict_array_size(file_dict, 'cases')
         _check_dict_array_size(file_dict['cases'][0], 'samples')
@@ -134,8 +135,8 @@ def project_id(file_dict):
         raise
     return file_dict['cases'][0]['project']['project_id']
 
-
-def get_entity_type(file_dict):
+# TODO: Ask david about this, doesn't seem to match sample counts
+def sample_type(file_dict):
     '''Parse the dicer metadata for this file.
 
     Returns the Entity ID and entity type.'''
@@ -143,15 +144,58 @@ def get_entity_type(file_dict):
         proj_id = project_id(file_dict)
         #TODO: Make this more generic
         if proj_id == 'TCGA-LAML':
-            entity_type = "Primary Blood Derived Cancer - Peripheral Blood"
+            stype = "Primary Blood Derived Cancer - Peripheral Blood"
         elif proj_id == 'TCGA-SKCM':
-            entity_type = 'Metastatic'
+            stype = 'Metastatic'
         else:
-            entity_type = 'Primary Tumor'
+            stype = 'Primary Tumor'
     else:
-        entity_type = sample_type(file_dict)
+        #Try to parse this from the metadata
+        stype = _sample_type(file_dict)
 
-    return entity_type
+    return stype
+
+#TODO: This should come from a config file
+# Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type
+def sample_type_codes(file_dict):
+    '''Convert long form sample types into letter codes.'''
+    stype = sample_type(file_dict)
+    lookup = {
+        "Additional - New Primary" : ('05', 'TAP'),
+        "Additional Metastatic" : ('07', 'TAM'),
+        "Blood Derived Normal" : ('10', 'NB'),
+        "Bone Marrow Normal" : ('14', 'NBM'),
+        "Buccal Cell Normal" : ('12', 'NBC'),
+        "Cell Line Derived Xenograft Tissue" : ('61', 'XCL'),
+        "Cell Lines" : ('50', 'CELL'),
+        "Control Analyte" : ('20', 'CELLC'),
+        "EBV Immortalized Normal" : ('13', 'NEBV'),
+        "Human Tumor Original Cells" : ('08', 'THOC'),
+        "Metastatic" : ('06', 'TM'),
+        "Primary Blood Derived Cancer - Bone Marrow" : ('09', 'TBM'),
+        "Primary Blood Derived Cancer - Peripheral Blood" : ('03', 'TB'),
+        "Primary Xenograft Tissue" : ('60', 'XP'),
+        "Primary Tumor" : ('01', 'TP'),
+        "Recurrent Blood Derived Cancer - Bone Marrow" : ('04', 'TRBM'),
+        "Recurrent Blood Derived Cancer - Peripheral Blood" : ('40', 'TRB'),
+        "Recurrent Solid Tumor" : ('02', 'TR'),
+        "Solid Tissue Normal" : ('11', 'NT'),
+    }
+
+    return lookup[stype]
+
+def sample_counts(metadata):
+    '''Create a dictionary of sample counts for each type.
+
+    E.g.: { "TP" : 100, "TR" : 50, "NT" : 50 }
+    '''
+    counts = dict()
+    for file_d in metadata:
+        _, code = sample_type_codes(file_d)
+        counts[code] = counts.get(code, 0) + 1
+    return counts
+
+
 
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)

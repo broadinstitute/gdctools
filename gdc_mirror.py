@@ -200,9 +200,21 @@ class gdc_mirror(GDCtool):
         tstamp_root = os.path.join(self.mirror_root_dir, program, project, tstamp)
         tstamp_root = os.path.abspath(tstamp_root)
         logging.info("Mirroring data to " + tstamp_root)
+        #Ensure timestamp dir exists
+        os.makedirs(tstamp_root)
+
+        proj_counts = dict()
 
         for cat in data_categories:
-            self.mirror_category(program, project, cat)
+            cat_counts = self.mirror_category(program, project, cat)
+            for code in cat_counts:
+                if code not in proj_counts: proj_counts[code] = dict()
+                proj_counts[code][cat] = cat_counts[code]
+
+        # Write sample counts
+        countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
+        countspath = os.path.join(tstamp_root, countsfile)
+        _write_counts(proj_counts, countspath)
 
         #Symlink /program/project/latest to /program/project/timestamp
         sym_path = os.path.join(self.mirror_root_dir, program, project, "latest")
@@ -213,9 +225,12 @@ class gdc_mirror(GDCtool):
 
 
     def mirror_category(self, program, project, category):
+        '''Mirror one category of data in a particular project.
+        Return a dictionary of counts for each sample type, e.g.:
+        { "TP" : 100, "TR" : 50, "NT" : 50 }
+        '''
         tstamp = self.timestamp
         proj_dir = os.path.join(self.mirror_root_dir, program, project)
-        '''Mirror one data category in a project'''
         tstamp_dir = os.path.join(proj_dir, tstamp)
         cat_dir = os.path.join(tstamp_dir, category.replace(' ', '_'))
 
@@ -235,7 +250,7 @@ class gdc_mirror(GDCtool):
         metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
         metadata_path = os.path.join(tstamp_dir, metadata_filename)
 
-        # Merge existing metadata with this category 
+        # Merge existing metadata with this category
         meta.append_metadata(file_metadata, metadata_path)
 
         if self.options.meta_only:
@@ -246,6 +261,9 @@ class gdc_mirror(GDCtool):
 
             for n, file_d in enumerate(file_metadata):
                 self.__mirror_file(file_d, proj_dir, last_mirror, n, total_files)
+
+        #Finally, return sample counts
+        return meta.sample_counts(file_metadata)
 
     def last_mirror_tstamp(self, program, project):
         '''Returns the timestamp of the last mirroring run for a project.
@@ -286,7 +304,30 @@ def _file_loc(file_d, proj_root, tstamp):
     else:
         return None
 
+#TODO: Handle explicit types, rather than infer them from the available counts
+# E.g. if a project reports no data for a type, ensure a column of zeroes
+def _write_counts(counts, f):
+    '''Write sample counts dict to file.
+    counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
+               'TR' : {'Clinical' : 10, 'BCR': 15, ...},
+               ...}
+    '''
+    types = sorted({dtype for code in counts for dtype in counts[code]})
 
+    with open(f, "w") as out:
+        # Write header
+        out.write("Sample Type\t" + "\t".join(types) + '\n')
+        for code in counts:
+            line = code + "\t"
+            line += "\t".join([str(counts[code].get(t, 0)) for t in types]) + "\n"
+            out.write(line)
+
+        # Write totals
+        totals = "Totals"
+        for t in types:
+            tot = sum([counts[code].get(t, 0) for code in counts])
+            totals += "\t" + str(tot)
+        out.write(totals + "\n")
 
 if __name__ == "__main__":
     gdc_mirror().execute()
