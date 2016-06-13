@@ -214,7 +214,7 @@ class gdc_mirror(GDCtool):
         # Write sample counts
         countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
         countspath = os.path.join(tstamp_root, countsfile)
-        _write_counts(proj_counts, countspath)
+        _write_counts(proj_counts, sorted(data_categories), countspath)
 
         #Symlink /program/project/latest to /program/project/timestamp
         sym_path = os.path.join(self.mirror_root_dir, program, project, "latest")
@@ -304,16 +304,14 @@ def _file_loc(file_d, proj_root, tstamp):
     else:
         return None
 
-#TODO: Handle explicit types, rather than infer them from the available counts
-# E.g. if a project reports no data for a type, ensure a column of zeroes
-def _write_counts(counts, f):
+# TODO: Insert short data type codes, rather than full type names
+# E.g. BCR instead of Biospeciment
+def _write_counts(counts, types, f):
     '''Write sample counts dict to file.
     counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
                'TR' : {'Clinical' : 10, 'BCR': 15, ...},
                ...}
     '''
-    types = sorted({dtype for code in counts for dtype in counts[code]})
-
     with open(f, "w") as out:
         # Write header
         out.write("Sample Type\t" + "\t".join(types) + '\n')
