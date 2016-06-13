@@ -234,7 +234,7 @@ def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         metafile = open(meta_filename, 'w')
         metafile.write('filename\tentity_id\tentity_type\n')
 
-    entity_type = get_entity_type(file_dict)
+    entity_type = meta.get_entity_type(file_dict)
 
     for entity_id in diced_files_dict:
         filename = diced_files_dict[entity_id]
@@ -269,7 +269,7 @@ def clinical(file_dict, mirror_path, dice_path):
 #     print("Dicing with 'clinical'")
     infile = mirror_path
     extension = 'clin'
-    tcga_id = patient_id(file_dict)
+    tcga_id = meta.patient_id(file_dict)
     return {tcga_id: gdac_clin.process(infile, extension, {tcga_id: tcga_id},
                                        dice_path, GDAC_BIN_DIR)}
 
@@ -283,8 +283,8 @@ def seg_broad(file_dict, mirror_path, dice_path):
     infile = mirror_path
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
-    tcga_id = aliquot_id(file_dict)
-    return {patient_id(file_dict):
+    tcga_id = meta.aliquot_id(file_dict)
+    return {meta.patient_id(file_dict):
             gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path,
                              'seg_broad')}
 
@@ -301,78 +301,6 @@ def tsv2magetab(file_dict, mirror_path, dice_path):
 
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
-
-def aliquot_id(file_dict):
-    '''Return the aliquot associated with the file. Raise an exception if more
-    than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-        _check_dict_array_size(file_dict['cases'][0], 'samples')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0], 'portions')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0],
-                               'analytes')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0],
-                               'aliquots')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-
-    return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
-
-def patient_id(file_dict):
-    '''Return the patient_id associated with the file. Raise an exception if
-    more than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-
-    return file_dict['cases'][0]['submitter_id']
-
-def sample_type(file_dict):
-    '''Return the sample_type associated with the file. Raise an exception if
-    more than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-        _check_dict_array_size(file_dict['cases'][0], 'samples')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-
-    return file_dict['cases'][0]['samples'][0]["sample_type"]
-
-def project_id(file_dict):
-    '''Return the project_id associated with the file. Raise an exception if
-    more than one case exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-    return file_dict['cases'][0]['project']['project_id']
-
-
-def get_entity_type(file_dict):
-    '''Parse the dicer metadata for this file.
-
-    Returns the Entity ID and entity type.'''
-    if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
-        proj_id = project_id(file_dict)
-        #TODO: Make this more generic
-        if proj_id == 'TCGA-LAML':
-            entity_type = "Primary Blood Derived Cancer - Peripheral Blood"
-        elif proj_id == 'TCGA-SKCM':
-            entity_type = 'Metastatic'
-        else:
-            entity_type = 'Primary Tumor'
-    else:
-        entity_type = sample_type(file_dict)
-
-    return entity_type
-
-def _check_dict_array_size(d, name, size=1):
-    assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
 
 
 if __name__ == "__main__":
