@@ -54,7 +54,6 @@ class gdc_mirror(GDCtool):
         self.timestamp = common.timetuple2stamp() #'2017_02_01__00_00_00'
         return self.timestamp
 
-
     def init_logs(self):
         log_dir = self.mirror_log_dir
         if log_dir is not None:
@@ -66,7 +65,6 @@ class gdc_mirror(GDCtool):
             logfile_path = None # Logfile is disabled
         common.init_logging(logfile_path, True)
 
-
     def parse_args(self):
         """Read options from config, and optionally override them with args"""
         # Config options that can be overridden by cli args
@@ -75,7 +73,6 @@ class gdc_mirror(GDCtool):
         if opts.root_dir is not None: self.mirror_root_dir = opts.root_dir
         if opts.projects is not None: self.mirror_projects = opts.projects
         if opts.programs is not None: self.mirror_programs = opts.programs
-
 
     def mirror(self):
         logging.info("GDC Mirror Version: %s", self.cli.version)
@@ -126,7 +123,6 @@ class gdc_mirror(GDCtool):
 
         logging.info("Mirror completed successfully.")
 
-
     def __mirror_file(self, file_d, proj_root, prev_tstamp, n, total, retries=3):
         '''Mirror a file into <proj_root>/<timestamp>.
 
@@ -148,7 +144,6 @@ class gdc_mirror(GDCtool):
 
         md5path = savepath + ".md5"
         prev_path = _file_loc(file_d, proj_root, prev_tstamp)
-
         # Possible States:
         # 1. Fresh mirror, prev_path=None, md5=None --> Download file
         # 2. Existing Mirror, prev_md5 doesn't match --> Download new file
@@ -184,7 +179,6 @@ class gdc_mirror(GDCtool):
             os.symlink(prev_path, savepath)
             os.symlink(prev_path + '.md5', savepath + '.md5')
 
-
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
         tstamp = self.timestamp
@@ -196,25 +190,20 @@ class gdc_mirror(GDCtool):
             data_categories = api.get_data_categories(project)
         logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
 
-
         tstamp_root = os.path.join(self.mirror_root_dir, program, project, tstamp)
         tstamp_root = os.path.abspath(tstamp_root)
         logging.info("Mirroring data to " + tstamp_root)
         #Ensure timestamp dir exists
         os.makedirs(tstamp_root)
 
-        proj_counts = dict()
-
         for cat in data_categories:
-            cat_counts = self.mirror_category(program, project, cat)
-            for code in cat_counts:
-                if code not in proj_counts: proj_counts[code] = dict()
-                proj_counts[code][cat] = cat_counts[code]
+            self.mirror_category(program, project, cat)
 
         # Write sample counts
+        proj_counts = self._sample_counts(program, project, data_categories)
         countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
         countspath = os.path.join(tstamp_root, countsfile)
-        _write_counts(proj_counts, sorted(data_categories), countspath)
+        _write_counts(proj_counts, project, sorted(data_categories), countspath)
 
         #Symlink /program/project/latest to /program/project/timestamp
         sym_path = os.path.join(self.mirror_root_dir, program, project, "latest")
@@ -222,7 +211,6 @@ class gdc_mirror(GDCtool):
 
         logging.info("Symlinking {0} -> {1}".format(sym_path, tstamp_root))
         os.symlink(tstamp_root, sym_path)
-
 
     def mirror_category(self, program, project, category):
         '''Mirror one category of data in a particular project.
@@ -236,6 +224,8 @@ class gdc_mirror(GDCtool):
 
         #Use the last mirror to check for presence of files, and to symlink to
         last_mirror = self.last_mirror_tstamp(program, project)
+        if last_mirror is not None:
+            logging.info("Found previous mirror: " + last_mirror)
 
         logging.info("Mirroring: {0} - {1} data".format(project, category))
 
@@ -262,8 +252,63 @@ class gdc_mirror(GDCtool):
             for n, file_d in enumerate(file_metadata):
                 self.__mirror_file(file_d, proj_dir, last_mirror, n, total_files)
 
-        #Finally, return sample counts
-        return meta.sample_counts(file_metadata)
+    def _sample_counts(self, program, project, data_categories):
+        tstamp = self.timestamp
+        proj_dir = os.path.join(self.mirror_root_dir, program, project)
+        tstamp_dir = os.path.join(proj_dir, tstamp)
+        metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
+        metadata_path = os.path.join(tstamp_dir, metadata_filename)
+
+        with open(metadata_path, 'r') as jsonf:
+            metadata = json.load(jsonf)
+
+        samp_level_cats = {cat for cat in data_categories
+                           if cat not in ['Biospecimen', 'Clinical']}
+        indiv_level_cats = set(data_categories) - samp_level_cats
+
+        #Useful counting structures
+        proj_counts = dict()                # Counts for each code+type
+        patient_codes = dict()              # Codes for each patient
+        patients_with_clinical = set()
+        patients_with_biospecimen = set()
+
+        for file_d in metadata:
+            cat = file_d['data_category']
+            if cat not in ['Biospecimen', 'Clinical']:
+                #Count as normal, for the given code
+                _, code = meta.tumor_code(meta.sample_type(file_d))
+                proj_counts[code] = proj_counts.get(code, dict())
+                proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
+
+                # Record that this case had this sample_code
+                pid = meta.patient_id(file_d)
+                #Ensure dict entry exists, then add to set
+                if pid not in patient_codes: patient_codes[pid] = set()
+                patient_codes[pid].add(code)
+
+            else:
+                # Record that this patient had Biospecimen or Clinical data
+                pid = meta.patient_id(file_d)
+                if cat == 'Biospecimen':
+                    patients_with_biospecimen.add(pid)
+                else:
+                    patients_with_clinical.add(pid)
+
+        # Now go back through and count the Biospecimen and Clinical data
+        # Each sample type is counted as 1 if present
+        for patient in patient_codes:
+            codes = patient_codes[patient]
+            for c in codes:
+                if patient in patients_with_clinical:
+                    count = proj_counts[c].get('Clinical', 0) + 1
+                    proj_counts[c]['Clinical'] = count
+                if patient in patients_with_biospecimen:
+                    count = proj_counts[c].get('Biospecimen', 0) + 1
+                    proj_counts[c]['Biospecimen'] = count
+
+        return proj_counts
+
+
 
     def last_mirror_tstamp(self, program, project):
         '''Returns the timestamp of the last mirroring run for a project.
@@ -275,13 +320,16 @@ class gdc_mirror(GDCtool):
 
         latest_sym = os.path.join(proj_dir, "latest")
         if os.path.islink(latest_sym):
-            tstamp = os.path.basename(os.readlink(latest_sym))
-        else:
-            #Otherwise, get the latest folder chronologically
-            prev_tstamps = sorted(common.immediate_subdirs(proj_dir))
-            tstamp = prev_tstamps[-1] if len(prev_tstamps) > 0 else None
+             if os.path.exists(os.readlink(latest_sym)):
+                 return os.path.basename(os.readlink(latest_sym))
+             else:
+                 os.remove(latest_sym)
 
-        return tstamp
+        #Otherwise, get the latest folder chronologically, ignoring today
+        prev_tstamps = sorted(common.immediate_subdirs(proj_dir))
+        if self.timestamp in prev_tstamps:
+            prev_tstamps.remove(self.timestamp)
+        return prev_tstamps[-1] if len(prev_tstamps) > 0 else None
 
     def execute(self):
         super(gdc_mirror, self).execute()
@@ -289,6 +337,7 @@ class gdc_mirror(GDCtool):
         self.set_timestamp()
         self.init_logs()
         self.mirror()
+
 
 def _file_loc(file_d, proj_root, tstamp):
     '''Return the path of the file described in file_d.
@@ -304,9 +353,10 @@ def _file_loc(file_d, proj_root, tstamp):
     else:
         return None
 
+
 # TODO: Insert short data type codes, rather than full type names
-# E.g. BCR instead of Biospeciment
-def _write_counts(counts, types, f):
+# E.g. BCR instead of Biospecimen
+def _write_counts(counts, proj_id, types, f):
     '''Write sample counts dict to file.
     counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
                'TR' : {'Clinical' : 10, 'BCR': 15, ...},
@@ -318,14 +368,14 @@ def _write_counts(counts, types, f):
         for code in counts:
             line = code + "\t"
             line += "\t".join([str(counts[code].get(t, 0)) for t in types]) + "\n"
+
             out.write(line)
 
-        # Write totals
-        totals = "Totals"
-        for t in types:
-            tot = sum([counts[code].get(t, 0) for code in counts])
-            totals += "\t" + str(tot)
-        out.write(totals + "\n")
+        # Write totals. Totals is dependent on the main analyzed tumor type
+        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_id))[1]
+        tots = [str(counts.get(main_code,{}).get(t, 0)) for t in types]
+        out.write('Totals\t' + '\t'.join(tots) + "\n")
+
 
 if __name__ == "__main__":
     gdc_mirror().execute()

@@ -8,10 +8,11 @@ import errno
 import logging
 import sys
 import contextlib
+from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
+
 from fasteners import InterProcessLock
 from lib.constants import LOGGING_FMT
 
-from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 
 # Initialize logging to stdout and to logfile
 # see http://stackoverflow.com/a/13733863
@@ -167,7 +168,7 @@ class RawDescriptionArgumentDefaultsHelpFormatter(RawDescriptionHelpFormatter):
         return help
 
 @contextlib.contextmanager
-def lock_context(path, name="common"):
+def lock_context(path, name="gdctool"):
     '''Process level lock context, to prevent access to path by other processes
 
     Sample Usage:

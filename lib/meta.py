@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # encoding: utf-8
 
@@ -16,6 +17,7 @@ from __future__ import print_function
 
 import os
 import json
+import sys
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,
@@ -43,8 +45,8 @@ def latest_metadata(stamp_dir):
         return json.load(jsonf)
 
 
-def get_timestamp(proj_dir, date_prefix=None):
-    '''Get the timestamp of the last project mirror run'''
+def latest_timestamp(proj_dir, date_prefix=None):
+    '''Get the timestamp of the last mirror or dicer run for a project'''
     latest_tstamp = None
 
     timestamps = [d for d in os.listdir(proj_dir)
@@ -68,13 +70,15 @@ def md5_matches(file_dict, md5file):
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
 
+
 def file_basename(file_dict):
     # Since GDC doesn't have unique filenames, prepend uuid
     name = file_dict['file_name']
     uuid = file_dict['file_id']
     return uuid + "." + name
 
-def mirror_path(root, file_dict):
+
+def mirror_path(stamp_root, file_dict):
     '''Return the file location relative to a root folder.
 
     This location is equivalent to:
@@ -82,7 +86,8 @@ def mirror_path(root, file_dict):
     category = file_dict['data_category']
     data_type = file_dict['data_type']
     name = file_basename(file_dict)
-    return os.path.join(root, category, data_type, name).replace(' ', '_')
+    return os.path.join(stamp_root, category, data_type, name).replace(' ', '_')
+
 
 def aliquot_id(file_dict):
     '''Return the aliquot associated with the file. Raise an exception if more
@@ -101,6 +106,7 @@ def aliquot_id(file_dict):
 
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
 
+
 def patient_id(file_dict):
     '''Return the patient_id associated with the file. Raise an exception if
     more than one exists.'''
@@ -112,10 +118,9 @@ def patient_id(file_dict):
 
     return file_dict['cases'][0]['submitter_id']
 
-def _sample_type(file_dict):
-    '''Return the sample type associated with the file. Raise an exception if
-    more than one exists. Doesn't handle special cases, use sample_type()
-    instead.'''
+
+def sample_type(file_dict):
+    '''Return the sample type associated with the file.'''
     try:
         _check_dict_array_size(file_dict, 'cases')
         _check_dict_array_size(file_dict['cases'][0], 'samples')
@@ -124,6 +129,7 @@ def _sample_type(file_dict):
         raise
 
     return file_dict['cases'][0]['samples'][0]["sample_type"]
+
 
 def project_id(file_dict):
     '''Return the project_id associated with the file. Raise an exception if
@@ -135,31 +141,24 @@ def project_id(file_dict):
         raise
     return file_dict['cases'][0]['project']['project_id']
 
-# TODO: Ask david about this, doesn't seem to match sample counts
-def sample_type(file_dict):
-    '''Parse the dicer metadata for this file.
 
-    Returns the Entity ID and entity type.'''
-    if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
-        proj_id = project_id(file_dict)
-        #TODO: Make this more generic
-        if proj_id == 'TCGA-LAML':
-            stype = "Primary Blood Derived Cancer - Peripheral Blood"
-        elif proj_id == 'TCGA-SKCM':
-            stype = 'Metastatic'
-        else:
-            stype = 'Primary Tumor'
+#TODO: Configurable?
+def main_tumor_sample_type(proj_id):
+    '''The sample type used by most analyses in a project.
+    'Primary Tumor' for everything except LAML and SKCM.
+    '''
+    if proj_id == 'TCGA-LAML':
+        stype = "Primary Blood Derived Cancer - Peripheral Blood"
+    elif proj_id == 'TCGA-SKCM':
+        stype = 'Metastatic'
     else:
-        #Try to parse this from the metadata
-        stype = _sample_type(file_dict)
-
+        stype = 'Primary Tumor'
     return stype
+
 
 #TODO: This should come from a config file
 # Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type
-def sample_type_codes(file_dict):
-    '''Convert long form sample types into letter codes.'''
-    stype = sample_type(file_dict)
+def tumor_code(tumor_type):
     lookup = {
         "Additional - New Primary" : ('05', 'TAP'),
         "Additional Metastatic" : ('07', 'TAM'),
@@ -181,20 +180,19 @@ def sample_type_codes(file_dict):
         "Recurrent Solid Tumor" : ('02', 'TR'),
         "Solid Tissue Normal" : ('11', 'NT'),
     }
+    return lookup.get(tumor_type, None)
 
-    return lookup[stype]
 
-def sample_counts(metadata):
-    '''Create a dictionary of sample counts for each type.
-
-    E.g.: { "TP" : 100, "TR" : 50, "NT" : 50 }
-    '''
-    counts = dict()
-    for file_d in metadata:
-        _, code = sample_type_codes(file_d)
-        counts[code] = counts.get(code, 0) + 1
-    return counts
-
+# def sample_counts(metadata):
+#     '''Create a dictionary of sample counts for each type.
+#
+#     E.g.: { "TP" : 100, "TR" : 50, "NT" : 50 }
+#     '''
+#     counts = dict()
+#     for file_d in metadata:
+#         _, code = tumor_code(sample_type(file_d))
+#         counts[code] = counts.get(code, 0) + 1
+#     return counts
 
 
 def _check_dict_array_size(d, name, size=1):
