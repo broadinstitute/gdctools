@@ -18,6 +18,7 @@ from __future__ import print_function
 import os
 import json
 import sys
+from lib.common import TIMESTAMP_REGEX
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,
@@ -45,15 +46,23 @@ def latest_metadata(stamp_dir):
         return json.load(jsonf)
 
 
-def latest_timestamp(proj_dir, date_prefix=None):
-    '''Get the timestamp of the last mirror or dicer run for a project'''
+def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
+    '''Get the timestamp of the last mirror or dicer run for a project.
+
+    Will only return a date matching date_prefix, but can ignore an explicit
+    stamp. Returns none if no timestamp matches
+    '''
     latest_tstamp = None
 
     timestamps = [d for d in os.listdir(proj_dir)
-                      if os.path.isdir(os.path.join(proj_dir, d))]
+                  if TIMESTAMP_REGEX.match(d) is not None
+                  and os.path.isdir(os.path.join(proj_dir, d))
+                  and d != ignore]
     if date_prefix is not None:
         timestamps = filter(lambda d: d.startswith(date_prefix), timestamps)
 
+    if len(timestamps) == 0:
+        return None
     return sorted(timestamps)[-1]
 
 
@@ -141,6 +150,16 @@ def project_id(file_dict):
         raise
     return file_dict['cases'][0]['project']['project_id']
 
+def tcga_id(file_dict):
+    '''Returns the expected tcga_id for the file.
+
+    The exact field depends on the data type, for clinical this will be a
+    patient id, for CNV this will be a sample id.
+    '''
+    if file_dict['data_type'] in ['Biospecimen', 'Clinical']:
+        return patient_id(file_dict)
+    else:
+        return aliquot_id(file_dict)
 
 #TODO: Configurable?
 def main_tumor_sample_type(proj_id):

@@ -16,7 +16,7 @@ from lib.constants import LOGGING_FMT
 
 # Initialize logging to stdout and to logfile
 # see http://stackoverflow.com/a/13733863
-def init_logging(logfile=None, link_latest=True):
+def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
     '''Initialize logging to stdout and to a logfile'''
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
@@ -24,12 +24,16 @@ def init_logging(logfile=None, link_latest=True):
     log_formatter = logging.Formatter(LOGGING_FMT)
 
     # Write logging data to file
-    if logfile is not None:
+    if log_dir is not None and tstamp is not None:
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+        logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"))
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
         root_logger.addHandler(file_handler)
 
+        logging.info("Logfile:" + logfile)
         # Symlink a '*.latest.log' to logfile
         if link_latest:
             lf_base = os.path.basename(logfile)
@@ -46,7 +50,7 @@ def init_logging(logfile=None, link_latest=True):
     console_handler.setFormatter(log_formatter)
     root_logger.addHandler(console_handler)
 
-    logging.info("Logfile:" + logfile)
+
 
 
 

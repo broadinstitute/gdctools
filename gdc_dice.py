@@ -21,10 +21,11 @@ import os
 import sys
 from pkg_resources import resource_filename #@UnresolvedImport
 
+from lib.convert import util as convert_util
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
-from lib.common import timetuple2stamp, immediate_subdirs, init_logging
+from lib import common
 from lib import meta
 
 from GDCtool import GDCtool
@@ -45,53 +46,47 @@ class gdc_dicer(GDCtool):
                          help='Root of diced data tree')
         cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
-        cli.add_argument('datestamp',
+        cli.add_argument('datestamp', nargs='?',
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
-
-
-    def init_logs(self):
-        '''Discover timestamp and initialize logs'''
-        mirror_root = self.mirror_root_dir
-
-        # Loop through projects to discover the timestamps from the mirror
-        latest_tstamps = set()
-        programs = immediate_subdirs(mirror_root) if self.dice_programs is None else self.dice_programs
-
-        for program in programs:
-            mirror_prog_root = os.path.join(mirror_root, program)
-            if self.dice_projects is not None:
-                projects = self.dice_projects
-            else:
-                projects = immediate_subdirs(mirror_prog_root)
-
-            for project in projects:
-                latest_tstamps.add(meta.get_timestamp(os.path.join(mirror_prog_root, project), self.options.datestamp))
-
-        # If the Mirror completed successfuly, the timestamps should all be the same
-        if len(latest_tstamps) != 1:
-            raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
-
-        #Set the mirror_timestamp for this run
-        self.mirror_timestamp = latest_tstamps.pop()
-
-        if self.dice_log_dir is not None:
-            log_dir = self.dice_log_dir
-            logfile_name = ".".join(["gdcDicer", self.mirror_timestamp, "log"])
-            if not os.path.isdir(log_dir):
-                os.makedirs(log_dir)
-            logfile_path = os.path.abspath(os.path.join(log_dir, logfile_name))
-        else:
-            logfile_path = None # Logfile is disabled
-
-        init_logging(logfile_path, True)
 
     def parse_args(self):
         opts = self.options
         if opts.log_dir is not None: self.dice_log_dir = opts.log_dir
         if opts.mirror_dir is not None: self.mirror_root_dir = opts.mirror_dir
         if opts.dice_dir is not None: self.dice_root_dir = opts.dice_dir
-        self.datestamp = opts.datestamp
+
+        # Figure out timestamp
+        mirror_root = self.mirror_root_dir
+        dstamp = opts.datestamp
+
+        # Discover programs to dice
+        latest_tstamps = set()
+        if self.dice_programs is None:
+            self.programs = common.immediate_subdirs(mirror_root)
+        else:
+            self.dice_programs = self.dice_programs
+
+        # Discover projects to dice
+        for program in self.dice_programs:
+            mirror_prog_root = os.path.join(mirror_root, program)
+            if self.dice_projects is not None:
+                projects = self.dice_projects
+            else:
+                projects = common.immediate_subdirs(mirror_prog_root)
+            for project in projects:
+                proj_dir = os.path.join(mirror_prog_root, project)
+                # For each project, get timestamp of last mirror that matches
+                latest_tstamps.add(meta.latest_timestamp(proj_dir, dstamp))
+
+        # Sanity check: if the wirror completed successfuly, all the
+        # discovered timestamps should be identical
+        if len(latest_tstamps) != 1:
+            raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
+
+        #Set the timestamp for this run
+        self.timestamp = latest_tstamps.pop()
+
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
@@ -101,33 +96,45 @@ class gdc_dicer(GDCtool):
         trans_dict = build_translation_dict(resource_filename(__name__,
                                                        "Harmonized_GDC_translation_table_FH.tsv"))
         #Set in init_logs()
-        timestamp = self.mirror_timestamp
+        timestamp = self.timestamp
         logging.info("Mirror timestamp: " + timestamp)
         #Iterable of programs, either user specified or discovered from folder names in the diced root
         if self.dice_programs is not None:
             programs = self.dice_programs
         else:
-            programs = immediate_subdirs(mirror_root)
-
+            programs = common.immediate_subdirs(mirror_root)
 
         for program in programs:
             diced_prog_root = os.path.join(diced_root, program)
             mirror_prog_root = os.path.join(mirror_root, program)
 
-            if self.dice_projects is not None:
-                projects = self.dice_projects
-            else:
-                projects = immediate_subdirs(mirror_prog_root)
-            for project in projects:
-                raw_project_root = os.path.join(mirror_prog_root, project)
-                diced_project_root = os.path.join(diced_prog_root, project)
-                logging.info("Dicing " + project + " to " + diced_project_root)
-                stamp_root = os.path.join(raw_project_root, self.mirror_timestamp)
-                metadata = meta.latest_metadata(stamp_root)
+            # Ensure no simultaneous mirroring/dicing
+            with common.lock_context(diced_prog_root, "dice"), \
+                 common.lock_context(mirror_prog_root, "mirror"):
+                if self.dice_projects is not None:
+                    projects = self.dice_projects
+                else:
+                    projects = common.immediate_subdirs(mirror_prog_root)
+                for project in projects:
+                    # Load metadata from mirror
+                    raw_project_root = os.path.join(mirror_prog_root, project)
+                    stamp_root = os.path.join(raw_project_root, timestamp)
+                    metadata = meta.latest_metadata(stamp_root)
 
-                for file_dict in metadata:
-                    dice_one(file_dict, trans_dict, raw_project_root, diced_project_root,
-                             timestamp, dry_run=self.options.dry_run)
+                    diced_project_root = os.path.join(diced_prog_root, project)
+                    logging.info("Dicing " + project + " to " + diced_project_root)
+
+                    #Dice to date specific folder
+                    #Figure out the previous dicing timestamp, if present
+                    prev_tstamp = meta.latest_timestamp(diced_project_root,
+                                                        None, timestamp)
+
+
+                    for file_dict in metadata:
+                        dice_one(file_dict, trans_dict, raw_project_root,
+                                 diced_project_root,
+                                 timestamp,
+                                 dry_run=self.options.dry_run)
         logging.info("Dicing completed successfuly")
 
 
@@ -135,7 +142,7 @@ class gdc_dicer(GDCtool):
         super(gdc_dicer, self).execute()
         opts = self.options
         self.parse_args()
-        self.init_logs()
+        common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
         self.dice()
 
 def build_translation_dict(translation_file):
@@ -170,8 +177,9 @@ def build_translation_dict(translation_file):
     return d
 
 
-def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root, timestamp, dry_run=True):
-    """Dice a single file from the GDC.
+def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
+             timestamp, prev_tstamp, dry_run=True):
+    """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
     true, a debug message will be displayed instead of performing the actual
@@ -180,16 +188,22 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root, timestam
     stamp_root = os.path.join(mirror_proj_root, timestamp)
     mirror_path = meta.mirror_path(stamp_root, file_dict)
 
+    dice_stamp_root = os.path.join(diced_root, timestamp)
+
     if os.path.isfile(mirror_path):
         ##Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
         if annot != 'UNRECOGNIZED':
-            dice_path = os.path.join(diced_root, annot)
+            dice_path = os.path.join(dice_stamp_root, annot)
             logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
             dice_meta_path = os.path.join(dice_path, "meta")
+
             if not dry_run:
+                if prev_tstamp is not None:
+                    expected_name =
+                # I
                 diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
-                write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
+                #write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
@@ -234,7 +248,8 @@ def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         metafile = open(meta_filename, 'w')
         metafile.write('filename\tentity_id\tentity_type\n')
 
-    entity_type = meta.get_entity_type(file_dict)
+    # What do we write for clinical/biospecimen?
+    entity_type = meta.sample_type(file_dict)
 
     for entity_id in diced_files_dict:
         filename = diced_files_dict[entity_id]

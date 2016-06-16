@@ -54,17 +54,6 @@ class gdc_mirror(GDCtool):
         self.timestamp = common.timetuple2stamp() #'2017_02_01__00_00_00'
         return self.timestamp
 
-    def init_logs(self):
-        log_dir = self.mirror_log_dir
-        if log_dir is not None:
-            logfile_name = ".".join(["gdcMirror", self.timestamp, "log"])
-            if not os.path.isdir(log_dir):
-                os.makedirs(log_dir)
-            logfile_path = os.path.join(log_dir, logfile_name)
-        else:
-            logfile_path = None # Logfile is disabled
-        common.init_logging(logfile_path, True)
-
     def parse_args(self):
         """Read options from config, and optionally override them with args"""
         # Config options that can be overridden by cli args
@@ -193,9 +182,11 @@ class gdc_mirror(GDCtool):
         tstamp_root = os.path.join(self.mirror_root_dir, program, project, tstamp)
         tstamp_root = os.path.abspath(tstamp_root)
         logging.info("Mirroring data to " + tstamp_root)
+
         #Ensure timestamp dir exists
         os.makedirs(tstamp_root)
 
+        # Mirror each category separately
         for cat in data_categories:
             self.mirror_category(program, project, cat)
 
@@ -317,25 +308,13 @@ class gdc_mirror(GDCtool):
         proj_dir = os.path.join(self.mirror_root_dir, program, project)
         if not os.path.isdir(proj_dir):
             return None
-
-        latest_sym = os.path.join(proj_dir, "latest")
-        if os.path.islink(latest_sym):
-             if os.path.exists(os.readlink(latest_sym)):
-                 return os.path.basename(os.readlink(latest_sym))
-             else:
-                 os.remove(latest_sym)
-
-        #Otherwise, get the latest folder chronologically, ignoring today
-        prev_tstamps = sorted(common.immediate_subdirs(proj_dir))
-        if self.timestamp in prev_tstamps:
-            prev_tstamps.remove(self.timestamp)
-        return prev_tstamps[-1] if len(prev_tstamps) > 0 else None
+        return meta.latest_timestamp(proj_dir, None, self.timestamp)
 
     def execute(self):
         super(gdc_mirror, self).execute()
         self.parse_args()
         self.set_timestamp()
-        self.init_logs()
+        common.init_logging(self.timestamp, self.mirror_log_dir, "gdcMirror")
         self.mirror()
 
 
