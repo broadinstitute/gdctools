@@ -21,6 +21,7 @@ import logging
 import time
 import ConfigParser
 import json
+import csv
 import subprocess
 
 from GDCtool import GDCtool
@@ -110,20 +111,23 @@ class gdc_mirror(GDCtool):
                 for project in projects:
                     self.mirror_project(prgm, project)
 
+                # Write program-level metadata
+                prgm_meta = os.path.join(root_dir, prgm,
+                                         "metadata", self.timestamp)
+                if not os.path.isdir(prgm_meta):
+                    os.makedirs(prgm_meta)
+
+                # Counts, report, etc.
+                self._aggregate_counts(prgm)
+
         logging.info("Mirror completed successfully.")
 
-    def __mirror_file(self, file_d, proj_root, prev_tstamp, n, total, retries=3):
-        '''Mirror a file into <proj_root>/<timestamp>.
+    def __mirror_file(self, file_d, proj_root, n, total, retries=3):
+        '''Mirror a file into <proj_root>/<cat>/<type>.
 
-        If the file exists in the previous root, then a symlink is created to
-        the first time the file was downloaded. Otherwise, the file is downloaded
-        to the current timestamp folder.
+        Files are uniquely identified by uuid.
         '''
-        tstamp = self.timestamp
-        tstamp_root = os.path.join(proj_root, tstamp)
-
-        uuid = file_d['file_id']
-        savepath = meta.mirror_path(tstamp_root, file_d)
+        savepath = meta.mirror_path(proj_root, file_d)
         dirname, basename = os.path.split(savepath)
         logging.info("Mirroring {0} | {1} of {2}".format(basename, n, total))
 
@@ -132,19 +136,15 @@ class gdc_mirror(GDCtool):
             os.makedirs(dirname)
 
         md5path = savepath + ".md5"
-        prev_path = _file_loc(file_d, proj_root, prev_tstamp)
-        # Possible States:
-        # 1. Fresh mirror, prev_path=None, md5=None --> Download file
-        # 2. Existing Mirror, prev_md5 doesn't match --> Download new file
-        # 3. prev_md5 matches --> Symlink file to realpath(prev_path)
 
-        if prev_path is None or not meta.md5_matches(file_d, prev_path + ".md5"):
-            logging.info("Downloading new file to " + savepath)
+        if not meta.md5_matches(file_d, md5path):
+            logging.info("New file, downloading...")
 
             # New file, mirror to this folder
             while retries > 0:
                 try:
                     #Download file
+                    uuid = file_d['file_id']
                     api.get_file(uuid, savepath)
                     break
                 except subprocess.CalledProcessError as e:
@@ -160,13 +160,9 @@ class gdc_mirror(GDCtool):
                 with open(md5path, 'w') as mf:
                     mf.write(md5sum + "  " + basename)
 
-        # Safety check, should be near impossible to have identical timestamps
-        elif tstamp != prev_tstamp:
-            # Old file, symlink savepath to the prev_path
-            # *But only if this is a new tstamp
-            logging.info("Exsting file, symlinking from " + prev_path)
-            os.symlink(prev_path, savepath)
-            os.symlink(prev_path + '.md5', savepath + '.md5')
+        # File exists in mirror
+        else:
+            logging.info("File exists")
 
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
@@ -175,50 +171,48 @@ class gdc_mirror(GDCtool):
         if self.options.data_categories is not None:
             data_categories = self.options.data_categories
         else:
-            logging.info("No data_categories specified, using GDC API to discover available categories")
+            logging.info("No data_categories specified, using GDC API to "
+                         + "discover available categories")
             data_categories = api.get_data_categories(project)
-        logging.info("Found " + str(len(data_categories)) + " data categories: " + ",".join(data_categories))
+        logging.info("Found " + str(len(data_categories)) + " data categories: "
+                     + ",".join(data_categories))
 
-        tstamp_root = os.path.join(self.mirror_root_dir, program, project, tstamp)
-        tstamp_root = os.path.abspath(tstamp_root)
-        logging.info("Mirroring data to " + tstamp_root)
+        proj_dir = os.path.join(self.mirror_root_dir, program, project)
+        logging.info("Mirroring data to " + proj_dir)
 
-        #Ensure timestamp dir exists
-        os.makedirs(tstamp_root)
-
-        # Mirror each category separately
+        # Mirror each category separately, recording metadata (file dicts)
+        file_metadata = []
         for cat in data_categories:
-            self.mirror_category(program, project, cat)
+            cat_data = self.mirror_category(program, project, cat)
+            file_metadata.extend(cat_data)
+
+        # Record project-level metadata
+        # file dicts, counts, redactions, blacklist, etc.
+        meta_folder = os.path.join(self.mirror_root_dir, program, project,
+                                   "metadata", tstamp)
+        if not os.path.isdir(meta_folder):
+            os.makedirs(meta_folder)
+
+        # Write file metadata
+        meta_json = ".".join(["metadata", project, tstamp, "json" ])
+        meta_json = os.path.join(meta_folder, meta_json)
+        with open(meta_json, 'w') as jf:
+            json.dump(file_metadata, jf, indent=2)
 
         # Write sample counts
-        proj_counts = self._sample_counts(program, project, data_categories)
         countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
-        countspath = os.path.join(tstamp_root, countsfile)
+        countspath = os.path.join(meta_folder, countsfile)
+
+        proj_counts = self._sample_counts(program, project, data_categories)
         _write_counts(proj_counts, project, sorted(data_categories), countspath)
-
-        #Symlink /program/project/latest to /program/project/timestamp
-        sym_path = os.path.join(self.mirror_root_dir, program, project, "latest")
-        common.silent_rm(sym_path)
-
-        logging.info("Symlinking {0} -> {1}".format(sym_path, tstamp_root))
-        os.symlink(tstamp_root, sym_path)
 
     def mirror_category(self, program, project, category):
         '''Mirror one category of data in a particular project.
-        Return a dictionary of counts for each sample type, e.g.:
-        { "TP" : 100, "TR" : 50, "NT" : 50 }
+        Return the mirrored file metadata.
         '''
         tstamp = self.timestamp
         proj_dir = os.path.join(self.mirror_root_dir, program, project)
-        tstamp_dir = os.path.join(proj_dir, tstamp)
-        cat_dir = os.path.join(tstamp_dir, category.replace(' ', '_'))
-
-        #Use the last mirror to check for presence of files, and to symlink to
-        last_mirror = self.last_mirror_tstamp(program, project)
-        if last_mirror is not None:
-            logging.info("Found previous mirror: " + last_mirror)
-
-        logging.info("Mirroring: {0} - {1} data".format(project, category))
+        cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
 
         #Create data folder
         if not os.path.isdir(cat_dir):
@@ -227,35 +221,27 @@ class gdc_mirror(GDCtool):
 
         file_metadata = api.get_files(project, category)
 
-        # Save metadata in json format for dicing reference, in <data_category>/meta/
-        metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
-        metadata_path = os.path.join(tstamp_dir, metadata_filename)
-
-        # Merge existing metadata with this category
-        meta.append_metadata(file_metadata, metadata_path)
-
         if self.options.meta_only:
-            logging.info("Metadata only option enabled, skipping file mirroring")
+            logging.info("Metadata only option enabled, skipping full mirror")
         else:
-            total_files = len(file_metadata)
-            logging.info("Mirroring " + str(total_files) + " " + category + " files")
+            num_files = len(file_metadata)
+            logging.info("Mirroring {0} {1} files".format(num_files, category))
 
             for n, file_d in enumerate(file_metadata):
-                self.__mirror_file(file_d, proj_dir, last_mirror, n, total_files)
+                self.__mirror_file(file_d, proj_dir, n, num_files)
+
+        return file_metadata
 
     def _sample_counts(self, program, project, data_categories):
-        tstamp = self.timestamp
+
         proj_dir = os.path.join(self.mirror_root_dir, program, project)
-        tstamp_dir = os.path.join(proj_dir, tstamp)
-        metadata_filename = '.'.join(["metadata", self.timestamp, "json"])
-        metadata_path = os.path.join(tstamp_dir, metadata_filename)
+        metadata_filename = '.'.join(["metadata", project,
+                                      self.timestamp, "json"])
+        metadata_path = os.path.join(proj_dir, "metadata",
+                                     self.timestamp, metadata_filename)
 
         with open(metadata_path, 'r') as jsonf:
             metadata = json.load(jsonf)
-
-        samp_level_cats = {cat for cat in data_categories
-                           if cat not in ['Biospecimen', 'Clinical']}
-        indiv_level_cats = set(data_categories) - samp_level_cats
 
         #Useful counting structures
         proj_counts = dict()                # Counts for each code+type
@@ -299,16 +285,58 @@ class gdc_mirror(GDCtool):
 
         return proj_counts
 
+    def _aggregate_counts(self, program):
+        '''Count samples across all projects in a program'''
+        # Loop over projects, searching for counts.tsv files
+        prgm_root = os.path.join(self.mirror_root_dir, program)
+        agg_counts = dict()
+        totals = dict()
+        all_types = set()
+        for cf in _counts_files(prgm_root, self.timestamp):
+            project = os.path.basename(cf).split('.')[0]
+            # Use a dict reader to build counts across all files
+            with open(cf, 'r') as f:
+                reader = csv.DictReader(f, delimiter='\t')
+                data_types = list(reader.fieldnames)
+                #Don't use the first row
+                data_types.remove('Sample Type')
+                all_types.update(data_types)
+                for row in reader:
+                    cohort = project.split('-')[-1]
+                    if row['Sample Type'] != 'Totals':
+                        cohort += '-' + row['Sample Type']
+                        is_total = False
+                    else:
+                        is_total = True
 
+                    agg_counts[cohort] = dict()
+                    for dt in data_types:
+                        count = int(row[dt])
+                        agg_counts[cohort][dt] = count
+                        if is_total:
+                            totals[dt] = totals.get(dt, 0) + count
 
-    def last_mirror_tstamp(self, program, project):
-        '''Returns the timestamp of the last mirroring run for a project.
-        '''
-        # If a symlink to latest exists, use the one pointed to by latest.
-        proj_dir = os.path.join(self.mirror_root_dir, program, project)
-        if not os.path.isdir(proj_dir):
-            return None
-        return meta.latest_timestamp(proj_dir, None, self.timestamp)
+        tstamp = self.timestamp
+        counts_file = '.'.join([program, "sample_counts", tstamp, "tsv"])
+        counts_path = os.path.join(prgm_root, "metadata",
+                                   tstamp, counts_file)
+        all_types = sorted(all_types)
+        with open(counts_path, 'w') as out:
+            #Write the header
+            header = 'Cohort\t' + '\t'.join(all_types) + '\n'
+            out.write(header)
+            # Write each cohort, alphabetically
+            cohorts = sorted(agg_counts.keys())
+            for c in cohorts:
+                line = c + '\t' + '\t'.join(str(agg_counts[c].get(dt, 0))
+                                            for dt in all_types)
+                out.write(line + '\n')
+
+            #Now write totals
+            line = 'Totals\t' + '\t'.join(str(totals.get(dt,0))
+                                          for dt in all_types)
+            out.write(line + '\n')
+
 
     def execute(self):
         super(gdc_mirror, self).execute()
@@ -316,21 +344,6 @@ class gdc_mirror(GDCtool):
         self.set_timestamp()
         common.init_logging(self.timestamp, self.mirror_log_dir, "gdcMirror")
         self.mirror()
-
-
-def _file_loc(file_d, proj_root, tstamp):
-    '''Return the path of the file described in file_d.
-    This could be in the given tstamp folder, or symlinked to another
-    timestamped folder, or None, if the file does not exist.
-    '''
-    if tstamp is None:
-        return None
-    path = meta.mirror_path(os.path.join(proj_root, tstamp), file_d)
-    real_path = os.path.realpath(path)
-    if os.path.isfile(real_path):
-        return real_path
-    else:
-        return None
 
 
 # TODO: Insert short data type codes, rather than full type names
@@ -354,6 +367,20 @@ def _write_counts(counts, proj_id, types, f):
         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_id))[1]
         tots = [str(counts.get(main_code,{}).get(t, 0)) for t in types]
         out.write('Totals\t' + '\t'.join(tots) + "\n")
+
+def _counts_files(prog_root, timestamp):
+    '''Generate the counts files for each project in a program'''
+    # 'dirs' will be the mirrored projects
+    root, dirs, files = os.walk(prog_root).next()
+
+    # counts files should be in /<prgm>/<proj>/metadata/<timestamp>/
+    stamp_files = [os.path.join(root, proj, 'metadata', timestamp,
+                                '.'.join([proj, "sample_counts", timestamp, "tsv"]))
+                   for proj in dirs]
+
+    for sf in stamp_files:
+        if os.path.isfile(sf):
+            yield sf
 
 
 if __name__ == "__main__":

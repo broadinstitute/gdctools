@@ -18,7 +18,7 @@ from __future__ import print_function
 import os
 import json
 import sys
-from lib.common import TIMESTAMP_REGEX
+from lib.constants import TIMESTAMP_REGEX
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,
@@ -81,13 +81,48 @@ def md5_matches(file_dict, md5file):
 
 
 def file_basename(file_dict):
-    # Since GDC doesn't have unique filenames, prepend uuid
+    '''Generate a filename based on the file dict.
+
+    Each file_dict reports a file_name, into which the uuid is inserted.
+    The function attempts to insert the uuid between the human-readable name
+    and the natural file extension.
+
+    E.g:
+        nationwidechildrens.org_biospecimen.TCGA-NA-A4QY.xml
+        becomes
+        nationwidechildrens.org_biospecimen.TCGA-NA-A4QY.<uuid>.xml
+        &
+        isoforms.quantification.txt
+        becomes
+        isoforms.quantification.<uuid>.txt
+
+
+    This is done by specifying a list of known extension strings and finding
+    the first extension from left to right, splitting on periods (.)
+    in order to preserve compound extensions such as '.tar.gz'
+
+    If no correct file basename can be found, raises ValueError and dumps
+    the offending file_dict.
+    '''
+    EXTENSIONS = {'xml', 'txt', 'tar', 'gz', 'md5'}
     name = file_dict['file_name']
     uuid = file_dict['file_id']
-    return uuid + "." + name
+
+    namelist = name.split('.')
+    try:
+        for i in range(len(namelist) + 1):
+            if namelist[i] in EXTENSIONS:
+                break
+    except IndexError:
+        # We went too far, must not have found an extension
+        raise ValueError("No valid extension found for file: " + name)
+
+    # i is now the index of the first extension, insert uuid right before
+    namelist.insert(i, uuid)
+    return ".".join(namelist)
 
 
-def mirror_path(stamp_root, file_dict):
+def mirror_path(proj_root, file_dict):
     '''Return the file location relative to a root folder.
 
     This location is equivalent to:
@@ -95,7 +130,7 @@ def mirror_path(stamp_root, file_dict):
     category = file_dict['data_category']
     data_type = file_dict['data_type']
     name = file_basename(file_dict)
-    return os.path.join(stamp_root, category, data_type, name).replace(' ', '_')
+    return os.path.join(proj_root, category, data_type, name).replace(' ', '_')
 
 
 def aliquot_id(file_dict):

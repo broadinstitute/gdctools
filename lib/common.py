@@ -27,7 +27,7 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
     if log_dir is not None and tstamp is not None:
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
-        logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"))
+        logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"]))
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
@@ -51,10 +51,6 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
     root_logger.addHandler(console_handler)
 
 
-
-
-
-
 def silent_rm(filename):
     try:
         os.remove(filename)
@@ -71,11 +67,13 @@ def timestamp2tuple(timestamp):
         raise ValueError('%s is not in expected format: YYYY_MM_DD__HH_MM_SS' % timestamp)
     return time.strptime(timestamp, '%Y_%m_%d__%H_%M_%S')
 
+
 def timetuple2stamp(timetuple=time.localtime()):
     '''Takes a time-tuple and converts it to the standard GDAC timestamp
     (YYYY_MM_DD__HH_MM_SS). No argument will generate a current time
     timestamp.'''
     return time.strftime('%Y_%m_%d__%H_%M_%S', timetuple)
+
 
 def increment_file(filepath):
     '''Returns filepath if filepath doesn't exist. Otherwise returns
@@ -86,6 +84,7 @@ def increment_file(filepath):
         count = sum((1 for _ in fnmatch.filter(os.listdir(dirname), filename + '*')), 1)
         filepath = '.'.join((filepath, str(count)))
     return filepath
+
 
 def immediate_subdirs(path):
     return [d for d in os.listdir(path)
