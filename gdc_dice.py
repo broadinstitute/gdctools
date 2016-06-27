@@ -79,6 +79,7 @@ class gdc_dicer(GDCtool):
                 # For each project, get timestamp of last mirror that matches
                 latest_tstamps.add(meta.latest_timestamp(proj_dir, dstamp))
 
+        print(latest_tstamps)
         # Sanity check: if the wirror completed successfuly, all the
         # discovered timestamps should be identical
         if len(latest_tstamps) != 1:
@@ -118,22 +119,19 @@ class gdc_dicer(GDCtool):
                 for project in projects:
                     # Load metadata from mirror
                     raw_project_root = os.path.join(mirror_prog_root, project)
-                    stamp_root = os.path.join(raw_project_root, timestamp)
+                    stamp_root = os.path.join(raw_project_root, "metadata", timestamp)
                     metadata = meta.latest_metadata(stamp_root)
-
                     diced_project_root = os.path.join(diced_prog_root, project)
                     logging.info("Dicing " + project + " to " + diced_project_root)
 
                     #Dice to date specific folder
                     #Figure out the previous dicing timestamp, if present
-                    prev_tstamp = meta.latest_timestamp(diced_project_root,
-                                                        None, timestamp)
-
+                    # prev_tstamp = meta.latest_timestamp(diced_project_root,
+                    #                                     None, timestamp)
 
                     for file_dict in metadata:
                         dice_one(file_dict, trans_dict, raw_project_root,
-                                 diced_project_root,
-                                 timestamp,
+                                 diced_project_root, timestamp,
                                  dry_run=self.options.dry_run)
         logging.info("Dicing completed successfuly")
 
@@ -178,31 +176,31 @@ def build_translation_dict(translation_file):
 
 
 def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
-             timestamp, prev_tstamp, dry_run=True):
+             timestamp, dry_run=True):
     """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
     true, a debug message will be displayed instead of performing the actual
     dicing operation.
     """
-    stamp_root = os.path.join(mirror_proj_root, timestamp)
-    mirror_path = meta.mirror_path(stamp_root, file_dict)
-
-    dice_stamp_root = os.path.join(diced_root, timestamp)
+    mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
+    meta_dir = os.path.join(diced_root, "metadata", timestamp)
 
     if os.path.isfile(mirror_path):
         ##Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
+        #TODO: Handle this better
         if annot != 'UNRECOGNIZED':
-            dice_path = os.path.join(dice_stamp_root, annot)
-            logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
-            dice_meta_path = os.path.join(dice_path, "meta")
+            dice_path = os.path.join(diced_root, annot)
+            expected_path = convert_util.diced_file_path(dice_path, file_dict)
+            logging.info("Dicing file {0} to {1}".format(mirror_path, expected_path))
 
             if not dry_run:
-                if prev_tstamp is not None:
-                    expected_name =
-                # I
-                diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+                if not os.path.isfile(expected_path):
+                    diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+                else:
+                    logging.info('Diced file exists')
+
                 #write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
@@ -280,13 +278,9 @@ def copy(file_dict, mirror_path, dice_path):
     print("Dicing with 'copy'")
     pass
 
-def clinical(file_dict, mirror_path, dice_path):
-#     print("Dicing with 'clinical'")
-    infile = mirror_path
-    extension = 'clin'
+def clinical(file_dict, mirror_path, outdir):
     tcga_id = meta.patient_id(file_dict)
-    return {tcga_id: gdac_clin.process(infile, extension, {tcga_id: tcga_id},
-                                       dice_path, GDAC_BIN_DIR)}
+    return {tcga_id: gdac_clin.process(mirror_path, file_dict, outdir)}
 
 def maf(file_dict, mirror_path, dice_path):
     pass
@@ -300,7 +294,7 @@ def seg_broad(file_dict, mirror_path, dice_path):
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
     return {meta.patient_id(file_dict):
-            gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path,
+            gdac_seg.process(infile, file_dict, hyb_id, tcga_id, dice_path,
                              'seg_broad')}
 
 def seg_harvard(file_dict, mirror_path, dice_path):

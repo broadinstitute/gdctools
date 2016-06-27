@@ -53,10 +53,11 @@ def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
     stamp. Returns none if no timestamp matches
     '''
     latest_tstamp = None
+    meta_dir = os.path.join(proj_dir, "metadata")
 
-    timestamps = [d for d in os.listdir(proj_dir)
+    timestamps = [d for d in os.listdir(meta_dir)
                   if TIMESTAMP_REGEX.match(d) is not None
-                  and os.path.isdir(os.path.join(proj_dir, d))
+                  and os.path.isdir(os.path.join(meta_dir, d))
                   and d != ignore]
     if date_prefix is not None:
         timestamps = filter(lambda d: d.startswith(date_prefix), timestamps)
@@ -121,6 +122,9 @@ def file_basename(file_dict):
     namelist.insert(i, uuid)
     return ".".join(namelist)
 
+def file_id(file_dict):
+    '''Get the file uuid.'''
+    return file_dict['file_id']
 
 def mirror_path(proj_root, file_dict):
     '''Return the file location relative to a root folder.
@@ -191,10 +195,23 @@ def tcga_id(file_dict):
     The exact field depends on the data type, for clinical this will be a
     patient id, for CNV this will be a sample id.
     '''
-    if file_dict['data_type'] in ['Biospecimen', 'Clinical']:
+    if file_dict['data_category'] in ['Biospecimen', 'Clinical']:
         return patient_id(file_dict)
     else:
-        return aliquot_id(file_dict)
+        try:
+            return aliquot_id(file_dict)
+        except:
+            print(json.dumps(file_dict, indent=2))
+            raise
+
+def dice_extension(file_dict):
+    '''Get the expected diced file extension for this file.'''
+    ext = ".txt"
+    if file_dict['data_type'] in ['Biospecimen', 'Clinical']:
+        ext = ".clin.txt"
+    if file_dict['data_type'] in ['Copy Number Variation']:
+        ext = ".seg.txt"
+    return ext
 
 #TODO: Configurable?
 def main_tumor_sample_type(proj_id):
