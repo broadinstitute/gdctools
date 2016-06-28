@@ -41,7 +41,6 @@ class create_loadfile(GDCtool):
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
 
-
     def parse_args(self):
         opts = self.options
 
@@ -81,13 +80,25 @@ class create_loadfile(GDCtool):
                 logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
                 # Keep track of the created annotations
                 annots = set()
+
                 for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
                     logging.info("Reading data for " + annot)
                     annots.add(annot)
+                    case_files = dict()
+                    case_samples = dict()
                     for row in reader:
+                        case_id = row['case_id']
+                        if row['sample_type'] == "None":
+                            # This is a case-level file, save until all the
+                            # samples are known
+                            case_files[case_id] = case_files.get(case_id, [])
+                            case_files[case_id].append(row['file_name'])
+                            continue
+
                         #Add entry for this entity into the master load dict
-                        #eid = row['entity_id']
                         samp_id = sample_id(project, row)
+                        case_samples[case_id] = case_samples.get(case_id, [])
+                        case_samples[case_id].append(samp_id)
 
                         if samp_id not in master_load_dict:
                             master_load_dict[samp_id] = master_load_entry(project, row)
@@ -95,6 +106,14 @@ class create_loadfile(GDCtool):
                         filepath = os.path.join(os.path.dirname(diced_root), row['filename'])
                         master_load_dict[samp_id][annot] = filepath
 
+                    # Now all the samples are known, insert case-level files to each
+                    for case_id in case_samples:
+                        # Insert each file into each sample in master_load_dict
+                        files = case_files.get(case_id, [])
+                        samples = case_samples.get(case_id, [])
+                        for s in samples:
+                            for f in files:
+                                master_load_dict[s][annot] = f
 
                 load_date_root = os.path.join(load_root, program, self.options.datestamp)
                 if not os.path.isdir(load_date_root):
@@ -110,8 +129,8 @@ class create_loadfile(GDCtool):
                 logging.info("Writing sample set loadfile to " + sset_loadfile)
                 write_sample_set_loadfile(samples_loadfile, sset_loadfile)
 
-                logging.info("Writing sample heatmaps")
-                write_heatmaps(master_load_dict, annots, project, timestamp, load_date_root)
+                #logging.info("Writing sample heatmaps")
+                #write_heatmaps(master_load_dict, annots, project, timestamp, load_date_root)
 
 
     def execute(self):
@@ -168,12 +187,12 @@ def sample_id(project, row_dict):
         raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
 
     cohort = project.replace("TCGA-", "")
-    entity_id = row_dict['entity_id']
-    indiv_base = entity_id.replace("TCGA-", "")
-    entity_type = row_dict['entity_type']
-    sample_type, sample_code = sample_type_lookup(entity_type)
+    case_id = row_dict['case_id']
+    indiv_base = case_id.replace("TCGA-", "")
+    sample_type = row_dict['sample_type']
+    sample_type_abbr, sample_code = sample_type_lookup(sample_type)
 
-    samp_id = "-".join([cohort, indiv_base, sample_type])
+    samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     return samp_id
 
 def master_load_entry(project, row_dict):
@@ -184,16 +203,16 @@ def master_load_entry(project, row_dict):
     cohort = project.replace("TCGA-", "")
     entity_id = row_dict['entity_id']
     indiv_base = entity_id.replace("TCGA-", "")
-    entity_type = row_dict['entity_type']
-    sample_type, sample_code = sample_type_lookup(entity_type)
+    sample_type = row_dict['sample_type']
+    sample_type_abbr, sample_code = sample_type_lookup(sample_type)
 
-    samp_id = "-".join([cohort, indiv_base, sample_type])
+    samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     indiv_id = "-".join([cohort, indiv_base])
     tcga_sample_id = "-".join([entity_id, sample_code])
 
     d['sample_id'] = samp_id
     d['individual_id'] = indiv_id
-    d['sample_type'] = sample_type
+    d['sample_type'] = sample_type_abbr
     d['tcga_sample_id'] = tcga_sample_id
 
     return d
@@ -214,22 +233,20 @@ def write_master_load_dict(ld, annots, outfile):
             line += "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
             out.write(line)
 
-def write_heatmaps(ld, annots, project, timestamp, outdir):
-    rownames, matrix = _build_heatmap_matrix(ld, annots)
-    draw_heatmaps(rownames, matrix, project, timestamp, outdir)
-
-def _build_heatmap_matrix(ld, annots):
-    '''Build a 2d matrix and rownames from annotations and load dict'''
-    rownames = list(annots)
-    matrix = [[] for row in rownames]
-    for r in range(len(rownames)):
-        for sid in sorted(ld.keys()):
-            # append 1 if data is present, else 0
-            matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
-
-    return rownames, matrix
-
-
+# def write_heatmaps(ld, annots, project, timestamp, outdir):
+#     rownames, matrix = _build_heatmap_matrix(ld, annots)
+#     draw_heatmaps(rownames, matrix, project, timestamp, outdir)
+#
+# def _build_heatmap_matrix(ld, annots):
+#     '''Build a 2d matrix and rownames from annotations and load dict'''
+#     rownames = list(annots)
+#     matrix = [[] for row in rownames]
+#     for r in range(len(rownames)):
+#         for sid in sorted(ld.keys()):
+#             # append 1 if data is present, else 0
+#             matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
+#
+#     return rownames, matrix
 
 
 def write_sample_set_loadfile(sample_loadfile, outfile):
