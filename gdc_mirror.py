@@ -200,11 +200,11 @@ class gdc_mirror(GDCtool):
             json.dump(file_metadata, jf, indent=2)
 
         # Write sample counts
-        countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
-        countspath = os.path.join(meta_folder, countsfile)
-
-        proj_counts = self._sample_counts(program, project, data_categories)
-        _write_counts(proj_counts, project, sorted(data_categories), countspath)
+        # countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
+        # countspath = os.path.join(meta_folder, countsfile)
+        #
+        # proj_counts = self._sample_counts(program, project, data_categories)
+        # _write_counts(proj_counts, project, sorted(data_categories), countspath)
 
     def mirror_category(self, program, project, category):
         '''Mirror one category of data in a particular project.
