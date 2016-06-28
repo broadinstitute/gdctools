@@ -143,7 +143,7 @@ class gdc_dicer(GDCtool):
 
                     with open(meta_file, 'w') as mf:
                         # Header
-                        mf.write("file_name\tcase_id\tsample_type\n")
+                        mf.write("file_name\tannotation\tcase_id\tsample_type\n")
 
                         # for file_dict in metadata:
                         #     dice_one(file_dict, trans_dict, raw_project_root,
@@ -240,7 +240,8 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                     logging.info('Diced file exists')
 
                 dice_meta_path = os.path.join(diced_root, "metadata")
-                append_diced_metadata(file_dict, expected_path, meta_file)
+                append_diced_metadata(file_dict, expected_path,
+                                      annot, meta_file)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
@@ -272,14 +273,14 @@ def metadata_to_key(file_dict):
         "center_namespace": center_namespace
     }.items())
 
-def append_diced_metadata(file_dict, diced_path, meta_file):
+def append_diced_metadata(file_dict, diced_path, annot, meta_file):
     if meta.has_sample(file_dict):
         sample_type = meta.sample_type(file_dict)
     else:
         sample_type = "None" #Case_level
     cid = meta.case_id(file_dict)
 
-    meta_file.write("\t".join([diced_path, cid, sample_type]) + "\n")
+    meta_file.write("\t".join([diced_path, annot, cid, sample_type]) + "\n")
 
 ## Converter mappings
 def converter(converter_name):

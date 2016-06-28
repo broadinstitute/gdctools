@@ -20,8 +20,8 @@ import logging
 import os
 import csv
 import ConfigParser
-from lib.common import immediate_subdirs
-from lib.meta import get_timestamp
+from lib import common
+from lib.meta import latest_timestamp
 from lib.report import draw_heatmaps
 
 class create_loadfile(GDCtool):
@@ -62,13 +62,12 @@ class create_loadfile(GDCtool):
 
     def create_loadfiles(self):
         #Iterate over programs/projects in diced root
-        diced_root = os.path.abspath(self.options.dice_directory)
-        load_root = os.path.abspath(self.options.loadfile_directory)
+        diced_root = os.path.abspath(self.dice_root_dir)
+        load_root = os.path.abspath(self.load_dir)
 
-
-        for program in immediate_subdirs(diced_root):
+        for program in common.immediate_subdirs(diced_root):
             prog_root = os.path.join(diced_root, program)
-            projects = immediate_subdirs(prog_root)
+            projects = common.immediate_subdirs(prog_root)
 
             for project in projects:
                 #This dictionary contains all the data for the loadfile.
@@ -76,23 +75,27 @@ class create_loadfile(GDCtool):
                 master_load_dict = dict()
 
                 proj_path = os.path.join(prog_root, project)
-                timestamp = get_timestamp(proj_path, self.options.datestamp)
+                timestamp = latest_timestamp(proj_path, self.options.datestamp)
                 logging.info("Generating loadfile data for {0} -- {1}".format( project, timestamp))
                 # Keep track of the created annotations
                 annots = set()
 
-                for annot, reader in get_diced_metadata(proj_path, self.options.datestamp):
-                    logging.info("Reading data for " + annot)
-                    annots.add(annot)
+                metapath = get_diced_metadata(proj_path, timestamp)
+                with open(metapath) as metafile:
+                    reader = csv.DictReader(metafile, delimiter='\t')
+                    #Stores the files and annotations for each case
                     case_files = dict()
                     case_samples = dict()
                     for row in reader:
                         case_id = row['case_id']
+                        annot = row['annotation']
+                        annots.add(annot)
+
                         if row['sample_type'] == "None":
                             # This is a case-level file, save until all the
                             # samples are known
                             case_files[case_id] = case_files.get(case_id, [])
-                            case_files[case_id].append(row['file_name'])
+                            case_files[case_id].append((row['file_name'], annot))
                             continue
 
                         #Add entry for this entity into the master load dict
@@ -103,19 +106,19 @@ class create_loadfile(GDCtool):
                         if samp_id not in master_load_dict:
                             master_load_dict[samp_id] = master_load_entry(project, row)
                         #Filenames in metadata begin with diced root,
-                        filepath = os.path.join(os.path.dirname(diced_root), row['filename'])
+                        filepath = os.path.join(os.path.dirname(diced_root), row['file_name'])
                         master_load_dict[samp_id][annot] = filepath
 
-                    # Now all the samples are known, insert case-level files to each
-                    for case_id in case_samples:
-                        # Insert each file into each sample in master_load_dict
-                        files = case_files.get(case_id, [])
-                        samples = case_samples.get(case_id, [])
-                        for s in samples:
-                            for f in files:
-                                master_load_dict[s][annot] = f
+                # Now all the samples are known, insert case-level files to each
+                for case_id in case_samples:
+                    # Insert each file into each sample in master_load_dict
+                    files = case_files.get(case_id, [])
+                    samples = case_samples.get(case_id, [])
+                    for s in samples:
+                        for f, annot in files:
+                            master_load_dict[s][annot] = f
 
-                load_date_root = os.path.join(load_root, program, self.options.datestamp)
+                load_date_root = os.path.join(load_root, program, timestamp)
                 if not os.path.isdir(load_date_root):
                     os.makedirs(load_date_root)
 
@@ -135,33 +138,24 @@ class create_loadfile(GDCtool):
 
     def execute(self):
         super(create_loadfile, self).execute()
+        self.parse_args()
         opts = self.options
-        logging.basicConfig(format='%(asctime)s[%(levelname)s]: %(message)s',
-                            level=logging.INFO)
+        print(dir(self))
+        common.init_logging()
         self.create_loadfiles()
 
 # Could use get_metadata, but since the loadfile generator is separate, it makes sense to divorce them
-def get_diced_metadata(project_root, datestamp=None):
-    project_root = project_root.rstrip(os.path.sep)
-    project = os.path.basename(project_root)
+def get_diced_metadata(project_root, timestamp):
+    stamp_dir = os.path.join(project_root, "metadata", timestamp)
 
-    for dirpath, dirnames, filenames in os.walk(project_root, topdown=True):
-        # Recurse to meta subdirectories
-        if os.path.basename(os.path.dirname(dirpath)) == project:
-            for n, subdir in enumerate(dirnames):
-                if subdir != 'meta': del dirnames[n]
-
-        if os.path.basename(dirpath) == 'meta':
-            #If provided, only use the metadata for a given date, otherwise use the latest metadata file
-            meta_files =  sorted(filename for filename in filenames \
-                                 if datestamp is None or datestamp in filename)
-            #Annot name is the parent folder
-            annot=os.path.basename(os.path.dirname(dirpath))
-
-            if len(meta_files) > 0:
-                with open(os.path.join(dirpath, meta_files[-1])) as f:
-                    #Return the annotation name, and a dictReader for the metadata
-                    yield  annot, csv.DictReader(f, delimiter='\t')
+    metadata_files = [f for f in os.listdir(stamp_dir)
+                      if os.path.isfile(os.path.join(stamp_dir, f))
+                      and "metadata" in f]
+    # Get the chronologically latest one, in case there is more than one,
+    # Should just be a sanity check
+    latest = sorted(metadata_files)[-1]
+    latest = os.path.join(stamp_dir, latest)
+    return latest
 
 #TODO: This should come from a config file
 def sample_type_lookup(etype):
@@ -201,14 +195,14 @@ def master_load_entry(project, row_dict):
         raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
 
     cohort = project.replace("TCGA-", "")
-    entity_id = row_dict['entity_id']
-    indiv_base = entity_id.replace("TCGA-", "")
+    case_id = row_dict['case_id']
+    indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
     sample_type_abbr, sample_code = sample_type_lookup(sample_type)
 
     samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     indiv_id = "-".join([cohort, indiv_base])
-    tcga_sample_id = "-".join([entity_id, sample_code])
+    tcga_sample_id = "-".join([case_id, sample_code])
 
     d['sample_id'] = samp_id
     d['individual_id'] = indiv_id
@@ -227,7 +221,7 @@ def write_master_load_dict(ld, annots, outfile):
 
         #Loop over sample ids, writing entries in outfile
         #NOTE: requires at least one annot
-        for sid in ld:
+        for sid in sorted(ld):
             this_dict = ld[sid]
             line = "\t".join([this_dict[h] for h in _FIRST_HEADERS]) + "\t"
             line += "\t".join([this_dict.get(a, "__DELETE__") for a in annots]) + "\n"
