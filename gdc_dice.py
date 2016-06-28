@@ -124,6 +124,15 @@ class gdc_dicer(GDCtool):
                     diced_project_root = os.path.join(diced_prog_root, project)
                     logging.info("Dicing " + project + " to " + diced_project_root)
 
+                    # The natural form of the metadata is a list of file dicts,
+                    # which makes it easy to mirror on a project by project
+                    # basis. However, the dicer should insist that only one
+                    # file per case per annotation exists, and therefore we must
+                    # generate a data structure in this form by iterating over
+                    # the metadata before dicing.
+
+                    tcga_lookup = _tcgaid_file_lookup(metadata, trans_dict)
+
                     # Diced Metadata
                     diced_meta_dir = os.path.join(diced_project_root,
                                                   "metadata", timestamp)
@@ -136,10 +145,17 @@ class gdc_dicer(GDCtool):
                         # Header
                         mf.write("file_name\tcase_id\tsample_type\n")
 
-                        for file_dict in metadata:
-                            dice_one(file_dict, trans_dict, raw_project_root,
-                                     diced_project_root, mf,
-                                     dry_run=self.options.dry_run)
+                        # for file_dict in metadata:
+                        #     dice_one(file_dict, trans_dict, raw_project_root,
+                        #              diced_project_root, mf,
+                        #              dry_run=self.options.dry_run)
+
+                        for tcga_id in tcga_lookup:
+                            for annot, file_d in tcga_lookup[tcga_id].iteritems():
+                                dice_one(file_d, trans_dict, raw_project_root,
+                                         diced_project_root, mf,
+                                         dry_run=self.options.dry_run)
+
         logging.info("Dicing completed successfuly")
 
 
@@ -149,6 +165,23 @@ class gdc_dicer(GDCtool):
         self.parse_args()
         common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
         self.dice()
+
+
+def _tcgaid_file_lookup(metadata, translation_dict):
+    '''Builds a dictionary mapping tcga_ids to their file info,
+    stratified by annotation type. This enables the dicer to ensure one diced
+    file per sample or case'''
+    d = dict()
+    for file_dict in metadata:
+        tcga_id = meta.tcga_id(file_dict)
+        annot, _ = get_annotation_converter(file_dict, translation_dict)
+        d[tcga_id] = d.get(tcga_id, dict())
+        # Note that this overwrites any previous value.
+        # TODO: More sophisticated reasoning
+        d[tcga_id][annot] =  file_dict
+
+    return d
+
 
 def build_translation_dict(translation_file):
     """Builds a translation dictionary from a translation table.
@@ -200,7 +233,6 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
             expected_path = convert_util.diced_file_path(dice_path, file_dict)
             logging.info("Dicing file {0} to {1}".format(mirror_path,
                                                          expected_path))
-
             if not dry_run:
                 if not os.path.isfile(expected_path):
                     convert(file_dict, mirror_path, dice_path)
