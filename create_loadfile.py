@@ -89,13 +89,14 @@ class create_loadfile(GDCtool):
                     for row in reader:
                         case_id = row['case_id']
                         annot = row['annotation']
+                        filepath = row['file_name']
                         annots.add(annot)
 
                         if row['sample_type'] == "None":
                             # This is a case-level file, save until all the
                             # samples are known
                             case_files[case_id] = case_files.get(case_id, [])
-                            case_files[case_id].append((row['file_name'], annot))
+                            case_files[case_id].append((filepath, annot))
                             continue
 
                         #Add entry for this entity into the master load dict
@@ -106,7 +107,7 @@ class create_loadfile(GDCtool):
                         if samp_id not in master_load_dict:
                             master_load_dict[samp_id] = master_load_entry(project, row)
                         #Filenames in metadata begin with diced root,
-                        filepath = os.path.join(os.path.dirname(diced_root), row['file_name'])
+
                         master_load_dict[samp_id][annot] = filepath
 
                 # Now all the samples are known, insert case-level files to each

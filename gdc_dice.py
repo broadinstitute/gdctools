@@ -143,7 +143,7 @@ class gdc_dicer(GDCtool):
 
                     with open(meta_file, 'w') as mf:
                         # Header
-                        mf.write("file_name\tannotation\tcase_id\tsample_type\n")
+                        mf.write("case_id\tsample_type\tannotation\tfile_name\n")
 
                         # for file_dict in metadata:
                         #     dice_one(file_dict, trans_dict, raw_project_root,
@@ -230,7 +230,9 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
         #TODO: Handle this better
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
+            #convert expected path to a relative path from the diced_root
             expected_path = convert_util.diced_file_path(dice_path, file_dict)
+            expected_path = os.path.abspath(expected_path)
             logging.info("Dicing file {0} to {1}".format(mirror_path,
                                                          expected_path))
             if not dry_run:
@@ -239,7 +241,6 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                 else:
                     logging.info('Diced file exists')
 
-                dice_meta_path = os.path.join(diced_root, "metadata")
                 append_diced_metadata(file_dict, expected_path,
                                       annot, meta_file)
         else:
@@ -280,7 +281,7 @@ def append_diced_metadata(file_dict, diced_path, annot, meta_file):
         sample_type = "None" #Case_level
     cid = meta.case_id(file_dict)
 
-    meta_file.write("\t".join([diced_path, annot, cid, sample_type]) + "\n")
+    meta_file.write("\t".join([cid, sample_type, annot, diced_path]) + "\n")
 
 ## Converter mappings
 def converter(converter_name):
