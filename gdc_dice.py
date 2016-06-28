@@ -124,15 +124,22 @@ class gdc_dicer(GDCtool):
                     diced_project_root = os.path.join(diced_prog_root, project)
                     logging.info("Dicing " + project + " to " + diced_project_root)
 
-                    #Dice to date specific folder
-                    #Figure out the previous dicing timestamp, if present
-                    # prev_tstamp = meta.latest_timestamp(diced_project_root,
-                    #                                     None, timestamp)
+                    # Diced Metadata
+                    diced_meta_dir = os.path.join(diced_project_root,
+                                                  "metadata", timestamp)
+                    diced_meta_fname = ".".join(['diced_metadata', timestamp, 'tsv'])
+                    if not os.path.isdir(diced_meta_dir):
+                        os.makedirs(diced_meta_dir)
+                    meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
-                    for file_dict in metadata:
-                        dice_one(file_dict, trans_dict, raw_project_root,
-                                 diced_project_root, timestamp,
-                                 dry_run=self.options.dry_run)
+                    with open(meta_file, 'w') as mf:
+                        # Header
+                        mf.write("file_name\tcase_id\tsample_type\n")
+
+                        for file_dict in metadata:
+                            dice_one(file_dict, trans_dict, raw_project_root,
+                                     diced_project_root, mf,
+                                     dry_run=self.options.dry_run)
         logging.info("Dicing completed successfuly")
 
 
@@ -176,7 +183,7 @@ def build_translation_dict(translation_file):
 
 
 def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
-             timestamp, dry_run=True):
+             meta_file, dry_run=True):
     """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
@@ -184,8 +191,6 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
     dicing operation.
     """
     mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
-    meta_dir = os.path.join(diced_root, "metadata", timestamp)
-
     if os.path.isfile(mirror_path):
         ##Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
@@ -193,15 +198,17 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
             expected_path = convert_util.diced_file_path(dice_path, file_dict)
-            logging.info("Dicing file {0} to {1}".format(mirror_path, expected_path))
+            logging.info("Dicing file {0} to {1}".format(mirror_path,
+                                                         expected_path))
 
             if not dry_run:
                 if not os.path.isfile(expected_path):
-                    diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
+                    convert(file_dict, mirror_path, dice_path)
                 else:
                     logging.info('Diced file exists')
 
-                #write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
+                dice_meta_path = os.path.join(diced_root, "metadata")
+                append_diced_metadata(file_dict, expected_path, meta_file)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
@@ -233,27 +240,14 @@ def metadata_to_key(file_dict):
         "center_namespace": center_namespace
     }.items())
 
-def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
-    if not os.path.isdir(dice_meta_path):
-        os.makedirs(dice_meta_path)
-
-    meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
-    if os.path.isfile(meta_filename):
-        #File exists, open in append mode
-        metafile = open(meta_filename, 'a')
+def append_diced_metadata(file_dict, diced_path, meta_file):
+    if meta.has_sample(file_dict):
+        sample_type = meta.sample_type(file_dict)
     else:
-        #File doesn't exist, create and add header
-        metafile = open(meta_filename, 'w')
-        metafile.write('filename\tentity_id\tentity_type\n')
+        sample_type = "None" #Case_level
+    cid = meta.case_id(file_dict)
 
-    # What do we write for clinical/biospecimen?
-    entity_type = meta.sample_type(file_dict)
-
-    for entity_id in diced_files_dict:
-        filename = diced_files_dict[entity_id]
-        metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
-
-    metafile.close()
+    meta_file.write("\t".join([diced_path, cid, sample_type]) + "\n")
 
 ## Converter mappings
 def converter(converter_name):
@@ -274,13 +268,14 @@ def converter(converter_name):
     return CONVERTERS[converter_name]
 
 #Converters
+# Each must return a dictionary mapping case_ids to the diced file paths
 def copy(file_dict, mirror_path, dice_path):
     print("Dicing with 'copy'")
     pass
 
 def clinical(file_dict, mirror_path, outdir):
-    tcga_id = meta.patient_id(file_dict)
-    return {tcga_id: gdac_clin.process(mirror_path, file_dict, outdir)}
+    case_id = meta.case_id(file_dict)
+    return {case_id: gdac_clin.process(mirror_path, file_dict, outdir)}
 
 def maf(file_dict, mirror_path, dice_path):
     pass
@@ -293,9 +288,9 @@ def seg_broad(file_dict, mirror_path, dice_path):
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
-    return {meta.patient_id(file_dict):
-            gdac_seg.process(infile, file_dict, hyb_id, tcga_id, dice_path,
-                             'seg_broad')}
+    case_id = meta.case_id(file_dict)
+    return {case_id: gdac_seg.process(infile, file_dict, hyb_id,
+                                      tcga_id, dice_path, 'seg_broad')}
 
 def seg_harvard(file_dict, mirror_path, dice_path):
     pass

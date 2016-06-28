@@ -155,8 +155,8 @@ def aliquot_id(file_dict):
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
 
 
-def patient_id(file_dict):
-    '''Return the patient_id associated with the file. Raise an exception if
+def case_id(file_dict):
+    '''Return the case_id associated with the file. Raise an exception if
     more than one exists.'''
     try:
         _check_dict_array_size(file_dict, 'cases')
@@ -196,7 +196,7 @@ def tcga_id(file_dict):
     patient id, for CNV this will be a sample id.
     '''
     if file_dict['data_category'] in ['Biospecimen', 'Clinical']:
-        return patient_id(file_dict)
+        return case_id(file_dict)
     else:
         try:
             return aliquot_id(file_dict)
@@ -204,13 +204,24 @@ def tcga_id(file_dict):
             print(json.dumps(file_dict, indent=2))
             raise
 
+def has_sample(file_dict):
+    '''Returns true if there is exactly one sample associated with this file.'''
+
+    # EAFP: accessing the first sample only succeeds if there is no
+    # IndexError, KeyError, or AssertionError
+    try:
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+        return True
+    except (KeyError, IndexError, AssertionError):
+        return False
+
 def dice_extension(file_dict):
     '''Get the expected diced file extension for this file.'''
-    ext = ".txt"
+    ext = "txt"
     if file_dict['data_type'] in ['Biospecimen', 'Clinical']:
-        ext = ".clin.txt"
+        ext = "clin.txt"
     if file_dict['data_type'] in ['Copy Number Variation']:
-        ext = ".seg.txt"
+        ext = "seg.txt"
     return ext
 
 #TODO: Configurable?

@@ -258,14 +258,14 @@ class gdc_mirror(GDCtool):
                 proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
 
                 # Record that this case had this sample_code
-                pid = meta.patient_id(file_d)
+                pid = meta.case_id(file_d)
                 #Ensure dict entry exists, then add to set
                 if pid not in patient_codes: patient_codes[pid] = set()
                 patient_codes[pid].add(code)
 
             else:
                 # Record that this patient had Biospecimen or Clinical data
-                pid = meta.patient_id(file_d)
+                pid = meta.case_id(file_d)
                 if cat == 'Biospecimen':
                     patients_with_biospecimen.add(pid)
                 else:
