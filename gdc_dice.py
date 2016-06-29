@@ -76,6 +76,8 @@ class gdc_dicer(GDCtool):
                 projects = self.dice_projects
             else:
                 projects = common.immediate_subdirs(mirror_prog_root)
+                if "metadata" in projects:
+                    projects.remove("metadata")
             for project in projects:
                 proj_dir = os.path.join(mirror_prog_root, project)
                 # For each project, get timestamp of last mirror that matches
@@ -118,6 +120,8 @@ class gdc_dicer(GDCtool):
                     projects = self.dice_projects
                 else:
                     projects = common.immediate_subdirs(mirror_prog_root)
+                    if "metadata" in projects:
+                        projects.remove("metadata")
                 for project in projects:
                     # Load metadata from mirror
                     raw_project_root = os.path.join(mirror_prog_root, project)
