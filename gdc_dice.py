@@ -24,6 +24,7 @@ from pkg_resources import resource_filename #@UnresolvedImport
 from lib.convert import util as convert_util
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
+from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
 from lib import common
 from lib import meta
@@ -332,8 +333,11 @@ def seg_harvardlowpass(file_dict, mirror_path, dice_path):
     pass
 def seg_mskcc2(file_dict, mirror_path, dice_path):
     pass
+
 def tsv2idtsv(file_dict, mirror_path, dice_path):
-    pass
+    case_id = meta.case_id(file_dict)
+    return {case_id : gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)}
+
 def tsv2magetab(file_dict, mirror_path, dice_path):
     pass
 

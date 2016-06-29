@@ -218,10 +218,14 @@ def has_sample(file_dict):
 def dice_extension(file_dict):
     '''Get the expected diced file extension for this file.'''
     ext = "txt"
-    if file_dict['data_type'] in ['Biospecimen', 'Clinical']:
+    dtype = file_dict['data_type']
+
+    if dtype in ['Biospecimen', 'Clinical']:
         ext = "clin.txt"
-    if file_dict['data_type'] in ['Copy Number Variation']:
+    elif dtype in ['Copy Number Variation']:
         ext = "seg.txt"
+    elif dtype in ['Transcriptome Profiling']:
+        ext = "data.txt"
     return ext
 
 #TODO: Configurable?
