@@ -19,6 +19,7 @@ import json
 import csv
 import os
 import sys
+import gzip
 from pkg_resources import resource_filename #@UnresolvedImport
 
 from lib.convert import util as convert_util
@@ -56,8 +57,6 @@ class gdc_dicer(GDCtool):
         if opts.log_dir is not None: self.dice_log_dir = opts.log_dir
         if opts.mirror_dir is not None: self.mirror_root_dir = opts.mirror_dir
         if opts.dice_dir is not None: self.dice_root_dir = opts.dice_dir
-        if opts.projects is not None: self.dice_projects = opts.projects
-        if opts.programs is not None: self.dice_programs = opts.programs
 
         # Figure out timestamp
         mirror_root = self.mirror_root_dir
@@ -66,7 +65,9 @@ class gdc_dicer(GDCtool):
         # Discover programs to dice
         latest_tstamps = set()
         if self.dice_programs is None:
-            self.dice_programs = common.immediate_subdirs(mirror_root)
+            self.programs = common.immediate_subdirs(mirror_root)
+        else:
+            self.dice_programs = self.dice_programs
 
         # Discover projects to dice
         for program in self.dice_programs:
@@ -297,7 +298,8 @@ def converter(converter_name):
         'seg_harvardlowpass': seg_harvardlowpass,
         'seg_mskcc2' : seg_mskcc2,
         'tsv2idtsv' : tsv2idtsv,
-        'tsv2magetab': tsv2magetab
+        'tsv2magetab': tsv2magetab,
+        'unzip_tsv2idtsv': unzip_tsv2idtsv
     }
 
     return CONVERTERS[converter_name]
@@ -337,6 +339,22 @@ def seg_mskcc2(file_dict, mirror_path, dice_path):
 def tsv2idtsv(file_dict, mirror_path, dice_path):
     case_id = meta.case_id(file_dict)
     return {case_id : gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)}
+
+def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
+    case_id = meta.case_id(file_dict)
+    # First unzip the mirror_path, which is a .gz
+
+    if not mirror_path.endswith('.gz'):
+        raise ValueError('Unexpected gzip filename: ' + fname)
+    uncompressed = mirror_path.rstrip('.gz')
+    with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
+        out.write(mf.read())
+    # Now dice extracted file
+    dice_name = gdac_tsv2idtsv.process(uncompressed, file_dict, dice_path)
+    # Remove extracted file to save disk space
+    os.remove(uncompressed)
+
+    return {case_id : dice_name}
 
 def tsv2magetab(file_dict, mirror_path, dice_path):
     pass
