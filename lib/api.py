@@ -98,7 +98,7 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
 
 def get_file(uuid, file_name):
     """Download a single file from GDC."""
-    curl_args =  ["curl", "-o", file_name, GDC_API_ROOT+ "data/" + uuid]
+    curl_args =  ["curl", "--fail", "-o", file_name, GDC_API_ROOT+ "data/" + uuid]
     return subprocess.check_call(curl_args)
 
 
