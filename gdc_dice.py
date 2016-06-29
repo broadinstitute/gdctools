@@ -56,6 +56,8 @@ class gdc_dicer(GDCtool):
         if opts.log_dir is not None: self.dice_log_dir = opts.log_dir
         if opts.mirror_dir is not None: self.mirror_root_dir = opts.mirror_dir
         if opts.dice_dir is not None: self.dice_root_dir = opts.dice_dir
+        if opts.projects is not None: self.dice_projects = opts.projects
+        if opts.programs is not None: self.dice_programs = opts.programs
 
         # Figure out timestamp
         mirror_root = self.mirror_root_dir
@@ -64,9 +66,7 @@ class gdc_dicer(GDCtool):
         # Discover programs to dice
         latest_tstamps = set()
         if self.dice_programs is None:
-            self.programs = common.immediate_subdirs(mirror_root)
-        else:
-            self.dice_programs = self.dice_programs
+            self.dice_programs = common.immediate_subdirs(mirror_root)
 
         # Discover projects to dice
         for program in self.dice_programs:
