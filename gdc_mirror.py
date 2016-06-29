@@ -343,8 +343,10 @@ class gdc_mirror(GDCtool):
         self.parse_args()
         self.set_timestamp()
         common.init_logging(self.timestamp, self.mirror_log_dir, "gdcMirror")
-        self.mirror()
-
+        try:
+            self.mirror()
+        except Exception as e:
+            logging.exception("Mirroring FAILED:")
 
 # TODO: Insert short data type codes, rather than full type names
 # E.g. BCR instead of Biospecimen

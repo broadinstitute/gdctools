@@ -170,8 +170,10 @@ class gdc_dicer(GDCtool):
         opts = self.options
         self.parse_args()
         common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
-        self.dice()
-
+        try:
+            self.dice()
+        except Exception as e:
+            logging.exception("Dicing FAILED:")
 
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,
