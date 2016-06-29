@@ -122,7 +122,7 @@ class gdc_dicer(GDCtool):
                     projects = common.immediate_subdirs(mirror_prog_root)
                     if "metadata" in projects:
                         projects.remove("metadata")
-                for project in projects:
+                for project in sorted(projects):
                     # Load metadata from mirror
                     raw_project_root = os.path.join(mirror_prog_root, project)
                     stamp_root = os.path.join(raw_project_root, "metadata", timestamp)

@@ -108,7 +108,7 @@ class gdc_mirror(GDCtool):
             prgm_root = os.path.abspath(os.path.join(root_dir, prgm))
 
             with common.lock_context(prgm_root, "mirror"):
-                for project in projects:
+                for project in sorted(projects):
                     self.mirror_project(prgm, project)
 
                 # Write program-level metadata
