@@ -47,7 +47,7 @@ class create_loadfile(GDCtool):
     def parse_args(self):
         opts = self.options
 
-        # Parse custom [firehose] section from configuration file.
+        # Parse custom [loadfile] section from configuration file.
         # This logic is intentionally omitted from GDCtool:parse_config, since
         # loadfiles are only useful to FireHose, and this tool is not distributed
 
@@ -59,10 +59,10 @@ class create_loadfile(GDCtool):
             #        parser ... which I believe we consider a bit more
             #        For case sensitivity we can use the str() function as in:
             #           cfg.optionxform = str
-            if cfg.has_option('firehose', 'load_dir'):
-                self.load_dir = cfg.get('firehose', 'load_dir')
-            if cfg.has_option('firehose', 'heatmaps_dir'):
-                self.heatmaps_dir = cfg.get('firehose', 'heatmaps_dir')
+            if cfg.has_option('loadfile', 'load_dir'):
+                self.load_dir = cfg.get('loadfile', 'load_dir')
+            if cfg.has_option('loadfile', 'heatmaps_dir'):
+                self.heatmaps_dir = cfg.get('loadfile', 'heatmaps_dir')
 
             
             self.aggregates = dict()
