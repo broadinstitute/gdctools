@@ -183,7 +183,7 @@ class gdc_mirror(GDCtool):
 
         # Read the previous metadata, if present
         prev_timestamp = meta.latest_timestamp(proj_dir, None, ignore=tstamp)
-        prev_metadata = None
+        prev_metadata = []
         if prev_timestamp is not None:
             prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_timestamp)
             prev_metadata = meta.latest_metadata(prev_stamp_dir)
