@@ -108,7 +108,7 @@ class gdc_mirror(GDCtool):
             prgm_root = os.path.abspath(os.path.join(root_dir, prgm))
 
             with common.lock_context(prgm_root, "mirror"):
-                for project in projects:
+                for project in sorted(projects):
                     self.mirror_project(prgm, project)
 
                 # Write program-level metadata
@@ -167,6 +167,7 @@ class gdc_mirror(GDCtool):
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
         tstamp = self.timestamp
+
         logging.info("Mirroring started for {0} ({1})".format(project, program))
         if self.options.data_categories is not None:
             data_categories = self.options.data_categories
@@ -180,22 +181,30 @@ class gdc_mirror(GDCtool):
         proj_dir = os.path.join(self.mirror_root_dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
+        # Read the previous metadata, if present
+        prev_timestamp = meta.latest_timestamp(proj_dir, None, ignore=tstamp)
+        prev_metadata = []
+        if prev_timestamp is not None:
+            prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_timestamp)
+            prev_metadata = meta.latest_metadata(prev_stamp_dir)
+
         # Mirror each category separately, recording metadata (file dicts)
         file_metadata = []
-        for cat in data_categories:
-            cat_data = self.mirror_category(program, project, cat)
+        for cat in sorted(data_categories):
+            cat_data = self.mirror_category(program, project, cat, prev_metadata)
             file_metadata.extend(cat_data)
+
 
         # Record project-level metadata
         # file dicts, counts, redactions, blacklist, etc.
-        meta_folder = os.path.join(self.mirror_root_dir, program, project,
-                                   "metadata", tstamp)
-        if not os.path.isdir(meta_folder):
-            os.makedirs(meta_folder)
+        meta_folder = os.path.join(proj_dir,"metadata")
+        stamp_folder = os.path.join(meta_folder, tstamp)
+        if not os.path.isdir(stamp_folder):
+            os.makedirs(stamp_folder)
 
         # Write file metadata
         meta_json = ".".join(["metadata", project, tstamp, "json" ])
-        meta_json = os.path.join(meta_folder, meta_json)
+        meta_json = os.path.join(stamp_folder, meta_json)
         with open(meta_json, 'w') as jf:
             json.dump(file_metadata, jf, indent=2)
 
@@ -206,7 +215,7 @@ class gdc_mirror(GDCtool):
         # proj_counts = self._sample_counts(program, project, data_categories)
         # _write_counts(proj_counts, project, sorted(data_categories), countspath)
 
-    def mirror_category(self, program, project, category):
+    def mirror_category(self, program, project, category, prev_metadata):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
@@ -220,15 +229,16 @@ class gdc_mirror(GDCtool):
             os.makedirs(cat_dir)
 
         file_metadata = api.get_files(project, category)
+        new_metadata = meta.files_diff(file_metadata, prev_metadata)
 
         if self.options.meta_only:
             logging.info("Metadata only option enabled, skipping full mirror")
         else:
-            num_files = len(file_metadata)
-            logging.info("Mirroring {0} {1} files".format(num_files, category))
+            num_files = len(new_metadata)
+            logging.info("Mirroring {0} new {1} files".format(num_files, category))
 
-            for n, file_d in enumerate(file_metadata):
-                self.__mirror_file(file_d, proj_dir, n, num_files)
+            for n, file_d in enumerate(new_metadata):
+                self.__mirror_file(file_d, proj_dir, n+1, num_files)
 
         return file_metadata
 
@@ -343,8 +353,10 @@ class gdc_mirror(GDCtool):
         self.parse_args()
         self.set_timestamp()
         common.init_logging(self.timestamp, self.mirror_log_dir, "gdcMirror")
-        self.mirror()
-
+        try:
+            self.mirror()
+        except Exception as e:
+            logging.exception("Mirroring FAILED:")
 
 # TODO: Insert short data type codes, rather than full type names
 # E.g. BCR instead of Biospecimen

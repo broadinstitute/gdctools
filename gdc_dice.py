@@ -122,7 +122,7 @@ class gdc_dicer(GDCtool):
                     projects = common.immediate_subdirs(mirror_prog_root)
                     if "metadata" in projects:
                         projects.remove("metadata")
-                for project in projects:
+                for project in sorted(projects):
                     # Load metadata from mirror
                     raw_project_root = os.path.join(mirror_prog_root, project)
                     stamp_root = os.path.join(raw_project_root, "metadata", timestamp)
@@ -170,8 +170,10 @@ class gdc_dicer(GDCtool):
         opts = self.options
         self.parse_args()
         common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
-        self.dice()
-
+        try:
+            self.dice()
+        except Exception as e:
+            logging.exception("Dicing FAILED:")
 
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,
