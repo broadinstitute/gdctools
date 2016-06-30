@@ -47,7 +47,7 @@ class create_loadfile(GDCtool):
     def parse_args(self):
         opts = self.options
 
-        # Parse custom [firehose] section from configuration file.
+        # Parse custom [loadfiles] section from configuration file.
         # This logic is intentionally omitted from GDCtool:parse_config, since
         # loadfiles are only useful to FireHose, and this tool is not distributed
 
@@ -59,12 +59,12 @@ class create_loadfile(GDCtool):
             #        parser ... which I believe we consider a bit more
             #        For case sensitivity we can use the str() function as in:
             #           cfg.optionxform = str
-            if cfg.has_option('firehose', 'load_dir'):
-                self.load_dir = cfg.get('firehose', 'load_dir')
-            if cfg.has_option('firehose', 'heatmaps_dir'):
-                self.heatmaps_dir = cfg.get('firehose', 'heatmaps_dir')
 
-
+            if cfg.has_option('loadfiles', 'load_dir'):
+                self.load_dir = cfg.get('loadfiles', 'load_dir')
+            if cfg.has_option('loadfiles', 'heatmaps_dir'):
+                self.heatmaps_dir = cfg.get('loadfiles', 'heatmaps_dir')
+            
             self.aggregates = dict()
             if cfg.has_section('aggregates'):
                 for aggr in cfg.options('aggregates'):
@@ -115,7 +115,7 @@ class create_loadfile(GDCtool):
             program_dir = os.path.join(diced_root, program)
             annotations = set()
 
-            for projname in common.immediate_subdirs(program_dir):
+            for projname in sorted(common.immediate_subdirs(program_dir)):
 
                 # Each project dict contains all the loadfile rows for the
                 # given project/cohort.  Keys are the entity_ids, values are
@@ -239,7 +239,7 @@ class create_loadfile(GDCtool):
         (projects, annotations) = self.inspect_data()
 
         # ... then generate singleton loadfiles (one per project/cohort)
-        for project in projects.keys():
+        for project in sorted(projects.keys()):
             self.generate_loadfiles(project, annotations, [projects[project]])
 
         # ... lastly, generate any aggregate loadfiles (>1 project/cohort)
@@ -250,8 +250,9 @@ class create_loadfile(GDCtool):
                 aggregate.append(projects[project])
             self.generate_loadfiles(aggr_name, annotations, aggregate)
 
-# Could use get_metadata, but since the loadfile generator is separate, it makes sense to divorce them
 def get_diced_metadata(project_root, datestamp):
+    # Could use get_metadata here, but since the loadfile generator is
+    # separate, it makes sense to divorce them
     stamp_dir = os.path.join(project_root, "metadata", datestamp)
 
     metadata_files = [f for f in os.listdir(stamp_dir)
@@ -263,20 +264,22 @@ def get_diced_metadata(project_root, datestamp):
     latest = os.path.join(stamp_dir, latest)
     return latest
 
-#TODO: This should come from a config file
 def sample_type_lookup(etype):
     '''Convert long form sample types into letter codes.'''
+    # FIXME: ideally this should come from a config file section, and
+    #        the config file parser could/should be updated to support
+    #        custom "program-specific" content
     lookup = {
-        "Blood Derived Normal" : ("NB", "10"),
         "Primary Tumor" : ("TP", "01"),
-        "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
-        "Metastatic" : ("TM", "06"),
-        "Solid Tissue Normal": ("NT", "11"),
         "Recurrent Tumor" : ("TR", "02"),
+        "Blood Derived Normal" : ("NB", "10"),
+        "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
+        "Additional - New Primary" : ("TAP", "05"),
+        "Metastatic" : ("TM", "06"),
+        "Additional Metastatic" : ("TAM", "07"),
+        "Solid Tissue Normal": ("NT", "11"),
         "Buccal Cell Normal": ("NBC", "12"),
         "Bone Marrow Normal" : ("NBM", "14"),
-        "Additional - New Primary" : ("TAP", "05")
-
     }
 
     return lookup[etype]
@@ -360,7 +363,6 @@ def write_sampleset(samples_lfp, sset_filename, sset_name):
 #             matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
 #
 #     return rownames, matrix
-
 
 if __name__ == "__main__":
     create_loadfile().execute()

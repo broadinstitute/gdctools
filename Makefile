@@ -15,7 +15,7 @@ REPO_HASH=$(shell $(GIT) log -n 1 --pretty=%H | cut -c 1-24)
 VERSION = $(shell cat $(__PATH__)/VERSION)
 LONGVERSION=$(VERSION) ($(TIMESTAMP) $(REPO_HASH))
 
-PYTHON_HOME=$(shell ./config.sh)
+PYTHON_HOME=$(shell config/findPython.sh)
 DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
 PYTHON=$(DEST)/bin/python
