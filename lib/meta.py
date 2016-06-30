@@ -46,6 +46,12 @@ def latest_metadata(stamp_dir):
         return json.load(jsonf)
 
 
+def files_diff(new_files, old_files):
+    '''Returns the file dicts in new_files that aren't in old_files'''
+    old_uuids = {fd['file_id'] for fd in old_files}
+    new_dicts = [fd for fd in new_files if fd['file_id'] not in old_uuids]
+    return new_dicts
+
 def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
     '''Get the timestamp of the last mirror or dicer run for a project.
 
