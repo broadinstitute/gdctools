@@ -282,6 +282,7 @@ def tumor_code(tumor_type):
         "Recurrent Blood Derived Cancer - Bone Marrow" : ('04', 'TRBM'),
         "Recurrent Blood Derived Cancer - Peripheral Blood" : ('40', 'TRB'),
         "Recurrent Solid Tumor" : ('02', 'TR'),
+        "Recurrent Tumor" : ('02', 'TR'), # GDC had new name for this
         "Solid Tissue Normal" : ('11', 'NT'),
     }
     return lookup.get(tumor_type, None)

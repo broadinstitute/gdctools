@@ -161,12 +161,14 @@ class gdc_dicer(GDCtool):
                                          dry_run=self.options.dry_run)
 
                     # Count available data per sample
+                    logging.info("Generating counts for " + project)
                     proj_counts, proj_annots = _count_samples(meta_file)
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
                     _write_counts(proj_counts, project, proj_annots, counts_file)
 
                     # Heatmaps per sample
+                    logging.info("Generating heatmaps for " + project)
                     create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
 
 
