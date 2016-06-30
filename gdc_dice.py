@@ -27,6 +27,7 @@ from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
+from lib.report import draw_heatmaps
 from lib import common
 from lib import meta
 
@@ -83,7 +84,6 @@ class gdc_dicer(GDCtool):
                 # For each project, get timestamp of last mirror that matches
                 latest_tstamps.add(meta.latest_timestamp(proj_dir, dstamp))
 
-        print(latest_tstamps)
         # Sanity check: if the wirror completed successfuly, all the
         # discovered timestamps should be identical
         if len(latest_tstamps) != 1:
@@ -148,13 +148,14 @@ class gdc_dicer(GDCtool):
                     meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
                     #Count project annotations
-
+                    annots = set()
                     with open(meta_file, 'w') as mf:
                         # Header
                         mf.write("case_id\tsample_type\tannotation\tfile_name\n")
 
                         for tcga_id in tcga_lookup:
                             for annot, file_d in tcga_lookup[tcga_id].iteritems():
+                                annots.add(annot)
                                 dice_one(file_d, trans_dict, raw_project_root,
                                          diced_project_root, mf,
                                          dry_run=self.options.dry_run)
@@ -163,9 +164,10 @@ class gdc_dicer(GDCtool):
                     proj_counts, proj_annots = _count_samples(meta_file)
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
-                    print(proj_counts)
-                    print(proj_annots)
                     _write_counts(proj_counts, project, proj_annots, counts_file)
+
+                    # Heatmaps per sample
+                    create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
 
 
 
@@ -329,7 +331,6 @@ def _count_samples(diced_metadata_file):
                 counts[sample_type][annot] = counts[sample_type].get(annot, 0) + 1
                 if case_id not in case_codes: case_codes[case_id] = set()
                 case_codes[case_id].add(sample_type)
-                print(annot, sample_type)
 
     # Now go back through and count the Biospecimen and Clinical data
     # Each sample type is counted as 1 if present
@@ -345,54 +346,6 @@ def _count_samples(diced_metadata_file):
 
     return counts, annotations
 
-
-
-
-
-# def _count_samples_old(metadata):
-#     ''' Generate sample counts for a single project's metadata'''
-#     #Useful counting structures
-#     proj_counts = dict()                # Counts for each code+type
-#     patient_codes = dict()              # Codes for each patient
-#     patients_with_clinical = set()
-#     patients_with_biospecimen = set()
-#
-#
-#     for file_d in metadata:
-#         cat = file_d['data_category']
-#         if cat not in ['Biospecimen', 'clinical__primary']:
-#             #Count as normal, for the given code
-#             _, code = meta.tumor_code(meta.sample_type(file_d))
-#             proj_counts[code] = proj_counts.get(code, dict())
-#             proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
-#
-#             # Record that this case had this sample_code
-#             pid = meta.case_id(file_d)
-#             #Ensure dict entry exists, then add to set
-#             if pid not in patient_codes: patient_codes[pid] = set()
-#             patient_codes[pid].add(code)
-#
-#         else:
-#             # Record that this patient had Biospecimen or Clinical data
-#             pid = meta.case_id(file_d)
-#             if cat == 'Biospecimen':
-#                 patients_with_biospecimen.add(pid)
-#             else:
-#                 patients_with_clinical.add(pid)
-#
-#     # Now go back through and count the Biospecimen and Clinical data
-#     # Each sample type is counted as 1 if present
-#     for patient in patient_codes:
-#         codes = patient_codes[patient]
-#         for c in codes:
-#             if patient in patients_with_clinical:
-#                 count = proj_counts[c].get('Clinical', 0) + 1
-#                 proj_counts[c]['Clinical'] = count
-#             if patient in patients_with_biospecimen:
-#                 count = proj_counts[c].get('Biospecimen', 0) + 1
-#                 proj_counts[c]['Biospecimen'] = count
-#
-#     return proj_counts
 
 # TODO: Insert short data type codes, rather than full type names
 # E.g. BCR instead of Biospecimen
@@ -419,6 +372,32 @@ def _write_counts(sample_counts, proj_name, annots, f):
         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
         tots = [str(sample_counts.get(main_code,{}).get(t, 0)) for t in annots]
         out.write('Totals\t' + '\t'.join(tots) + "\n")
+
+def create_heatmaps(diced_metadata_file, annots, project, timestamp, outdir):
+    rownames, matrix = _build_heatmap_matrix(diced_metadata_file, annots)
+    draw_heatmaps(rownames, matrix, project, timestamp, outdir)
+
+def _build_heatmap_matrix(diced_metadata_file, annots):
+    '''Build a 2d matrix and rownames from annotations and load dict'''
+    rownames = sorted(list(annots))
+    annot_sample_data = dict()
+    # Extract a matrix of whether each annotation has a sample id
+    with open(diced_metadata_file, 'r') as dmf:
+        reader = csv.DictReader(dmf, delimiter='\t')
+        for row in reader:
+            case_id = row['case_id']
+            annot = row['annotation']
+            annot_sample_data[case_id] = annot_sample_data.get(case_id, set())
+            annot_sample_data[case_id].add(annot)
+
+    matrix = [[] for row in rownames]
+    # Now iterate over samples, inserting a 1 if data is presente
+    for r in range(len(rownames)):
+        for sid in sorted(annot_sample_data.keys()):
+            # append 1 if data is present, else 0
+            matrix[r].append( 1 if rownames[r] in annot_sample_data[sid] else 0)
+
+    return rownames, matrix
 
 ## Converter mappings
 def converter(converter_name):

@@ -59,6 +59,7 @@ def draw_heatmaps(rownames, matrix, cohort, timestamp, outputDir):
     ax.tick_params(axis="both", labelsize="x-large")
     canvas = FigureCanvasAgg(fig)
     high_res_filepath = os.path.join(outputDir, ".".join([cohort, timestamp,"high_res.heatmap.png"]))
+    fig.tight_layout()
     canvas.print_figure(high_res_filepath)
 
     fig.set_size_inches(12,6)
@@ -70,6 +71,7 @@ def draw_heatmaps(rownames, matrix, cohort, timestamp, outputDir):
     ax.legend([present, missing], ["Present", "Absent"], loc=1, prop=fontProp)
     canvas = FigureCanvasAgg(fig)
     low_res_filepath = os.path.join(outputDir, ".".join([cohort, timestamp, "low_res.heatmap.png"]))
+    fig.tight_layout()
     canvas.print_figure(low_res_filepath)
 
 def __sort_rows(rownames, matrix):

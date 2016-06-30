@@ -64,7 +64,7 @@ class create_loadfile(GDCtool):
                 self.load_dir = cfg.get('loadfiles', 'load_dir')
             if cfg.has_option('loadfiles', 'heatmaps_dir'):
                 self.heatmaps_dir = cfg.get('loadfiles', 'heatmaps_dir')
-            
+
             self.aggregates = dict()
             if cfg.has_section('aggregates'):
                 for aggr in cfg.options('aggregates'):
@@ -224,8 +224,8 @@ class create_loadfile(GDCtool):
         logging.info("Writing sample set loadfile to " + sset_loadfile)
         write_sampleset(samples_lfp, sset_loadfile, projname)
 
-        #logging.info("Writing sample heatmaps")
-        #write_heatmaps(master_load_dict, annots, project, datestamp, load_date_root)
+        logging.info("Writing sample heatmaps")
+        write_heatmaps(master_load_dict, annots, project, datestamp, load_date_root)
 
     def execute(self):
 
