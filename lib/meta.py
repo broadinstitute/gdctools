@@ -247,6 +247,18 @@ def main_tumor_sample_type(proj_id):
         stype = 'Primary Tumor'
     return stype
 
+def type_abbr(data_type):
+    '''Give the abbreviated data type if one exists.
+    E.g. type_abbr('Biospecimen') == 'BCR'
+    '''
+    #TODO: New abbreviations
+    _ABBRS = {
+        'Biospecimen' : 'BCR',
+        'Clinical' : 'Clin'
+    }
+    # Return long name if no abbreviation exists
+    return _ABBRS.get(data_type, data_type)
+
 
 #TODO: This should come from a config file
 # Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type

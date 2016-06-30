@@ -117,8 +117,8 @@ class gdc_mirror(GDCtool):
                 if not os.path.isdir(prgm_meta):
                     os.makedirs(prgm_meta)
 
-                # Counts, report, etc.
-                self._aggregate_counts(prgm)
+                # # Counts, report, etc.
+                # self._aggregate_counts(prgm)
 
         logging.info("Mirror completed successfully.")
 
@@ -242,110 +242,110 @@ class gdc_mirror(GDCtool):
 
         return file_metadata
 
-    def _sample_counts(self, program, project, data_categories):
+    # def _sample_counts(self, program, project, data_categories):
+    #
+    #     proj_dir = os.path.join(self.mirror_root_dir, program, project)
+    #     metadata_filename = '.'.join(["metadata", project,
+    #                                   self.timestamp, "json"])
+    #     metadata_path = os.path.join(proj_dir, "metadata",
+    #                                  self.timestamp, metadata_filename)
+    #
+    #     with open(metadata_path, 'r') as jsonf:
+    #         metadata = json.load(jsonf)
+    #
+    #     #Useful counting structures
+    #     proj_counts = dict()                # Counts for each code+type
+    #     patient_codes = dict()              # Codes for each patient
+    #     patients_with_clinical = set()
+    #     patients_with_biospecimen = set()
+    #
+    #     for file_d in metadata:
+    #         cat = file_d['data_category']
+    #         if cat not in ['Biospecimen', 'Clinical']:
+    #             #Count as normal, for the given code
+    #             _, code = meta.tumor_code(meta.sample_type(file_d))
+    #             proj_counts[code] = proj_counts.get(code, dict())
+    #             proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
+    #
+    #             # Record that this case had this sample_code
+    #             pid = meta.case_id(file_d)
+    #             #Ensure dict entry exists, then add to set
+    #             if pid not in patient_codes: patient_codes[pid] = set()
+    #             patient_codes[pid].add(code)
+    #
+    #         else:
+    #             # Record that this patient had Biospecimen or Clinical data
+    #             pid = meta.case_id(file_d)
+    #             if cat == 'Biospecimen':
+    #                 patients_with_biospecimen.add(pid)
+    #             else:
+    #                 patients_with_clinical.add(pid)
+    #
+    #     # Now go back through and count the Biospecimen and Clinical data
+    #     # Each sample type is counted as 1 if present
+    #     for patient in patient_codes:
+    #         codes = patient_codes[patient]
+    #         for c in codes:
+    #             if patient in patients_with_clinical:
+    #                 count = proj_counts[c].get('Clinical', 0) + 1
+    #                 proj_counts[c]['Clinical'] = count
+    #             if patient in patients_with_biospecimen:
+    #                 count = proj_counts[c].get('Biospecimen', 0) + 1
+    #                 proj_counts[c]['Biospecimen'] = count
+    #
+    #     return proj_counts
 
-        proj_dir = os.path.join(self.mirror_root_dir, program, project)
-        metadata_filename = '.'.join(["metadata", project,
-                                      self.timestamp, "json"])
-        metadata_path = os.path.join(proj_dir, "metadata",
-                                     self.timestamp, metadata_filename)
-
-        with open(metadata_path, 'r') as jsonf:
-            metadata = json.load(jsonf)
-
-        #Useful counting structures
-        proj_counts = dict()                # Counts for each code+type
-        patient_codes = dict()              # Codes for each patient
-        patients_with_clinical = set()
-        patients_with_biospecimen = set()
-
-        for file_d in metadata:
-            cat = file_d['data_category']
-            if cat not in ['Biospecimen', 'Clinical']:
-                #Count as normal, for the given code
-                _, code = meta.tumor_code(meta.sample_type(file_d))
-                proj_counts[code] = proj_counts.get(code, dict())
-                proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
-
-                # Record that this case had this sample_code
-                pid = meta.case_id(file_d)
-                #Ensure dict entry exists, then add to set
-                if pid not in patient_codes: patient_codes[pid] = set()
-                patient_codes[pid].add(code)
-
-            else:
-                # Record that this patient had Biospecimen or Clinical data
-                pid = meta.case_id(file_d)
-                if cat == 'Biospecimen':
-                    patients_with_biospecimen.add(pid)
-                else:
-                    patients_with_clinical.add(pid)
-
-        # Now go back through and count the Biospecimen and Clinical data
-        # Each sample type is counted as 1 if present
-        for patient in patient_codes:
-            codes = patient_codes[patient]
-            for c in codes:
-                if patient in patients_with_clinical:
-                    count = proj_counts[c].get('Clinical', 0) + 1
-                    proj_counts[c]['Clinical'] = count
-                if patient in patients_with_biospecimen:
-                    count = proj_counts[c].get('Biospecimen', 0) + 1
-                    proj_counts[c]['Biospecimen'] = count
-
-        return proj_counts
-
-    def _aggregate_counts(self, program):
-        '''Count samples across all projects in a program'''
-        # Loop over projects, searching for counts.tsv files
-        prgm_root = os.path.join(self.mirror_root_dir, program)
-        agg_counts = dict()
-        totals = dict()
-        all_types = set()
-        for cf in _counts_files(prgm_root, self.timestamp):
-            project = os.path.basename(cf).split('.')[0]
-            # Use a dict reader to build counts across all files
-            with open(cf, 'r') as f:
-                reader = csv.DictReader(f, delimiter='\t')
-                data_types = list(reader.fieldnames)
-                #Don't use the first row
-                data_types.remove('Sample Type')
-                all_types.update(data_types)
-                for row in reader:
-                    cohort = project.split('-')[-1]
-                    if row['Sample Type'] != 'Totals':
-                        cohort += '-' + row['Sample Type']
-                        is_total = False
-                    else:
-                        is_total = True
-
-                    agg_counts[cohort] = dict()
-                    for dt in data_types:
-                        count = int(row[dt])
-                        agg_counts[cohort][dt] = count
-                        if is_total:
-                            totals[dt] = totals.get(dt, 0) + count
-
-        tstamp = self.timestamp
-        counts_file = '.'.join([program, "sample_counts", tstamp, "tsv"])
-        counts_path = os.path.join(prgm_root, "metadata",
-                                   tstamp, counts_file)
-        all_types = sorted(all_types)
-        with open(counts_path, 'w') as out:
-            #Write the header
-            header = 'Cohort\t' + '\t'.join(all_types) + '\n'
-            out.write(header)
-            # Write each cohort, alphabetically
-            cohorts = sorted(agg_counts.keys())
-            for c in cohorts:
-                line = c + '\t' + '\t'.join(str(agg_counts[c].get(dt, 0))
-                                            for dt in all_types)
-                out.write(line + '\n')
-
-            #Now write totals
-            line = 'Totals\t' + '\t'.join(str(totals.get(dt,0))
-                                          for dt in all_types)
-            out.write(line + '\n')
+    # def _aggregate_counts(self, program):
+    #     '''Count samples across all projects in a program'''
+    #     # Loop over projects, searching for counts.tsv files
+    #     prgm_root = os.path.join(self.mirror_root_dir, program)
+    #     agg_counts = dict()
+    #     totals = dict()
+    #     all_types = set()
+    #     for cf in _counts_files(prgm_root, self.timestamp):
+    #         project = os.path.basename(cf).split('.')[0]
+    #         # Use a dict reader to build counts across all files
+    #         with open(cf, 'r') as f:
+    #             reader = csv.DictReader(f, delimiter='\t')
+    #             data_types = list(reader.fieldnames)
+    #             #Don't use the first row
+    #             data_types.remove('Sample Type')
+    #             all_types.update(data_types)
+    #             for row in reader:
+    #                 cohort = project.split('-')[-1]
+    #                 if row['Sample Type'] != 'Totals':
+    #                     cohort += '-' + row['Sample Type']
+    #                     is_total = False
+    #                 else:
+    #                     is_total = True
+    #
+    #                 agg_counts[cohort] = dict()
+    #                 for dt in data_types:
+    #                     count = int(row[dt])
+    #                     agg_counts[cohort][dt] = count
+    #                     if is_total:
+    #                         totals[dt] = totals.get(dt, 0) + count
+    #
+    #     tstamp = self.timestamp
+    #     counts_file = '.'.join([program, "sample_counts", tstamp, "tsv"])
+    #     counts_path = os.path.join(prgm_root, "metadata",
+    #                                tstamp, counts_file)
+    #     all_types = sorted(all_types)
+    #     with open(counts_path, 'w') as out:
+    #         #Write the header
+    #         header = 'Cohort\t' + '\t'.join(all_types) + '\n'
+    #         out.write(header)
+    #         # Write each cohort, alphabetically
+    #         cohorts = sorted(agg_counts.keys())
+    #         for c in cohorts:
+    #             line = c + '\t' + '\t'.join(str(agg_counts[c].get(dt, 0))
+    #                                         for dt in all_types)
+    #             out.write(line + '\n')
+    #
+    #         #Now write totals
+    #         line = 'Totals\t' + '\t'.join(str(totals.get(dt,0))
+    #                                       for dt in all_types)
+    #         out.write(line + '\n')
 
 
     def execute(self):
@@ -358,27 +358,27 @@ class gdc_mirror(GDCtool):
         except Exception as e:
             logging.exception("Mirroring FAILED:")
 
-# TODO: Insert short data type codes, rather than full type names
-# E.g. BCR instead of Biospecimen
-def _write_counts(counts, proj_id, types, f):
-    '''Write sample counts dict to file.
-    counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
-               'TR' : {'Clinical' : 10, 'BCR': 15, ...},
-               ...}
-    '''
-    with open(f, "w") as out:
-        # Write header
-        out.write("Sample Type\t" + "\t".join(types) + '\n')
-        for code in counts:
-            line = code + "\t"
-            line += "\t".join([str(counts[code].get(t, 0)) for t in types]) + "\n"
-
-            out.write(line)
-
-        # Write totals. Totals is dependent on the main analyzed tumor type
-        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_id))[1]
-        tots = [str(counts.get(main_code,{}).get(t, 0)) for t in types]
-        out.write('Totals\t' + '\t'.join(tots) + "\n")
+# # TODO: Insert short data type codes, rather than full type names
+# # E.g. BCR instead of Biospecimen
+# def _write_counts(counts, proj_id, types, f):
+#     '''Write sample counts dict to file.
+#     counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
+#                'TR' : {'Clinical' : 10, 'BCR': 15, ...},
+#                ...}
+#     '''
+#     with open(f, "w") as out:
+#         # Write header
+#         out.write("Sample Type\t" + "\t".join(types) + '\n')
+#         for code in counts:
+#             line = code + "\t"
+#             line += "\t".join([str(counts[code].get(t, 0)) for t in types]) + "\n"
+#
+#             out.write(line)
+#
+#         # Write totals. Totals is dependent on the main analyzed tumor type
+#         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_id))[1]
+#         tots = [str(counts.get(main_code,{}).get(t, 0)) for t in types]
+#         out.write('Totals\t' + '\t'.join(tots) + "\n")
 
 def _counts_files(prog_root, timestamp):
     '''Generate the counts files for each project in a program'''

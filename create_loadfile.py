@@ -64,7 +64,7 @@ class create_loadfile(GDCtool):
             if cfg.has_option('firehose', 'heatmaps_dir'):
                 self.heatmaps_dir = cfg.get('firehose', 'heatmaps_dir')
 
-            
+
             self.aggregates = dict()
             if cfg.has_section('aggregates'):
                 for aggr in cfg.options('aggregates'):
@@ -191,7 +191,7 @@ class create_loadfile(GDCtool):
         # Generate a sample and sample_set loadfile for the given list of
         # cohorts (i.e. GDC projects).  Note that singleton cohorts will
         # have 1 entry in cohort list, and aggregate cohorts more than 1.
-        # Specifying each case (singleton vs aggregate) as a sequence 
+        # Specifying each case (singleton vs aggregate) as a sequence
         # allows them both to be treated the same manner below.
 
         program = self.program

@@ -147,20 +147,27 @@ class gdc_dicer(GDCtool):
                         os.makedirs(diced_meta_dir)
                     meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
+                    #Count project annotations
+
                     with open(meta_file, 'w') as mf:
                         # Header
                         mf.write("case_id\tsample_type\tannotation\tfile_name\n")
-
-                        # for file_dict in metadata:
-                        #     dice_one(file_dict, trans_dict, raw_project_root,
-                        #              diced_project_root, mf,
-                        #              dry_run=self.options.dry_run)
 
                         for tcga_id in tcga_lookup:
                             for annot, file_d in tcga_lookup[tcga_id].iteritems():
                                 dice_one(file_d, trans_dict, raw_project_root,
                                          diced_project_root, mf,
                                          dry_run=self.options.dry_run)
+
+                    # Count available data per sample
+                    proj_counts, proj_annots = _count_samples(meta_file)
+                    counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
+                    counts_file = os.path.join(diced_meta_dir, counts_file)
+                    print(proj_counts)
+                    print(proj_annots)
+                    _write_counts(proj_counts, project, proj_annots, counts_file)
+
+
 
         logging.info("Dicing completed successfuly")
 
@@ -263,6 +270,7 @@ def get_annotation_converter(file_dict, translation_dict):
         #TODO: Gracefully handle this instead of creating a new annotation type
         return "UNRECOGNIZED", None #TODO: handle this better
 
+
 def metadata_to_key(file_dict):
     """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT"""
 
@@ -282,6 +290,7 @@ def metadata_to_key(file_dict):
         "center_namespace": center_namespace
     }.items())
 
+
 def append_diced_metadata(file_dict, diced_path, annot, meta_file):
     if meta.has_sample(file_dict):
         sample_type = meta.sample_type(file_dict)
@@ -290,6 +299,126 @@ def append_diced_metadata(file_dict, diced_path, annot, meta_file):
     cid = meta.case_id(file_dict)
 
     meta_file.write("\t".join([cid, sample_type, annot, diced_path]) + "\n")
+
+def _count_samples(diced_metadata_file):
+    '''Count the number of diced files for each annotation/tumor-type'''
+    counts = dict()
+    cases_with_clinical = set()
+    cases_with_biospecimen = set()
+    case_codes = dict()
+    annotations = set()
+
+    with open(diced_metadata_file, 'r') as dmf:
+        reader = csv.DictReader(dmf, delimiter='\t')
+        #Loop through counting non-case-level annotations
+        for row in reader:
+
+            annot = row['annotation']
+            case_id = row['case_id']
+
+            annotations.add(annot)
+
+            # TODO: This should probably not be hard-coded
+            if 'clinical__primary' == annot:
+                cases_with_clinical.add(case_id)
+            elif 'clinical__biospecimen' == annot:
+                cases_with_biospecimen.add(case_id)
+            else:
+                _, sample_type = meta.tumor_code(row['sample_type'])
+                counts[sample_type] = counts.get(sample_type, dict())
+                counts[sample_type][annot] = counts[sample_type].get(annot, 0) + 1
+                if case_id not in case_codes: case_codes[case_id] = set()
+                case_codes[case_id].add(sample_type)
+                print(annot, sample_type)
+
+    # Now go back through and count the Biospecimen and Clinical data
+    # Each sample type is counted as 1 if present
+    for case in case_codes:
+        codes = case_codes[case]
+        for c in codes:
+            if case in cases_with_clinical:
+                count = counts[c].get('clinical__primary', 0) + 1
+                counts[c]['clinical__primary'] = count
+            if case in cases_with_biospecimen:
+                count = counts[c].get('clinical__biospecimen', 0) + 1
+                counts[c]['clinical__biospecimen'] = count
+
+    return counts, annotations
+
+
+
+
+
+# def _count_samples_old(metadata):
+#     ''' Generate sample counts for a single project's metadata'''
+#     #Useful counting structures
+#     proj_counts = dict()                # Counts for each code+type
+#     patient_codes = dict()              # Codes for each patient
+#     patients_with_clinical = set()
+#     patients_with_biospecimen = set()
+#
+#
+#     for file_d in metadata:
+#         cat = file_d['data_category']
+#         if cat not in ['Biospecimen', 'clinical__primary']:
+#             #Count as normal, for the given code
+#             _, code = meta.tumor_code(meta.sample_type(file_d))
+#             proj_counts[code] = proj_counts.get(code, dict())
+#             proj_counts[code][cat] = proj_counts[code].get(cat, 0) + 1
+#
+#             # Record that this case had this sample_code
+#             pid = meta.case_id(file_d)
+#             #Ensure dict entry exists, then add to set
+#             if pid not in patient_codes: patient_codes[pid] = set()
+#             patient_codes[pid].add(code)
+#
+#         else:
+#             # Record that this patient had Biospecimen or Clinical data
+#             pid = meta.case_id(file_d)
+#             if cat == 'Biospecimen':
+#                 patients_with_biospecimen.add(pid)
+#             else:
+#                 patients_with_clinical.add(pid)
+#
+#     # Now go back through and count the Biospecimen and Clinical data
+#     # Each sample type is counted as 1 if present
+#     for patient in patient_codes:
+#         codes = patient_codes[patient]
+#         for c in codes:
+#             if patient in patients_with_clinical:
+#                 count = proj_counts[c].get('Clinical', 0) + 1
+#                 proj_counts[c]['Clinical'] = count
+#             if patient in patients_with_biospecimen:
+#                 count = proj_counts[c].get('Biospecimen', 0) + 1
+#                 proj_counts[c]['Biospecimen'] = count
+#
+#     return proj_counts
+
+# TODO: Insert short data type codes, rather than full type names
+# E.g. BCR instead of Biospecimen
+def _write_counts(sample_counts, proj_name, annots, f):
+    '''Write sample counts dict to file.
+    counts = { 'TP' : {'clinical__primary' : 10, '...': 15, ...},
+               'TR' : {'clinical__primary' : 10, '...': 15, ...},
+               ...}
+    '''
+    annots = sorted(annots)
+    #Abbreviate data types, if possible
+    with open(f, "w") as out:
+        # Write header
+        out.write("Sample Type\t" + "\t".join(annots) + '\n')
+        for code in sample_counts:
+            line = code + "\t"
+            # Headers can use abbreviated data types
+            abbr_types = [meta.type_abbr(dt) for dt in annots]
+            line += "\t".join([str(sample_counts[code].get(t, 0)) for t in annots]) + "\n"
+
+            out.write(line)
+
+        # Write totals. Totals is dependent on the main analyzed tumor type
+        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
+        tots = [str(sample_counts.get(main_code,{}).get(t, 0)) for t in annots]
+        out.write('Totals\t' + '\t'.join(tots) + "\n")
 
 ## Converter mappings
 def converter(converter_name):
