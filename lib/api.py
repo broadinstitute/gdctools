@@ -72,7 +72,7 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     data_filter = _eq_filter("data_category", data_category)
     acc_filter = _eq_filter("access", "open")
     filter_list = [proj_filter, data_filter, acc_filter]
-    if exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:
+    if 'TCGA' in project_id and exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:
         filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
     qfilter = _and_filter(filter_list)
 
@@ -110,6 +110,8 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
 
     # Make initial call
     r = requests.get(endpoint, params=p)
+    #Debug, print url
+    print(r.url)
 
     # Get pagination data
     data = r.json()['data']
