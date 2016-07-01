@@ -113,7 +113,7 @@ def file_basename(file_dict):
     If no correct file basename can be found, raises ValueError and dumps
     the offending file_dict.
     '''
-    EXTENSIONS = {'xml', 'txt', 'tar', 'gz', 'md5'}
+    EXTENSIONS = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
     name = file_dict['file_name']
     uuid = file_dict['file_id']
 
