@@ -60,7 +60,9 @@ def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
     '''
     latest_tstamp = None
     meta_dir = os.path.join(proj_dir, "metadata")
-
+    if not os.path.isdir(meta_dir):
+        # new mirror, no existing timestamps
+        return None
     timestamps = [d for d in os.listdir(meta_dir)
                   if TIMESTAMP_REGEX.match(d) is not None
                   and os.path.isdir(os.path.join(meta_dir, d))

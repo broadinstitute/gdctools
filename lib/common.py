@@ -28,6 +28,13 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
         logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"]))
+        # TODO: For a dicing, this can append to an existing log, is
+        # this a good thing, or not?
+        # Pro: All dicing attempts for a given timestamp are colocated,
+        #     no data is lost
+        # Cons: Logs can get very large, and it's difficult to tell if it
+        #     succeeded or failed, and to tell the difference between dice
+        #     runs.
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
