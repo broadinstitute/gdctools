@@ -79,7 +79,7 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     fields = ['file_id', 'file_name', 'cases.samples.sample_id', 'data_type',
               'data_category', 'data_format', 'experimental_strategy', 'md5sum',
               'platform','tags', 'center.namespace', 'cases.submitter_id',
-              'cases.project.project_id']
+              'cases.project.project_id', 'analysis.workflow_type']
 
     if data_category == 'Protein Expression':
         fields.append('cases.samples.portions.submitter_id')
