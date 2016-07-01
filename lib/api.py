@@ -110,8 +110,6 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
 
     # Make initial call
     r = requests.get(endpoint, params=p)
-    #Debug, print url
-    print(r.url)
 
     # Get pagination data
     data = r.json()['data']
