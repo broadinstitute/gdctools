@@ -20,9 +20,28 @@ import re
 from GDCtool import GDCtool
 from GDCcore import gprint, gabort
 
-# FIXME: this needs to stay in sync (grow) with our other code as GDC exposes more data(types)
-LEGACY_ANNOTATION_NAMES= "sample_id\tindividual_id\tsample_type\ttcga_sample_id\tsnp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_hg19__seg\tsnp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg\tclin__bio__nationwidechildrens_org__Level_1__biospecimen__clin\tclin__bio__nationwidechildrens_org__Level_1__clinical__clin\n"
+# FIXME: this needs to stay in sync (grow) with translation table as GDC exposes
+# more data(types) and our annotations grow
+LEGACY_ANNOTATION_NAMES = [
+    "sample_id",
+    "individual_id",
+    "sample_type",
+    "tcga_sample_id",
+    "snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_hg19__seg",
+    "snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg",
+    "clin__bio__nationwidechildrens_org__Level_1__biospecimen__clin",
+    "clin__bio__nationwidechildrens_org__Level_1__clinical__clin",
 
+    "rnaseq__illuminahiseq_rnaseq__bcgsc_ca__Level_3__gene_expression__data",               # Technically these 3 expression annotations are incorrect,
+    "mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_gene_expression__data",       # b/c GDC blurs the boundaries between GA/HiSeq (does not
+    "mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data",    # expose which aliquots are from which platforms) and also
+                                                                                            # does not expose the submitting center identity.  But this
+                                                                                            # is not a concern during GDC testing phase, and we'll switch
+                                                                                            # to new annotations & tasks in gdc_dev/gdc_prod spaces for
+                                                                                            # later public release.
+]
+
+LEGACY_ANNOTATION_NAMES = "\t".join(LEGACY_ANNOTATION_NAMES) + "\n"
 LEGACY_SAMPLE_STAMP_NAMES = "sample_set_id\tsamplestamp\tmerge_after_load\ttumor_type\tsample_type_short_letter_code\n"
 
 class create_legacy(GDCtool):
