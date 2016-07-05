@@ -161,12 +161,14 @@ class gdc_dicer(GDCtool):
                                          dry_run=self.options.dry_run)
 
                     # Count available data per sample
+                    logging.info("Generating counts for " + project)
                     proj_counts, proj_annots = _count_samples(meta_file)
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
                     _write_counts(proj_counts, project, proj_annots, counts_file)
 
                     # Heatmaps per sample
+                    logging.info("Generating heatmaps for " + project)
                     create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
 
 
@@ -220,7 +222,7 @@ def build_translation_dict(translation_file):
             ##Parse list fields into frozensets
             row['tags'] = frozenset(row['tags'].split(',') if row['tags'] != '' else [])
 
-            #Only add complete rows
+            #Only add fields from the row if they are present in the row_dict
             #Give a warning if overwriting an existing tag, and don't add the new one
             key = frozenset(row.items())
             if key not in d:
@@ -275,13 +277,14 @@ def get_annotation_converter(file_dict, translation_dict):
 
 def metadata_to_key(file_dict):
     """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT"""
-
+    # Required fields
     data_type = file_dict.get("data_type", '')
     data_category = file_dict.get("data_category", '')
     experimental_strategy = file_dict.get("experimental_strategy", '')
     platform = file_dict.get("platform", '')
     tags = _parse_tags(file_dict.get("tags",[]))
     center_namespace = file_dict['center']['namespace'] if 'center' in file_dict else ''
+    workflow_type = file_dict['analysis']['workflow_type'] if 'analysis' in file_dict else ''
 
     return frozenset({
         "data_type" : data_type,
@@ -289,7 +292,8 @@ def metadata_to_key(file_dict):
         "experimental_strategy": experimental_strategy,
         "platform": platform,
         "tags": tags,
-        "center_namespace": center_namespace
+        "center_namespace": center_namespace,
+        "workflow_type" : workflow_type
     }.items())
 
 
@@ -472,6 +476,7 @@ def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
 
 def tsv2magetab(file_dict, mirror_path, dice_path):
     pass
+
 
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)

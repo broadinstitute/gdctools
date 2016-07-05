@@ -72,14 +72,14 @@ def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     data_filter = _eq_filter("data_category", data_category)
     acc_filter = _eq_filter("access", "open")
     filter_list = [proj_filter, data_filter, acc_filter]
-    if exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:
+    if 'TCGA' in project_id and exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:
         filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
     qfilter = _and_filter(filter_list)
 
     fields = ['file_id', 'file_name', 'cases.samples.sample_id', 'data_type',
               'data_category', 'data_format', 'experimental_strategy', 'md5sum',
               'platform','tags', 'center.namespace', 'cases.submitter_id',
-              'cases.project.project_id']
+              'cases.project.project_id', 'analysis.workflow_type']
 
     if data_category == 'Protein Expression':
         fields.append('cases.samples.portions.submitter_id')
