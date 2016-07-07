@@ -8,7 +8,7 @@ Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 GDCtool.py: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
-@author: Michael S. Noble
+@author: Michael S. Noble, Timothy DeFreitas, David I. Heiman
 @date:  2016-05-20
 '''
 
@@ -66,7 +66,6 @@ class GDCtool(object):
         # Store the option in self
         setattr(self, option, value)
         return value
-
 
     def parse_config(self):
         """Read options from config, and optionally override them with args"""
