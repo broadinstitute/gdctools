@@ -121,8 +121,6 @@ class create_loadfile(GDCtool):
                 # given project/cohort.  Keys are the entity_ids, values are
                 # dictionaries for the columns in a loadfile
                 project = dict()
-
-
                 projpath = os.path.join(program_dir, projname)
                 projdate = latest_timestamp(projpath, self.options.datestamp)
 
