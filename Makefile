@@ -86,8 +86,9 @@ install:  gather
 gather: default $(STAGING_DIR) Makefile $(PKG_SRCFILES) $(METAFILES)
 	$(EMAKE) dir_exists DIR=DEST
 	\rm -rf $(PKG_DIR) ; \
-	mkdir -p $(PKG_DIR) ; \
+	mkdir -p $(PKG_DIR)/config ; \
 	cp -fp $(PKG_SRC_FILES) $(PKG_DIR)/. ;\
+	cp -fp config/annotations_table.tsv $(PKG_DIR)/config/. ;\
 	$(EMAKE) $(PKG_DIR)/__init__.py ;\
 	cp -fp $(METAFILES) $(STAGING_DIR)/. ; \
 	cd $(STAGING_DIR) ; \
