@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import xml.etree.ElementTree as ET
 import sys
+import codecs
 
 def path_iter(elem, prefix=""):
     '''Iterates over nodes in an Element Tree with full node paths'''
@@ -40,7 +41,7 @@ def parse_clinical_xml(xmlfile, outtsv):
     """Parses the clinical xml file and outputs node values in two column tsv file."""
     tree = ET.parse(xmlfile)
     root = tree.getroot()
-    with open(outtsv, 'w') as f:
+    with codecs.open(outtsv, 'w', 'utf-8') as f:
         f.write("node_name\tnode_value\n")
         for tup in path_iter(root):
             f.write("\t".join(tup) + "\n")

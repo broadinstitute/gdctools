@@ -8,144 +8,203 @@ Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 gdc_mirror: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
-@author: Timothy DeFreitas
+@author: Timothy DeFreitas, Michael S. Noble
 @date:  2016_05_25
 '''
 
 # }}}
+
 from __future__ import print_function
 import logging
 import json
 import csv
 import os
 import sys
+import gzip
 from pkg_resources import resource_filename #@UnresolvedImport
 
+from lib.convert import util as convert_util
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
-from lib.constants import GDAC_BIN_DIR ##TODO: Remove GDAC BIN dependency
-from lib.common import timetuple2stamp, immediate_subdirs, init_logging
+from lib.convert import tsv2idtsv as gdac_tsv2idtsv
+from lib.report import draw_heatmaps
+from lib import common
 from lib import meta
 
 from GDCtool import GDCtool
 
-
 class gdc_dicer(GDCtool):
 
     def __init__(self):
-        super(gdc_dicer, self).__init__(version="0.2.0")
+        super(gdc_dicer, self).__init__(version="0.3.0")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
 
-        cli.add_argument('-l', '--log-directory', help='Folder to store logfiles')
-        cli.add_argument('-m', '--mirror-directory',
+        cli.add_argument('-m', '--mirror-dir',
                          help='Root folder of mirrored GDC data')
-        cli.add_argument('-d', '--dice-directory', 
+        cli.add_argument('-d', '--dice-dir',
                          help='Root of diced data tree')
-        cli.add_argument('--dry-run', action='store_true', 
+        cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
-        cli.add_argument('-g', '--programs', nargs='+', metavar='program',
-                         help='Mirror data from these cancer programs')
-        cli.add_argument('-p', '--projects', nargs='+', metavar='project',
-                         help='Mirror data from these projects')
-        cli.add_argument('datestamp',
+        cli.add_argument('datestamp', nargs='?',
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
 
+    def parse_args(self):
+        opts = self.options
 
-    def init_logs(self):
-        '''Discover timestamp and initialize logs'''
-        mirror_root = self.options.mirror_directory
+        if opts.log_dir:
+            self.dice_log_dir = opts.log_dir
 
-        # Loop through projects to discover the timestamps from the mirror
+        if opts.mirror_dir:
+            self.mirror_root_dir = opts.mirror_dir
+
+        if opts.dice_dir:
+            self.dice_root_dir = opts.dice_dir
+
+        # Figure out timestamp
+        mirror_root = self.mirror_root_dir
+        dstamp = opts.datestamp
+
+        # Discover which GDC program(s) data will be diced
         latest_tstamps = set()
-        if self.options.programs is not None:
-            programs = self.options.programs
-        else:
-            programs = immediate_subdirs(mirror_root)
-        for program in programs:
+        if not self.dice_programs:
+            self.dice_programs = common.immediate_subdirs(mirror_root)
+
+        # Discover which GDC projects (within programs) to dice
+        for program in self.dice_programs:
             mirror_prog_root = os.path.join(mirror_root, program)
-            if self.options.projects is not None:
-                projects = self.options.projects
+            if self.dice_projects:
+                projects = self.dice_projects
             else:
-                projects = immediate_subdirs(mirror_prog_root)
-
+                projects = common.immediate_subdirs(mirror_prog_root)
+                if "metadata" in projects:
+                    projects.remove("metadata")
             for project in projects:
-                latest_tstamps.add(meta.get_timestamp(os.path.join(mirror_prog_root, project), self.options.datestamp))
+                # For each project, get timestamp of last mirror that matches
+                proj_dir = os.path.join(mirror_prog_root, project)
+                tstamp = meta.latest_timestamp(proj_dir, dstamp)
+                if tstamp:
+                    latest_tstamps.add(tstamp)
 
-        # If the Mirror completed successfuly, the timestamps should all be the same
-        if len(latest_tstamps) != 1:
-            raise ValueError("Multiple timestamps discovered, mirror may not have completed correctly: " + str(latest_tstamps))
-        print(latest_tstamps)
-        #Set the mirror_timestamp for this run
-        self.mirror_timestamp = latest_tstamps.pop()
+        # A successful mirror should contain data from only 1 timestamp
+        if len(latest_tstamps) > 1:
+            raise ValueError("Multiple timestamps discovered for single mirror: " + str(latest_tstamps))
 
-
-        if self.options.log_directory is not None:
-            log_dir = self.options.log_directory
-            logfile_name = ".".join(["gdcDicer", self.mirror_timestamp, "log"])
-            if not os.path.isdir(log_dir):
-                os.makedirs(log_dir)
-            logfile_path = os.path.abspath(os.path.join(log_dir, logfile_name))
-        else:
-            logfile_path = None # Logfile is disabled
-
-        init_logging(logfile_path, True)
-
-
+        # Set the timestamp for this run
+        self.timestamp = latest_tstamps.pop() if latest_tstamps else "9999_99_99"
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        mirror_root = self.options.mirror_directory
-        diced_root = self.options.dice_directory
-        trans_dict = build_translation_dict(resource_filename(__name__,
-                                                       "Harmonized_GDC_translation_table_FH.tsv"))
-        #Set in init_logs()
-        timestamp = self.mirror_timestamp
+        mirror_root = self.mirror_root_dir
+        diced_root = self.dice_root_dir
+        trans_dict = build_translation_dict(resource_filename("gdctools",
+                                                "config/annotations_table.tsv"))
+        # Set in init_logs()
+        timestamp = self.timestamp
         logging.info("Mirror timestamp: " + timestamp)
-        #Iterable of programs, either user specified or discovered from folder names in the diced root
-        if self.options.programs is not None:
-            programs = self.options.programs
+        # Iterable of programs, either user specified or discovered from folder names in the diced root
+        if self.dice_programs:
+            programs = self.dice_programs
         else:
-            programs = immediate_subdirs(mirror_root)
+            programs = common.immediate_subdirs(mirror_root)
 
         for program in programs:
             diced_prog_root = os.path.join(diced_root, program)
             mirror_prog_root = os.path.join(mirror_root, program)
 
+            # Ensure no simultaneous mirroring/dicing
+            with common.lock_context(diced_prog_root, "dice"), \
+                 common.lock_context(mirror_prog_root, "mirror"):
+                if self.dice_projects:
+                    projects = self.dice_projects
+                else:
+                    projects = common.immediate_subdirs(mirror_prog_root)
+                    if "metadata" in projects:
+                        projects.remove("metadata")
+                for project in sorted(projects):
+                    # Load metadata from mirror
+                    raw_project_root = os.path.join(mirror_prog_root, project)
+                    stamp_root = os.path.join(raw_project_root, "metadata", timestamp)
+                    metadata = meta.latest_metadata(stamp_root)
+                    diced_project_root = os.path.join(diced_prog_root, project)
+                    logging.info("Dicing " + project + " to " + diced_project_root)
 
-            if self.options.projects is not None:
-                projects = self.options.projects
-            else:
-                projects = immediate_subdirs(mirror_prog_root)
+                    # The natural form of the metadata is a list of file dicts,
+                    # which makes it easy to mirror on a project by project
+                    # basis. However, the dicer should insist that only one
+                    # file per case per annotation exists, and therefore we must
+                    # generate a data structure in this form by iterating over
+                    # the metadata before dicing.
 
-            for project in projects:
-                raw_project_root = os.path.join(mirror_prog_root, project)
-                diced_project_root = os.path.join(diced_prog_root, project)
-                logging.info("Dicing " + project + " to " + diced_project_root)
-                metadata = meta.iter_mirror_file_dicts(raw_project_root, self.options.datestamp)#get_metadata(raw_project_root, self.options.datestamp)
+                    tcga_lookup = _tcgaid_file_lookup(metadata, trans_dict)
 
-                for files in metadata:
-                    if len(files) > 0:
-                        for f in files:
-                            dice_one(f, trans_dict, raw_project_root, diced_project_root,
-                                     timestamp, dry_run=self.options.dry_run)
+                    # Diced Metadata
+                    diced_meta_dir = os.path.join(diced_project_root,
+                                                  "metadata", timestamp)
+                    diced_meta_fname = ".".join(['diced_metadata', timestamp, 'tsv'])
+                    if not os.path.isdir(diced_meta_dir):
+                        os.makedirs(diced_meta_dir)
+                    meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
+
+                    # Count project annotations
+                    annots = set()
+                    with open(meta_file, 'w') as mf:
+                        # Header
+                        mf.write("case_id\tsample_type\tannotation\tfile_name\n")
+
+                        for tcga_id in tcga_lookup:
+                            for annot, file_d in tcga_lookup[tcga_id].iteritems():
+                                annots.add(annot)
+                                dice_one(file_d, trans_dict, raw_project_root,
+                                         diced_project_root, mf,
+                                         dry_run=self.options.dry_run)
+
+                    # Count available data per sample
+                    logging.info("Generating counts for " + project)
+                    proj_counts, proj_annots = _count_samples(meta_file)
+                    counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
+                    counts_file = os.path.join(diced_meta_dir, counts_file)
+                    _write_counts(proj_counts, project, proj_annots, counts_file)
+
+                    # Heatmaps per sample
+                    logging.info("Generating heatmaps for " + project)
+                    create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
+
         logging.info("Dicing completed successfuly")
-
 
     def execute(self):
         super(gdc_dicer, self).execute()
         opts = self.options
-        self.init_logs()
-        self.dice()
+        self.parse_args()
+        common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
+        try:
+            self.dice()
+        except Exception as e:
+            logging.exception("Dicing FAILED:")
+
+def _tcgaid_file_lookup(metadata, translation_dict):
+    '''Builds a dictionary mapping tcga_ids to their file info,
+    stratified by annotation type. This enables the dicer to ensure one diced
+    file per sample or case'''
+    d = dict()
+    for file_dict in metadata:
+        tcga_id = meta.tcga_id(file_dict)
+        annot, _ = get_annotation_converter(file_dict, translation_dict)
+        d[tcga_id] = d.get(tcga_id, dict())
+        # Note that this overwrites any previous value.
+        # FIXME: More sophisticated reasoning
+        d[tcga_id][annot] =  file_dict
+
+    return d
 
 def build_translation_dict(translation_file):
     """Builds a translation dictionary from a translation table.
 
-    First column of the translation_file is the Annotation name, 
+    First column of the translation_file is the Annotation name,
     remaining columns are signatures in the file metadata that indicate a file is of this annotation type.
     """
 
@@ -153,48 +212,54 @@ def build_translation_dict(translation_file):
         reader = csv.DictReader(tsvfile, delimiter='\t')
         d = dict()
 
-        #Duplicate detection
+        # Duplicate detection
         dupes = False
         for row in reader:
             annot = row.pop("Firehose_annotation")
             converter_name = row.pop("converter")
 
-            ##Parse list fields into frozensets
+            ## Parse list fields into frozensets
             row['tags'] = frozenset(row['tags'].split(',') if row['tags'] != '' else [])
 
-            #Only add complete rows
-            #Give a warning if overwriting an existing tag, and don't add the new one
+            # Only add fields from the row if they are present in the row_dict
+            # Give a warning if overwriting an existing tag, and don't add the new one
             key = frozenset(row.items())
             if key not in d:
                 d[key] = (annot, converter(converter_name))
             else:
                 dupes = True
-    if dupes: print("WARNING: duplicate annotation definitions detected")
+    if dupes:
+        logging.warning("duplicate annotation definitions detected")
     return d
 
-
-def dice_one(file_dict, translation_dict, raw_root, diced_root, timestamp, dry_run=True):
-    """Dice a single file from the GDC.
+def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
+             meta_file, dry_run=True):
+    """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
     true, a debug message will be displayed instead of performing the actual
     dicing operation.
     """
-
-    mirror_path = os.path.join(raw_root, file_dict['data_category'],
-                               file_dict['data_type'],
-                               file_dict['file_name']).replace(' ', '_')
-
-    if os.path.isfile(mirror_path):    
-        ##Get the right annotation and converter for this file
+    mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
+    if os.path.isfile(mirror_path):
+        ## Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
+        # FIXME: Handle this better
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
-            logging.info("Dicing file {0} to {1}".format(mirror_path, dice_path))
-            dice_meta_path = os.path.join(dice_path, "meta")
+            # convert expected path to a relative path from the diced_root
+            expected_path = convert_util.diced_file_path(dice_path, file_dict)
+            expected_path = os.path.abspath(expected_path)
+            logging.info("Dicing file {0} to {1}".format(mirror_path,
+                                                         expected_path))
             if not dry_run:
-                diced_files_dict = convert(file_dict, mirror_path, dice_path) #actually do it
-                write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict)
+                if not os.path.isfile(expected_path):
+                    convert(file_dict, mirror_path, dice_path)
+                else:
+                    logging.info('Diced file exists')
+
+                append_diced_metadata(file_dict, expected_path,
+                                      annot, meta_file)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
@@ -204,18 +269,19 @@ def get_annotation_converter(file_dict, translation_dict):
     if k in translation_dict:
         return translation_dict[k]
     else:
-        #TODO: Gracefully handle this instead of creating a new annotation type
-        return "UNRECOGNIZED", None #TODO: handle this better
+        # FIXME: Gracefully handle this instead of creating a new annotation type
+        return "UNRECOGNIZED", None
 
 def metadata_to_key(file_dict):
-    """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT""" 
-
+    """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT"""
+    # Required fields
     data_type = file_dict.get("data_type", '')
     data_category = file_dict.get("data_category", '')
     experimental_strategy = file_dict.get("experimental_strategy", '')
     platform = file_dict.get("platform", '')
     tags = _parse_tags(file_dict.get("tags",[]))
     center_namespace = file_dict['center']['namespace'] if 'center' in file_dict else ''
+    workflow_type = file_dict['analysis']['workflow_type'] if 'analysis' in file_dict else ''
 
     return frozenset({
         "data_type" : data_type,
@@ -223,29 +289,116 @@ def metadata_to_key(file_dict):
         "experimental_strategy": experimental_strategy,
         "platform": platform,
         "tags": tags,
-        "center_namespace": center_namespace
+        "center_namespace": center_namespace,
+        "workflow_type" : workflow_type
     }.items())
 
-def write_diced_metadata(file_dict, dice_meta_path, timestamp, diced_files_dict):
-    if not os.path.isdir(dice_meta_path):
-        os.makedirs(dice_meta_path)
-
-    meta_filename = os.path.join(dice_meta_path, ".".join(["dicedMetadata", timestamp, "tsv"]))
-    if os.path.isfile(meta_filename):
-        #File exists, open in append mode
-        metafile = open(meta_filename, 'a')
+def append_diced_metadata(file_dict, diced_path, annot, meta_file):
+    if meta.has_sample(file_dict):
+        sample_type = meta.sample_type(file_dict)
     else:
-        #File doesn't exist, create and add header
-        metafile = open(meta_filename, 'w')
-        metafile.write('filename\tentity_id\tentity_type\n')
-        
-    entity_type = get_entity_type(file_dict)
+        sample_type = "None" # Case_level
+    cid = meta.case_id(file_dict)
 
-    for entity_id in diced_files_dict:
-        filename = diced_files_dict[entity_id]
-        metafile.write("\t".join([filename, entity_id, entity_type]) + "\n")
+    meta_file.write("\t".join([cid, sample_type, annot, diced_path]) + "\n")
 
-    metafile.close()
+def _count_samples(diced_metadata_file):
+    '''Count the number of diced files for each annotation/tumor-type'''
+    counts = dict()
+    cases_with_clinical = set()
+    cases_with_biospecimen = set()
+    case_codes = dict()
+    annotations = set()
+
+    with open(diced_metadata_file, 'r') as dmf:
+        reader = csv.DictReader(dmf, delimiter='\t')
+        # Loop through counting non-case-level annotations
+        for row in reader:
+
+            annot = row['annotation']
+            case_id = row['case_id']
+
+            annotations.add(annot)
+
+            # FIXME: This should probably not be hard-coded
+            if 'clinical__primary' == annot:
+                cases_with_clinical.add(case_id)
+            elif 'clinical__biospecimen' == annot:
+                cases_with_biospecimen.add(case_id)
+            else:
+                _, sample_type = meta.tumor_code(row['sample_type'])
+                counts[sample_type] = counts.get(sample_type, dict())
+                counts[sample_type][annot] = counts[sample_type].get(annot, 0) + 1
+                if case_id not in case_codes: case_codes[case_id] = set()
+                case_codes[case_id].add(sample_type)
+
+    # Now go back through and count the Biospecimen and Clinical data
+    # Each sample type is counted as 1 if present
+    for case in case_codes:
+        codes = case_codes[case]
+        for c in codes:
+            if case in cases_with_clinical:
+                count = counts[c].get('clinical__primary', 0) + 1
+                counts[c]['clinical__primary'] = count
+            if case in cases_with_biospecimen:
+                count = counts[c].get('clinical__biospecimen', 0) + 1
+                counts[c]['clinical__biospecimen'] = count
+
+    return counts, annotations
+
+def _write_counts(sample_counts, proj_name, annots, f):
+    '''Write sample counts dict to file.
+    counts = { 'TP' : {'clinical__primary' : 10, '...': 15, ...},
+               'TR' : {'clinical__primary' : 10, '...': 15, ...},
+               ...}
+    '''
+
+    # FIXME: insert short data type codes, rather than full type names
+    # E.g. BCR instead of Biospecimen
+
+    annots = sorted(annots)
+    # Abbreviate data types, if possible
+    with open(f, "w") as out:
+        # Write header
+        out.write("Sample Type\t" + "\t".join(annots) + '\n')
+        for code in sample_counts:
+            line = code + "\t"
+            # Headers can use abbreviated data types
+            abbr_types = [meta.type_abbr(dt) for dt in annots]
+            line += "\t".join([str(sample_counts[code].get(t, 0)) for t in annots]) + "\n"
+
+            out.write(line)
+
+        # Write totals. Totals is dependent on the main analyzed tumor type
+        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
+        tots = [str(sample_counts.get(main_code,{}).get(t, 0)) for t in annots]
+        out.write('Totals\t' + '\t'.join(tots) + "\n")
+
+def create_heatmaps(diced_metadata_file, annots, project, timestamp, outdir):
+    rownames, matrix = _build_heatmap_matrix(diced_metadata_file, annots)
+    draw_heatmaps(rownames, matrix, project, timestamp, outdir)
+
+def _build_heatmap_matrix(diced_metadata_file, annots):
+    '''Build a 2d matrix and rownames from annotations and load dict'''
+    rownames = sorted(list(annots))
+    annot_sample_data = dict()
+    # Extract a matrix of whether each annotation has a sample id
+    with open(diced_metadata_file, 'r') as dmf:
+        reader = csv.DictReader(dmf, delimiter='\t')
+        for row in reader:
+            case_id = row['case_id']
+            annot = row['annotation']
+            annot_sample_data[case_id] = annot_sample_data.get(case_id, set())
+            annot_sample_data[case_id].add(annot)
+
+    matrix = [[] for row in rownames]
+    # Now iterate over samples, inserting a 1 if data is presente
+    for r in range(len(rownames)):
+        for sid in sorted(annot_sample_data.keys()):
+            # append 1 if data is present, else 0
+            matrix[r].append( 1 if rownames[r] in annot_sample_data[sid] else 0)
+
+    return rownames, matrix
 
 ## Converter mappings
 def converter(converter_name):
@@ -260,23 +413,21 @@ def converter(converter_name):
         'seg_harvardlowpass': seg_harvardlowpass,
         'seg_mskcc2' : seg_mskcc2,
         'tsv2idtsv' : tsv2idtsv,
-        'tsv2magetab': tsv2magetab 
+        'tsv2magetab': tsv2magetab,
+        'unzip_tsv2idtsv': unzip_tsv2idtsv
     }
 
     return CONVERTERS[converter_name]
 
-#Converters
+# Converters
+# Each must return a dictionary mapping case_ids to the diced file paths
 def copy(file_dict, mirror_path, dice_path):
     print("Dicing with 'copy'")
     pass
 
-def clinical(file_dict, mirror_path, dice_path):
-#     print("Dicing with 'clinical'")
-    infile = mirror_path
-    extension = 'clin'
-    tcga_id = patient_id(file_dict)
-    return {tcga_id: gdac_clin.process(infile, extension, {tcga_id: tcga_id},
-                                       dice_path, GDAC_BIN_DIR)}
+def clinical(file_dict, mirror_path, outdir):
+    case_id = meta.case_id(file_dict)
+    return {case_id: gdac_clin.process(mirror_path, file_dict, outdir)}
 
 def maf(file_dict, mirror_path, dice_path):
     pass
@@ -288,10 +439,10 @@ def seg_broad(file_dict, mirror_path, dice_path):
     infile = mirror_path
     extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
-    tcga_id = aliquot_id(file_dict)
-    return {patient_id(file_dict):
-            gdac_seg.process(infile, extension, hyb_id, tcga_id, dice_path,
-                             'seg_broad')}
+    tcga_id = meta.aliquot_id(file_dict)
+    case_id = meta.case_id(file_dict)
+    return {case_id: gdac_seg.process(infile, file_dict, hyb_id,
+                                      tcga_id, dice_path, 'seg_broad')}
 
 def seg_harvard(file_dict, mirror_path, dice_path):
     pass
@@ -299,86 +450,32 @@ def seg_harvardlowpass(file_dict, mirror_path, dice_path):
     pass
 def seg_mskcc2(file_dict, mirror_path, dice_path):
     pass
+
 def tsv2idtsv(file_dict, mirror_path, dice_path):
-    pass
+    case_id = meta.case_id(file_dict)
+    return {case_id : gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)}
+
+def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
+    case_id = meta.case_id(file_dict)
+    # First unzip the mirror_path, which is a .gz
+
+    if not mirror_path.endswith('.gz'):
+        raise ValueError('Unexpected gzip filename: ' + fname)
+    uncompressed = mirror_path.rstrip('.gz')
+    with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
+        out.write(mf.read())
+    # Now dice extracted file
+    dice_name = gdac_tsv2idtsv.process(uncompressed, file_dict, dice_path)
+    # Remove extracted file to save disk space
+    os.remove(uncompressed)
+
+    return {case_id : dice_name}
+
 def tsv2magetab(file_dict, mirror_path, dice_path):
     pass
 
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
-
-def aliquot_id(file_dict):
-    '''Return the aliquot associated with the file. Raise an exception if more
-    than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-        _check_dict_array_size(file_dict['cases'][0], 'samples')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0], 'portions')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0],
-                               'analytes')
-        _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0],
-                               'aliquots')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-    
-    return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
-
-def patient_id(file_dict):
-    '''Return the patient_id associated with the file. Raise an exception if
-    more than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-    
-    return file_dict['cases'][0]['submitter_id']
-
-def sample_type(file_dict):
-    '''Return the sample_type associated with the file. Raise an exception if
-    more than one exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-        _check_dict_array_size(file_dict['cases'][0], 'samples')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-    
-    return file_dict['cases'][0]['samples'][0]["sample_type"]
-
-def project_id(file_dict):
-    '''Return the project_id associated with the file. Raise an exception if
-    more than one case exists.'''
-    try:
-        _check_dict_array_size(file_dict, 'cases')
-    except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
-        raise
-    return file_dict['cases'][0]['project']['project_id']
-        
-
-def get_entity_type(file_dict):
-    '''Parse the dicer metadata for this file.
-
-    Returns the Entity ID and entity type.'''
-    if file_dict['data_category'] in ['Clinical', 'Biospecimen']:
-        proj_id = project_id(file_dict)
-        #TODO: Make this more generic
-        if proj_id == 'TCGA-LAML':
-            entity_type = "Primary Blood Derived Cancer - Peripheral Blood" 
-        elif proj_id == 'TCGA-SKCM':
-            entity_type = 'Metastatic'
-        else:
-                entity_type = 'Primary Tumor'
-    else:
-        entity_type = sample_type(file_dict)
-
-    return entity_type
-
-def _check_dict_array_size(d, name, size=1):
-    assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
-
 
 if __name__ == "__main__":
     gdc_dicer().execute()

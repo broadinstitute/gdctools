@@ -29,7 +29,7 @@ class GDCcli(argparse.ArgumentParser):
     ALL_REMAINING_ARGS = argparse.REMAINDER
 
     def __init__(self, descrip=None, version=None):
-    
+
         if not descrip:
             descrip =  'GDCtools: a suite of CLI tools to simplify interaction\n'
             descrip += 'with MongoDB, directly from the *NIX command line and\n'
@@ -41,9 +41,17 @@ class GDCcli(argparse.ArgumentParser):
         super(GDCcli,self).__init__(description=descrip,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
 
-        self.add_argument('--verbose', dest='verbose', action='count', 
+        self.add_argument('--verbose', dest='verbose', action='count',
                 help='set verbosity level [%(default)s]')
         self.add_argument('--version',action='version',version=version)
+        self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
+        self.add_argument('-c','--config',
+                          help='GDCTool configuration file')
+        self.add_argument('-g', '--programs', nargs='+', metavar='program',
+                         help='Limit to data from these cancer programs')
+        self.add_argument('-p', '--projects', nargs='+', metavar='project',
+                         help='Limit to data from these projects')
+
         self.version = version
 
     def parse_args(self):

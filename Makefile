@@ -15,7 +15,7 @@ REPO_HASH=$(shell $(GIT) log -n 1 --pretty=%H | cut -c 1-24)
 VERSION = $(shell cat $(__PATH__)/VERSION)
 LONGVERSION=$(VERSION) ($(TIMESTAMP) $(REPO_HASH))
 
-PYTHON_HOME=$(shell ./config.sh)
+PYTHON_HOME=$(shell config/findPython.sh)
 DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
 PYTHON=$(DEST)/bin/python
@@ -25,6 +25,7 @@ PIP=$(DEST)/bin/pip
 TOOLS= \
 	gdc_mirror \
 	gdc_dice \
+	create_legacy \
 	create_loadfile
 
 CORE_SRC_FILES=\
@@ -85,8 +86,9 @@ install:  gather
 gather: default $(STAGING_DIR) Makefile $(PKG_SRCFILES) $(METAFILES)
 	$(EMAKE) dir_exists DIR=DEST
 	\rm -rf $(PKG_DIR) ; \
-	mkdir -p $(PKG_DIR) ; \
+	mkdir -p $(PKG_DIR)/config ; \
 	cp -fp $(PKG_SRC_FILES) $(PKG_DIR)/. ;\
+	cp -fp config/annotations_table.tsv $(PKG_DIR)/config/. ;\
 	$(EMAKE) $(PKG_DIR)/__init__.py ;\
 	cp -fp $(METAFILES) $(STAGING_DIR)/. ; \
 	cd $(STAGING_DIR) ; \

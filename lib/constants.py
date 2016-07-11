@@ -12,11 +12,10 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 # }}}
 
 import os
-
-LOGGING_FMT = '%(asctime)s[%(levelname)s]: %(message)s'
+import re
 
 #===============================================================================
-# PATHS 
+# PATHS
 #===============================================================================
 NORMALIZED = "normalized"
 REDACTIONS = "redactions"
@@ -28,4 +27,8 @@ FISS         = os.path.join(GDAC_BIN_DIR, "fiss")
 
 GDAC_DATA_DIR            = "/xchip/gdac_data"
 
+# String Formats
 
+LOGGING_FMT = '%(asctime)s[%(levelname)s]: %(message)s'
+_TIMESTAMP_PATTERN = "^\d{4}_[01]\d_[0-3]\d__[0-2]\d_[0-5]\d_[0-5]\d$"
+TIMESTAMP_REGEX = re.compile(_TIMESTAMP_PATTERN)

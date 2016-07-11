@@ -7,13 +7,16 @@ import csv
 import errno
 import logging
 import sys
+import contextlib
+from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
+
+from fasteners import InterProcessLock
 from lib.constants import LOGGING_FMT
 
-from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 
 # Initialize logging to stdout and to logfile
 # see http://stackoverflow.com/a/13733863
-def init_logging(logfile=None, link_latest=True):
+def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
     '''Initialize logging to stdout and to a logfile'''
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
@@ -21,12 +24,23 @@ def init_logging(logfile=None, link_latest=True):
     log_formatter = logging.Formatter(LOGGING_FMT)
 
     # Write logging data to file
-    if logfile is not None:
+    if log_dir is not None and tstamp is not None:
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+        logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"]))
+        # TODO: For a dicing, this can append to an existing log, is
+        # this a good thing, or not?
+        # Pro: All dicing attempts for a given timestamp are colocated,
+        #     no data is lost
+        # Cons: Logs can get very large, and it's difficult to tell if it
+        #     succeeded or failed, and to tell the difference between dice
+        #     runs.
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
         root_logger.addHandler(file_handler)
 
+        logging.info("Logfile:" + logfile)
         # Symlink a '*.latest.log' to logfile
         if link_latest:
             lf_base = os.path.basename(logfile)
@@ -34,7 +48,7 @@ def init_logging(logfile=None, link_latest=True):
             timestamp = lf_base.split('.')[-2]
             latest_log = logfile.replace(timestamp, "latest")
             silent_rm(latest_log)
-            os.symlink(logfile, latest_log)
+            os.symlink(os.path.abspath(logfile), latest_log)
 
 
     # Write logging data to console
@@ -44,13 +58,11 @@ def init_logging(logfile=None, link_latest=True):
     root_logger.addHandler(console_handler)
 
 
-
-
 def silent_rm(filename):
     try:
         os.remove(filename)
     except OSError as e:
-        #ENOENT means file doesn't exist, ignore 
+        #ENOENT means file doesn't exist, ignore
         if e.errno != errno.ENOENT:
             raise
 
@@ -62,11 +74,13 @@ def timestamp2tuple(timestamp):
         raise ValueError('%s is not in expected format: YYYY_MM_DD__HH_MM_SS' % timestamp)
     return time.strptime(timestamp, '%Y_%m_%d__%H_%M_%S')
 
+
 def timetuple2stamp(timetuple=time.localtime()):
     '''Takes a time-tuple and converts it to the standard GDAC timestamp
     (YYYY_MM_DD__HH_MM_SS). No argument will generate a current time
     timestamp.'''
     return time.strftime('%Y_%m_%d__%H_%M_%S', timetuple)
+
 
 def increment_file(filepath):
     '''Returns filepath if filepath doesn't exist. Otherwise returns
@@ -78,13 +92,14 @@ def increment_file(filepath):
         filepath = '.'.join((filepath, str(count)))
     return filepath
 
+
 def immediate_subdirs(path):
-    return [d for d in os.listdir(path) 
+    return [d for d in os.listdir(path)
             if os.path.isdir(os.path.join(path, d))]
 
 #===============================================================================
-# Makes directory structure, or ends gracefully if directory already exists. 
-# If permissions passed, then honor them, however os.makedirs ignores the 
+# Makes directory structure, or ends gracefully if directory already exists.
+# If permissions passed, then honor them, however os.makedirs ignores the
 # sticky bit. Use changeMod if this matters.
 #===============================================================================
 def safeMakeDirs(dir_name, permissions=None):
@@ -161,3 +176,20 @@ class RawDescriptionArgumentDefaultsHelpFormatter(RawDescriptionHelpFormatter):
                 if action.option_strings or action.nargs in defaulting_nargs:
                     help += ' (default: %(default)s)'
         return help
+
+@contextlib.contextmanager
+def lock_context(path, name="gdctool"):
+    '''Process level lock context, to prevent access to path by other processes
+
+    Sample Usage:
+    with lock_context(dice_root, "dicer"):
+        dice()
+
+    '''
+    lockname = os.path.join(path, ".".join(["", name, "lock"]))
+    lock = InterProcessLock(lockname)
+    logging.info("Attempting to acquire lock: " + lockname)
+    with lock:
+        logging.info("Lock acquired.")
+        yield
+        logging.info("Releasing lock: " + lockname)

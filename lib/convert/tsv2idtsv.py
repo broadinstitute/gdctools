@@ -1,30 +1,28 @@
 #!/usr/bin/env python
 
 import csv
-from lib.convert import util as converterUtils
+from lib.convert import util as convert_util
 from lib.common import safeMakeDirs
+from lib.meta import tcga_id
 
-def process(infile, extension, hyb2tcga, outdir):
-    if len(hyb2tcga) != 1:
-        raise Exception("multiple samples found for one tsv file")
-    
-    tcga_id = hyb2tcga.itervalues().next()
-    filepath = converterUtils.constructPath(outdir, tcga_id, extension)
-    
+def process(infile, file_dict, outdir):
+
+    filepath = filepath = convert_util.diced_file_path(outdir, file_dict)
+    _tcga_id = tcga_id(file_dict)
     rawfile = open(infile, 'rb')
     csvfile = csv.reader(rawfile, dialect='excel-tab')
-    
-    csvfile_with_ids = tsv2idtsv(csvfile, tcga_id)
-    csvfile_with_NAs = converterUtils.map_blank_to_na(csvfile_with_ids)
-    
+
+    csvfile_with_ids = tsv2idtsv(csvfile, _tcga_id)
+    csvfile_with_NAs = convert_util.map_blank_to_na(csvfile_with_ids)
+
     safeMakeDirs(outdir)
-    converterUtils.writeCsvFile(filepath, csvfile_with_NAs)
-    
+    convert_util.writeCsvFile(filepath, csvfile_with_NAs)
+
     rawfile.close()
 
 def tsv2idtsv(csvfile, sampleName):
     header = csvfile.next()
     yield ['SampleId'] + header
-    
+
     for row in csvfile:
         yield [sampleName] + row
