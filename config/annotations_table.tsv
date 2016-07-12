@@ -3,7 +3,8 @@ clinical__biospecimen	clinical	Biospecimen	Biospecimen Supplement
 clinical__primary	clinical	Clinical	Clinical Supplement					
 CNV__snp6	seg_broad	Copy Number Variation	Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
 CNV_no_germline__snp6	seg_broad	Copy Number Variation	Masked Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
-miR__illum__geneExp	tsv2idtsv	Transcriptome Profiling	miRNA Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
-miR__illum__isoformExp	tsv2idtsv	Transcriptome Profiling	Isoform Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
-mRNA__illum__geneExp	unzip_tsv2idtsv	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM
-mRNA__illum__isoformExp	tsv2idtsv	Transcriptome Profiling	Isoform Expression Quantification	RNA-Seq				
+miR__illum__geneExp	tsv2magetab	Transcriptome Profiling	miRNA Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
+miR__illum__isoformExp	tsv2magetab	Transcriptome Profiling	Isoform Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
+mRNA__illum_FPKM__geneExp	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM
+mRNA__illum_FPKM__geneNormExp	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM-UQ
+mRNA__illum_FPKM__counts	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - Counts

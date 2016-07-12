@@ -7,7 +7,7 @@ from lib.meta import tcga_id
 
 def process(infile, file_dict, outdir):
 
-    filepath = filepath = convert_util.diced_file_path(outdir, file_dict)
+    filepath = convert_util.diced_file_path(outdir, file_dict)
     _tcga_id = tcga_id(file_dict)
     rawfile = open(infile, 'rb')
     csvfile = csv.reader(rawfile, dialect='excel-tab')

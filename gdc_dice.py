@@ -27,6 +27,7 @@ from lib.convert import util as convert_util
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv
+from lib.convert import tsv2magetab as gdac_tsv2magetab
 from lib.report import draw_heatmaps
 from lib import common
 from lib import meta
@@ -413,8 +414,11 @@ def converter(converter_name):
         'seg_harvardlowpass': seg_harvardlowpass,
         'seg_mskcc2' : seg_mskcc2,
         'tsv2idtsv' : tsv2idtsv,
+        'unzip_tsv2idtsv': unzip_tsv2idtsv,
         'tsv2magetab': tsv2magetab,
-        'unzip_tsv2idtsv': unzip_tsv2idtsv
+        'unzip_tsv2magetab': unzip_tsv2magetab,
+        'fpkm2magetab': fpkm2magetab,
+        'unzip_fpkm2magetab': unzip_fpkm2magetab
     }
 
     return CONVERTERS[converter_name]
@@ -437,7 +441,6 @@ def magetab_data_matrix(file_dict, mirror_path, dice_path):
 
 def seg_broad(file_dict, mirror_path, dice_path):
     infile = mirror_path
-    extension = 'seg'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
     case_id = meta.case_id(file_dict)
@@ -456,23 +459,37 @@ def tsv2idtsv(file_dict, mirror_path, dice_path):
     return {case_id : gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)}
 
 def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
-    case_id = meta.case_id(file_dict)
-    # First unzip the mirror_path, which is a .gz
+    return _unzip(file_dict, mirror_path, dice_path, tsv2idtsv)
 
+def tsv2magetab(file_dict, mirror_path, dice_path):
+    case_id = meta.case_id(file_dict)
+    return {case_id : gdac_tsv2magetab.process(mirror_path, file_dict,
+                                               dice_path)}
+
+def unzip_tsv2magetab(file_dict, mirror_path, dice_path):
+    return _unzip(file_dict, mirror_path, dice_path, tsv2magetab)
+
+def fpkm2magetab(file_dict, mirror_path, dice_path):
+    case_id = meta.case_id(file_dict)
+    return {case_id : gdac_tsv2magetab.process(mirror_path, file_dict,
+                                               dice_path, fpkm=True)}
+
+def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
+    return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
+
+def _unzip(file_dict, mirror_path, dice_path, _converter):
+    # First unzip the mirror_path, which is a .gz
     if not mirror_path.endswith('.gz'):
-        raise ValueError('Unexpected gzip filename: ' + fname)
+        raise ValueError('Unexpected gzip filename: ' +
+                         os.path.basename(mirror_path))
     uncompressed = mirror_path.rstrip('.gz')
     with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
         out.write(mf.read())
     # Now dice extracted file
-    dice_name = gdac_tsv2idtsv.process(uncompressed, file_dict, dice_path)
+    diced = _converter(file_dict, uncompressed, dice_path)
     # Remove extracted file to save disk space
     os.remove(uncompressed)
-
-    return {case_id : dice_name}
-
-def tsv2magetab(file_dict, mirror_path, dice_path):
-    pass
+    return diced
 
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)

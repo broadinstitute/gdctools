@@ -11,7 +11,7 @@ import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 
 from fasteners import InterProcessLock
-from lib.constants import LOGGING_FMT
+from lib.constants import LOGGING_FMT, TIMESTAMP_REGEX
 
 
 # Initialize logging to stdout and to logfile
@@ -70,7 +70,7 @@ def silent_rm(filename):
 def timestamp2tuple(timestamp):
     '''Takes a timestamp of the format YYYY_MM_DD__HH_MM_SS and converts it to
     a time-tuple usable by built in datetime functions. HH is in 24hr format.'''
-    if CONSTANTS['timestamp_regex'].match(timestamp) is None:
+    if TIMESTAMP_REGEX.match(timestamp) is None:
         raise ValueError('%s is not in expected format: YYYY_MM_DD__HH_MM_SS' % timestamp)
     return time.strptime(timestamp, '%Y_%m_%d__%H_%M_%S')
 
