@@ -14,9 +14,8 @@ def process(infile, file_dict, outdir, fpkm=False):
     hdr1, hdr2 = generate_headers(infile, _tcga_id, fpkm)
 
     rawfile = open(infile, 'rb')
-    if fpkm:
-        rawfile = fpkm_reader(rawfile)
-    csvfile = csv.reader(rawfile, dialect='excel-tab')
+    csvfile = csv.reader(fpkm_reader(rawfile) if fpkm else rawfile,
+                         dialect='excel-tab')
 
     csvfile_with_hdr = convert_util.change_header__generator(csvfile, hdr1,
                                                              hdr2)
