@@ -27,7 +27,7 @@ def process(infile, file_dict, outdir, fpkm=False):
     rawfile.close()
 
 def generate_headers(infile, tcga_id, fpkm):
-    old_hdr = fpkm_header(infile) if fpkm else getTabFileHeader(infile)
+    old_hdr = fpkm_header(infile).split() if fpkm else getTabFileHeader(infile)
     num_data_cols = len(old_hdr) - 1
     new_hdr = ['Hybridization REF'] + [tcga_id] * num_data_cols
 
