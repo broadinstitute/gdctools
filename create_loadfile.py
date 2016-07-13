@@ -249,18 +249,15 @@ class create_loadfile(GDCtool):
             self.generate_loadfiles(aggr_name, annotations, aggregate)
 
 def get_diced_metadata(project_root, datestamp):
-    # Could use get_metadata here, but since the loadfile generator is
-    # separate, it makes sense to divorce them
-    stamp_dir = os.path.join(project_root, "metadata", datestamp)
 
-    metadata_files = [f for f in os.listdir(stamp_dir)
-                      if os.path.isfile(os.path.join(stamp_dir, f))
-                      and "metadata" in f]
-    # Get the chronologically latest one, in case there is more than one,
-    # Should just be a sanity check
-    latest = sorted(metadata_files)[-1]
-    latest = os.path.join(stamp_dir, latest)
-    return latest
+    # At this point the datestamp has been vetted to be the latest HH_MM_SS
+    # dicing for the given YYYY_MM_DD date; and so there MUST be EXACTLY 1
+    # 1 metadata file summarizing that given YYYY_MM_DD__HH_MM_SS dicing.
+    mpath = os.path.join(project_root, "metadata", datestamp)
+    mpath = os.path.join(mpath, "diced_metadata." + datestamp + ".tsv")
+    if os.path.exists(mpath):
+        return mpath
+    raise ValueError("Could not find dicing metadata: "+mpath)
 
 def sample_type_lookup(etype):
     '''Convert long form sample types into letter codes.'''
