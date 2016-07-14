@@ -14,12 +14,14 @@ Core API functions to interface with Genome Data Commons
 # }}}
 from __future__ import print_function
 import requests
+import logging
 import subprocess
 import json
 import os
 import sys
 
 GDC_API_ROOT = 'https://gdc-api.nci.nih.gov/'
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 def get_programs():
     '''Return list of programs in GDC.'''
@@ -45,7 +47,8 @@ def get_projects(program, page_size=500):
     endpoint = GDC_API_ROOT + 'projects'
     filt = _eq_filter('program.name', program)
     params = {'fields': 'project_id', 'filters': json.dumps(filt)}
-    return [obj['project_id'] for obj in _query_paginator(endpoint, params, page_size)]
+    projs = [ obj['project_id'] for obj in _query_paginator(endpoint, params, page_size)]
+    return sorted(projs)
 
 def get_data_categories(project):
     endpoint = GDC_API_ROOT + 'projects'
