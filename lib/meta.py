@@ -46,9 +46,11 @@ def latest_metadata(stamp_dir):
         return json.load(jsonf)
 
 
-def files_diff(new_files, old_files):
-    '''Returns the file dicts in new_files that aren't in old_files'''
-    old_uuids = {fd['file_id'] for fd in old_files}
+def files_diff(proj_root, new_files, old_files):
+    '''Returns the file dicts in new_files that aren't in old_files.
+    Also checks that the file is present on disk.'''
+    old_uuids = {fd['file_id'] for fd in old_files
+                if os.path.isfile(mirror_path(proj_root, fd))}
     new_dicts = [fd for fd in new_files if fd['file_id'] not in old_uuids]
     return new_dicts
 
