@@ -111,6 +111,14 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
     p['from'] = from_idx
     p['size'] = size
 
+    # For pagination to work, the records must specify a sort order. This
+    # lookup tells the right field to use based on the endpoint
+    sort_lookup = { 'https://gdc-api.nci.nih.gov/files' : 'file_id',
+                    'https://gdc-api.nci.nih.gov/cases' : 'case_id',
+                    'https://gdc-api.nci.nih.gov/projects' : 'project_id'}
+
+    sort = sort_lookup[endpoint]
+    p['sort'] = sort
     # Make initial call
     r = requests.get(endpoint, params=p)
 
@@ -126,10 +134,9 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
         r = requests.get(endpoint, params=p)
 
         hits = r.json()['data']['hits']
-
         all_hits.extend(hits)
 
-    return all_hits[:total] # Chop off hits on the last page if they exceed to_idx
+    return all_hits # Chop off hits on the last page if they exceed to_idx
 
 ## Helpers to generate valid query filters
 def _eq_filter(field, value):
