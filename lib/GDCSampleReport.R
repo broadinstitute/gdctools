@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
-
 # William Mallard / Redactions Report / April 2012
 # Dan DiCara / Updated to Samples Summary Report / January 2013
+# Tim DeFreitas / Updated for GD + GDAN era / June 2016
 GDAC_BIN        = "/xchip/tcga/Tools/gdac/bin"
 HTML2PNG        = file.path(GDAC_BIN, "html2png")
 REDACTIONS.HEAD = 'redactions'
@@ -35,15 +35,6 @@ PLATFORM_TO_DATATYPE_MAP[["ht_hg_u133a"]]            = "mRNA"
 SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
                  "NB", "NT", "NBC", "NEBV", "NBM", "FFPE")
 
-#    Outdated so ignore
-#    PLATFORM_TO_DATATYPE_MAP["cgh_1x1m_g4447a"] =
-#    PLATFORM_TO_DATATYPE_MAP["hg_cgh_244a"] =
-#    PLATFORM_TO_DATATYPE_MAP["hg_cgh_415k_g4124a"] =
-#    PLATFORM_TO_DATATYPE_MAP["huex_1_0_st_v2"] =
-#    PLATFORM_TO_DATATYPE_MAP["illuminadnamethylation_oma002_cpi"] =
-#    PLATFORM_TO_DATATYPE_MAP["illuminadnamethylation_oma003_cpi"] =
-#    PLATFORM_TO_DATATYPE_MAP["human1mduo"] =
-#    PLATFORM_TO_DATATYPE_MAP["humanhap550"] =
 
 main <- function(...)
 {
@@ -52,7 +43,6 @@ main <- function(...)
     # Parse inputs
     ############################################################################
     args = list(...)
-#    args = args[[1]]
     if (length(args) < 10 || length(args) > 11) {
         stop(
             paste(
