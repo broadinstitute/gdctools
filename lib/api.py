@@ -72,7 +72,7 @@ def get_data_categories(project):
 def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
     endpoint = 'https://gdc-api.nci.nih.gov/files'
     proj_filter = _eq_filter("cases.project.project_id", project_id)
-    data_filter = _eq_filter("data_category", data_category)
+    data_filter = _eq_filter("files.data_category", data_category)
     acc_filter = _eq_filter("access", "open")
     filter_list = [proj_filter, data_filter, acc_filter]
     if 'TCGA' in project_id and exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:

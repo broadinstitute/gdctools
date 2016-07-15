@@ -62,6 +62,8 @@ class sample_report(GDCtool):
             blacklist_file = cfg.get('loadfiles', 'blacklist')
             # Reference data
             reference_dir = cfg.get('loadfiles', 'ref_dir')
+            # Where the sample reports are stored
+            reports_dir = cfg.get('loadfiles', 'reports_dir')
 
             #
             if cfg.has_option('loadfiles', 'load_dir'):
@@ -99,7 +101,7 @@ class sample_report(GDCtool):
                               blacklist_file,           # From config
                               sample_loadfile,          # Inferred from loadfile dir + timestamp
                               reference_dir,            # From config
-                              report_dir,               # From config
+                              reports_dir,               # From config
                               aggregates_file           # Created with aggregates in config
                             ])
 
