@@ -44,11 +44,12 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
         # Symlink a '*.latest.log' to logfile
         if link_latest:
             lf_base = os.path.basename(logfile)
-            #Logfiles should be of the format *.<timestamp>.log
+            # Logfiles should be of the format *.<timestamp>.log
             timestamp = lf_base.split('.')[-2]
-            latest_log = logfile.replace(timestamp, "latest")
-            silent_rm(latest_log)
-            os.symlink(os.path.abspath(logfile), latest_log)
+            # For easier eyeballing & CLI tab-completion, symlink to latest.log
+            latest = "latest.log"
+            silent_rm(latest)
+            os.symlink(os.path.abspath(logfile), latest)
 
 
     # Write logging data to console
