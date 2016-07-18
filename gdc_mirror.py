@@ -50,6 +50,9 @@ class gdc_mirror(GDCtool):
         cli.add_argument('-m', '--meta-only', action='store_true',
                          help="Only retrieve metadata, skip file download")
 
+        cli.add_argument('-w', '--workflow-type',
+                         help='Mirror only data of thisworkflow type')
+
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
         self.timestamp = common.timetuple2stamp() #'2017_02_01__00_00_00'
@@ -63,6 +66,7 @@ class gdc_mirror(GDCtool):
         if opts.root_dir is not None: self.mirror_root_dir = opts.root_dir
         if opts.projects is not None: self.mirror_projects = opts.projects
         if opts.programs is not None: self.mirror_programs = opts.programs
+        self.workflow_type = opts.workflow_type
 
     def mirror(self):
         logging.info("GDC Mirror Version: %s", self.cli.version)
@@ -187,7 +191,9 @@ class gdc_mirror(GDCtool):
         # Mirror each category separately, recording metadata (file dicts)
         file_metadata = []
         for cat in sorted(data_categories):
-            cat_data = self.mirror_category(program, project, cat, prev_metadata)
+            cat_data = self.mirror_category(program, project, cat,
+                                            self.workflow_type,
+                                            prev_metadata)
             file_metadata.extend(cat_data)
 
 
@@ -211,7 +217,8 @@ class gdc_mirror(GDCtool):
         # proj_counts = self._sample_counts(program, project, data_categories)
         # _write_counts(proj_counts, project, sorted(data_categories), countspath)
 
-    def mirror_category(self, program, project, category, prev_metadata):
+    def mirror_category(self, program, project, category,
+                        workflow_type, prev_metadata):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
@@ -224,7 +231,7 @@ class gdc_mirror(GDCtool):
             logging.info("Creating folder: " + cat_dir)
             os.makedirs(cat_dir)
 
-        file_metadata = api.get_files(project, category)
+        file_metadata = api.get_files(project, category, workflow_type)
         new_metadata = meta.files_diff(proj_dir, file_metadata, prev_metadata)
 
         if self.options.meta_only:
@@ -249,41 +256,6 @@ class gdc_mirror(GDCtool):
         except Exception as e:
             logging.exception("Mirroring FAILED:")
 
-# # TODO: Insert short data type codes, rather than full type names
-# # E.g. BCR instead of Biospecimen
-# def _write_counts(counts, proj_id, types, f):
-#     '''Write sample counts dict to file.
-#     counts = { 'TP' : {'Clinical' : 10, 'BCR': 15, ...},
-#                'TR' : {'Clinical' : 10, 'BCR': 15, ...},
-#                ...}
-#     '''
-#     with open(f, "w") as out:
-#         # Write header
-#         out.write("Sample Type\t" + "\t".join(types) + '\n')
-#         for code in counts:
-#             line = code + "\t"
-#             line += "\t".join([str(counts[code].get(t, 0)) for t in types]) + "\n"
-#
-#             out.write(line)
-#
-#         # Write totals. Totals is dependent on the main analyzed tumor type
-#         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_id))[1]
-#         tots = [str(counts.get(main_code,{}).get(t, 0)) for t in types]
-#         out.write('Totals\t' + '\t'.join(tots) + "\n")
-
-def _counts_files(prog_root, timestamp):
-    '''Generate the counts files for each project in a program'''
-    # 'dirs' will be the mirrored projects
-    root, dirs, files = os.walk(prog_root).next()
-
-    # counts files should be in /<prgm>/<proj>/metadata/<timestamp>/
-    stamp_files = [os.path.join(root, proj, 'metadata', timestamp,
-                                '.'.join([proj, "sample_counts", timestamp, "tsv"]))
-                   for proj in dirs]
-
-    for sf in stamp_files:
-        if os.path.isfile(sf):
-            yield sf
 
 
 if __name__ == "__main__":

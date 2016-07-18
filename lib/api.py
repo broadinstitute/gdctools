@@ -69,14 +69,17 @@ def get_data_categories(project):
     categories = [obj['data_category'] for obj in hits[0]['summary']['data_categories']] if 'summary' in hits[0] else []
     return categories
 
-def get_files(project_id, data_category, exclude_ffpe=True, page_size=500):
+def get_files(project_id, data_category, workflow_type=None, page_size=500):
     endpoint = 'https://gdc-api.nci.nih.gov/files'
     proj_filter = _eq_filter("cases.project.project_id", project_id)
     data_filter = _eq_filter("files.data_category", data_category)
     acc_filter = _eq_filter("access", "open")
     filter_list = [proj_filter, data_filter, acc_filter]
-    if 'TCGA' in project_id and exclude_ffpe and data_category not in ['Clinical', 'Biospecimen']:
-        filter_list.append(_eq_filter("cases.samples.is_ffpe", "false"))
+
+    #Optional filters
+    if workflow_type is not None:
+        filter_list.append(_eq_filter('analysis.workflow_type', workflow_type))
+
     qfilter = _and_filter(filter_list)
 
     fields = ['file_id', 'file_name', 'cases.samples.sample_id', 'data_type',
