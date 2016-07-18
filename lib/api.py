@@ -37,7 +37,8 @@ def get_program(project):
                 'filters' : json.dumps(filt)
              }
     r = requests.get(endpoint, params=params)
-    hits = r.json()['data']['hits']
+
+    hits = _decode_json(r)['data']['hits']
     #Sanity Check
     if len(hits) != 1:
         raise ValueError("Uh oh, more than one project matched '" + project + "'")
@@ -59,7 +60,7 @@ def get_data_categories(project):
              }
 
     r = requests.get(endpoint, params=params)
-    hits = r.json()['data']['hits']
+    hits = _decode_json(r)['data']['hits']
 
     #Sanity Check
     if len(hits) != 1:
@@ -124,9 +125,10 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
     p['sort'] = sort
     # Make initial call
     r = requests.get(endpoint, params=p)
+    r_json = _decode_json(r)
 
     # Get pagination data
-    data = r.json()['data']
+    data = r_json['data']
     all_hits = data['hits']
     pagination = data['pagination']
     total = pagination['total'] if to_idx == -1 else to_idx
@@ -136,7 +138,7 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
         p['from'] = from_idx
         r = requests.get(endpoint, params=p)
 
-        hits = r.json()['data']['hits']
+        hits = _decode_json(r)['data']['hits']
         all_hits.extend(hits)
 
     return all_hits # Chop off hits on the last page if they exceed to_idx
@@ -147,3 +149,15 @@ def _eq_filter(field, value):
 
 def _and_filter(filters):
     return {"op" : "and", "content" : filters}
+
+def _decode_json(request):
+    """ Attempt to decode response from request using the .json() method.
+
+    If one cannot be decoded, raise a more useful error than the default by
+    printing the text content, rather than just raising a ValueError"""
+    try:
+        return request.json()
+    except ValueError:
+        emsg = "No JSON object could be decoded from response. Content:\n"
+        emsg += request.text
+        raise ValueError(emsg)
