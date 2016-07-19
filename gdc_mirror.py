@@ -115,14 +115,6 @@ class gdc_mirror(GDCtool):
                 for project in sorted(projects):
                     self.mirror_project(prgm, project)
 
-                # Write program-level metadata
-                prgm_meta = os.path.join(root_dir, prgm,
-                                         "metadata", self.timestamp)
-                if not os.path.isdir(prgm_meta):
-                    os.makedirs(prgm_meta)
-
-                # # Counts, report, etc.
-                # self._aggregate_counts(prgm)
 
         logging.info("Mirror completed successfully.")
 

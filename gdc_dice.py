@@ -167,11 +167,17 @@ class gdc_dicer(GDCtool):
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
                     proj_counts, proj_annots = _count_samples(meta_file)
-                    counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
+                    counts_file = ".".join([project, 'sample_counts', timestamp, "tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
+
+                    # Counts are written on a per-cohort (project) basis during
+                    # dicing, as these are the way the data are naturally
+                    # organized. Aggregate cohorts are not created during
+                    # dicing, so no aggregate counts file is generated until a
+                    # freeze (loadfile) specifying these groups is also created.
                     _write_counts(proj_counts, project, proj_annots, counts_file)
 
-                    # Heatmaps per sample
+                    # Heatmaps for each individual project
                     logging.info("Generating heatmaps for " + project)
                     create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
 

@@ -222,9 +222,6 @@ class create_loadfile(GDCtool):
         logging.info("Writing sample set loadfile to " + sset_loadfile)
         write_sampleset(samples_lfp, sset_loadfile, projname)
 
-        #logging.info("Writing sample heatmaps")
-        #write_heatmaps(master_load_dict, annots, project, datestamp, load_date_root)
-
     def execute(self):
 
         super(create_loadfile, self).execute()
