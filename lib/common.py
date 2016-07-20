@@ -95,8 +95,9 @@ def increment_file(filepath):
 
 
 def immediate_subdirs(path):
-    return [d for d in os.listdir(path)
+    subdirs = [d for d in os.listdir(path)
             if os.path.isdir(os.path.join(path, d))]
+    return sorted(subdirs)
 
 #===============================================================================
 # Makes directory structure, or ends gracefully if directory already exists.
