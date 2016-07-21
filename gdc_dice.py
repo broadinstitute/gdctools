@@ -49,9 +49,13 @@ class gdc_dicer(GDCtool):
                          help='Root of diced data tree')
         cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
-        cli.add_argument('datestamp', nargs='?',
+        cli.add_argument('timestamp', nargs='?',
+                         default=common.timetuple2stamp(),
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
+        fd_help = "Skip detection of already diced files, and redice everything"
+        cli.add_argument('-f', '--force-dice',
+                         action='store_true', help=fd_help)
 
     def parse_args(self):
         opts = self.options
@@ -61,41 +65,29 @@ class gdc_dicer(GDCtool):
         if opts.dice_dir: self.dice_root_dir = opts.dice_dir
         if opts.programs: self.dice_programs = opts.programs
         if opts.projects: self.dice_projects = opts.projects
+        self.force_dice = opts.force_dice
 
         # Figure out timestamp
         mirror_root = self.mirror_root_dir
-        dstamp = opts.datestamp
+        #Sets timestamp for this run
+        self.timestamp = opts.timestamp
 
-        # Discover which GDC program(s) data will be diced
+        # Discover which GDC programs & projects data will be diced
         latest_tstamps = set()
         if not self.dice_programs:
             self.dice_programs = common.immediate_subdirs(mirror_root)
 
-        # Discover which GDC projects (within programs) to dice
-        for program in self.dice_programs:
-            mirror_prog_root = os.path.join(mirror_root, program)
-            if self.dice_projects:
-                projects = self.dice_projects
-            else:
-                projects = common.immediate_subdirs(mirror_prog_root)
-                if "metadata" in projects:
-                    projects.remove("metadata")
-            for project in projects:
-                # For each project, get timestamp of last mirror that matches
-                proj_dir = os.path.join(mirror_prog_root, project)
-                tstamp = meta.latest_timestamp(proj_dir, dstamp)
-                if tstamp:
-                    latest_tstamps.add(tstamp)
-                else:
-                    print("No dicing for %s, is it a valid project name?" % project)
+        # FIXME: Dicer will only work correctly with one program, since
+        # projects are not linked to which program they are from
+        if not self.dice_projects:
+            projects = []
+            for program in self.dice_programs:
+                projects.extend(common.immediate_subdirs(mirror_prog_root))
+            # Filter the metadata folders out
+            self.dice_projects = [p for p in projects if p != 'metadata']
 
-        if len(latest_tstamps) > 1:
-            raise ValueError("Multiple timestamps discovered for single mirror: " + str(latest_tstamps))
-        elif len(latest_tstamps) < 1:
-            raise ValueError("No valid programs/projects/dicings discovered")
 
-        # Set the timestamp for this run
-        self.timestamp = latest_tstamps.pop() if latest_tstamps else "9999_99_99"
+        # TODO: Verify that each of these are valid programs and fail fast
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
@@ -106,7 +98,8 @@ class gdc_dicer(GDCtool):
                                                 "config/annotations_table.tsv"))
         # Set in init_logs()
         timestamp = self.timestamp
-        logging.info("Mirror timestamp: " + timestamp)
+        logging.info("Timestamp: " + timestamp)
+
         # Iterable of programs, either user specified or discovered from folder names in the diced root
         if self.dice_programs:
             programs = self.dice_programs
@@ -120,20 +113,29 @@ class gdc_dicer(GDCtool):
             # Ensure no simultaneous mirroring/dicing
             with common.lock_context(diced_prog_root, "dice"), \
                  common.lock_context(mirror_prog_root, "mirror"):
-                if self.dice_projects:
-                    projects = self.dice_projects
-                else:
-                    projects = common.immediate_subdirs(mirror_prog_root)
-                    if "metadata" in projects:
-                        projects.remove("metadata")
+                projects = self.dice_projects
                 prog_counts = dict()
                 prog_annots = set()
 
                 for project in sorted(projects):
-                    # Load metadata from mirror
+                    # Load metadata from mirror, getting the latest metadata
+                    # earlier than the given timestamp
                     raw_project_root = os.path.join(mirror_prog_root, project)
-                    stamp_root = os.path.join(raw_project_root, "metadata", timestamp)
-                    metadata = meta.latest_metadata(stamp_root)
+                    meta_dir = os.path.join(raw_project_root, "metadata")
+                    meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
+
+                    # Check to see if there is actually metadata available,
+                    # and skip with a warning if not
+                    if len(meta_dirs) < 1:
+                        _warning =  "No metadata found for " + project
+                        _warning += " earlier than " + timestamp
+                        logging.warning(_warning)
+                        continue
+
+
+                    latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
+                    metadata = meta.latest_metadata(latest_meta)
+
                     diced_project_root = os.path.join(diced_prog_root, project)
                     logging.info("Dicing " + project + " to " + diced_project_root)
 
@@ -165,7 +167,8 @@ class gdc_dicer(GDCtool):
                                 annots.add(annot)
                                 dice_one(file_d, trans_dict, raw_project_root,
                                          diced_project_root, mf,
-                                         dry_run=self.options.dry_run)
+                                         dry_run=self.options.dry_run,
+                                         force=self.force_dice)
 
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
@@ -181,17 +184,6 @@ class gdc_dicer(GDCtool):
                     #Add project level counts & annots to program dict
                     prog_counts[project] = proj_counts
                     prog_annots.update(annots)
-
-                # Write program level counts
-                prog_meta_folder = os.path.join(diced_prog_root,
-                                                "metadata",
-                                                timestamp)
-                if not os.path.isdir(prog_meta_folder):
-                    os.makedirs(prog_meta_folder)
-                prog_counts_file = os.path.join(prog_meta_folder,
-                                           ".".join([program, timestamp, "sample_counts.tsv"]))
-                _write_program_counts(prog_counts, program, prog_annots, )
-
 
         logging.info("Dicing completed successfuly")
 
@@ -252,7 +244,7 @@ def build_translation_dict(translation_file):
     return d
 
 def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
-             meta_file, dry_run=True):
+             meta_file, dry_run=False, force=False):
     """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
@@ -272,10 +264,9 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
             logging.info("Dicing file {0} to {1}".format(mirror_path,
                                                          expected_path))
             if not dry_run:
-                if not os.path.isfile(expected_path):
+                # Dice if force_dice is enabled or the file doesn't exist
+                if force or not os.path.isfile(expected_path):
                     convert(file_dict, mirror_path, dice_path)
-                else:
-                    logging.info('Diced file exists')
 
                 append_diced_metadata(file_dict, expected_path,
                                       annot, meta_file)
