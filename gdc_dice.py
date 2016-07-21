@@ -56,14 +56,11 @@ class gdc_dicer(GDCtool):
     def parse_args(self):
         opts = self.options
 
-        if opts.log_dir:
-            self.dice_log_dir = opts.log_dir
-
-        if opts.mirror_dir:
-            self.mirror_root_dir = opts.mirror_dir
-
-        if opts.dice_dir:
-            self.dice_root_dir = opts.dice_dir
+        if opts.log_dir: self.dice_log_dir = opts.log_dir
+        if opts.mirror_dir: self.mirror_root_dir = opts.mirror_dir
+        if opts.dice_dir: self.dice_root_dir = opts.dice_dir
+        if opts.programs: self.dice_programs = opts.programs
+        if opts.projects: self.dice_projects = opts.projects
 
         # Figure out timestamp
         mirror_root = self.mirror_root_dir
@@ -89,10 +86,13 @@ class gdc_dicer(GDCtool):
                 tstamp = meta.latest_timestamp(proj_dir, dstamp)
                 if tstamp:
                     latest_tstamps.add(tstamp)
+                else:
+                    print("No dicing for %s, is it a valid project name?" % project)
 
-        # A successful mirror should contain data from only 1 timestamp
         if len(latest_tstamps) > 1:
             raise ValueError("Multiple timestamps discovered for single mirror: " + str(latest_tstamps))
+        elif len(latest_tstamps) < 1:
+            raise ValueError("No valid programs/projects/dicings discovered")
 
         # Set the timestamp for this run
         self.timestamp = latest_tstamps.pop() if latest_tstamps else "9999_99_99"
