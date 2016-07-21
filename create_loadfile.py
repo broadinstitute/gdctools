@@ -224,6 +224,7 @@ class create_loadfile(GDCtool):
 
     def generate_master_loadfiles(self, projects, annotations):
         # Generate master loadfiles for all samples & sample sets
+        # Do this by concatenating the individual sample(set) loadfiles
         program = self.program
         datestamp = self.datestamp
 
@@ -235,15 +236,36 @@ class create_loadfile(GDCtool):
 
         all_samp_loadfile = program + '.' + datestamp + ".Sample.loadfile.txt"
         all_samp_loadfile = os.path.join(loadfile_root, all_samp_loadfile)
-        with open(all_samp_loadfile, 'w+') as aslfp:
-            #Write all samples to one file
-
 
         all_sset_loadfile = program + '.' + datestamp + ".Sample_Set.loadfile.txt"
         all_sset_loadfile = os.path.join(loadfile_root, all_sset_loadfile)
-        with open(all_sset_loadfile, 'w+') as sslfp:
-            # Write all sample sets
-            
+
+        with open(all_samp_loadfile, 'w') as aslfp, open(all_sset_loadfile, 'w') as sslfp:
+            #Write headers for samples loadfile
+            headers =  ["sample_id", "individual_id" ]
+            headers += ["sample_type", "tcga_sample_id"] + sorted(annotations)
+            aslfp.write("\t".join(headers) + "\n")
+
+            # Write headers for sample set loadfile
+            sslfp.write("sample_set_id\tsample_id\n")
+
+            # loop over each project, concatenating loadfile data from each
+            for projname in sorted(projects.keys()):
+                proj_samples = projname + "." + datestamp + ".Sample.loadfile.txt"
+                proj_samples = os.path.join(loadfile_root, proj_samples)
+                with open(proj_samples) as ps:
+                     # Skip header, and copy the rest of the file
+                    ps.next()
+                    for line in ps:
+                        aslfp.write(line)
+
+                proj_sset = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
+                proj_sset = os.path.join(loadfile_root, proj_sset)
+                with open(proj_sset) as psset:
+                     # Skip header, and copy the rest of the file
+                    psset.next()
+                    for line in psset:
+                        sslfp.write(line)
 
 
     def execute(self):
@@ -271,7 +293,7 @@ class create_loadfile(GDCtool):
 
         # ... finally, assemble a compositle loadfile for all available samples
         # and sample sets
-        self.generate_master_loadfile(projects, annotations)
+        self.generate_master_loadfiles(projects, annotations)
 
 def get_diced_metadata(project_root, datestamp):
 
