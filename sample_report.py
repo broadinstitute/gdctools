@@ -137,24 +137,26 @@ class sample_report(GDCtool):
         # inspect_data in create_loadfile
         for cf in _counts_files(diced_prog_root, timestamp):
             # Filename is <project>
-            cohort = cf.split('.')[0].replace('TCGA-', '')
+            cf_base = os.path.basename(cf)
+            cohort = cf_base.split('.')[0].replace('TCGA-', '')
+            with open(cf, 'r') as cfp:
+                d_reader = csv.DictReader(cfp, delimiter='\t')
+                annots = list(d_reader.fieldnames)
+                annots.remove('Sample Type')
+                agg_annots.update(annots)
 
-            d_reader = csv.DictReader(cf, delimiter='\t')
-            annots = d_reader.fieldnames
-            annots.remove('Sample Type')
-            agg_annots.update(annots)
+                for row in d_reader:
+                    sample_type = row['Sample Type']
+                    cohort_type = cohort
 
-            for row in d_reader:
-                sample_type = row['Sample Type']
-                cohort_type = cohort
-                if sample_type != 'Totals':
-                    cohort_type += '-' + sample_type
-
-                agg_counts[cohort_type] = dict()
-                for a in annots:
-                    agg_counts[cohort_type][a] = int(row[a])
-                    if row['Sample Type'] == 'Totals':
-                        agg_totals[a] = agg_totals[a].get(a,0) + 1
+                    if sample_type != 'Totals':
+                        cohort_type += '-' + sample_type
+                    agg_counts[cohort_type] = dict()
+                    for a in annots:
+                        count = int(row[a])
+                        agg_counts[cohort_type][a] = count
+                        if row['Sample Type'] == 'Totals':
+                            agg_totals[a] = agg_totals.get(a,0) + count
 
         # Now loop through aggregate cohorts if present, combining entries for those
         for agg_cohort in self.aggregates:
@@ -168,7 +170,7 @@ class sample_report(GDCtool):
             header = 'Cohort\t' + '\t'.join(agg_annots) + '\n'
             f.write(header)
             # Write row of counts for each annot
-            for cohort in agg_counts:
+            for cohort in sorted(agg_counts):
                 row = [cohort] + [str(agg_counts[cohort].get(a, 0)) for a in agg_annots]
                 row = '\t'.join(row) + '\n'
                 f.write(row)
@@ -211,7 +213,7 @@ def _counts_files(diced_prog_root, timestamp):
         # as of the provided date
         if len(meta_dirs) > 0:
             latest_tstamp = sorted(meta_dirs)[-1]
-            count_f = '.'.join([project, 'sample_counts', latest_tstamp, 'tsv'])
+            count_f = '.'.join([project, latest_tstamp, 'sample_counts','tsv'])
             count_f = os.path.join(meta_dir, latest_tstamp, count_f)
 
             # Final sanity check, file must exist
