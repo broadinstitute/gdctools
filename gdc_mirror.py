@@ -34,7 +34,7 @@ from lib.constants import LOGGING_FMT
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.7.0")
+        super(gdc_mirror, self).__init__(version="0.8.0")
         cli = self.cli
 
         desc =  'Create local mirror of the data from arbitrary programs '\
@@ -47,11 +47,12 @@ class gdc_mirror(GDCtool):
         cli.add_argument('-d', '--data-categories', nargs='+', metavar='category',
                          help='Mirror only these data categories. Many data categories have spaces, use quotes to delimit')
 
-        cli.add_argument('-m', '--meta-only', action='store_true',
-                         help="Only retrieve metadata, skip file download")
-
         cli.add_argument('-w', '--workflow-type',
                          help='Mirror only data of thisworkflow type')
+        fdl_help = "Skip download-avoidance of files already on disk."
+        fdl_help += " Avoid doing this for incremental mirrors."
+        cli.add_argument('-f', '--force-download',
+                         action='store_true', help=fdl_help)
 
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
@@ -66,6 +67,7 @@ class gdc_mirror(GDCtool):
         if opts.root_dir is not None: self.mirror_root_dir = opts.root_dir
         if opts.projects is not None: self.mirror_projects = opts.projects
         if opts.programs is not None: self.mirror_programs = opts.programs
+        self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
 
     def mirror(self):
@@ -133,7 +135,8 @@ class gdc_mirror(GDCtool):
 
         md5path = savepath + ".md5"
 
-        if not meta.md5_matches(file_d, md5path):
+        # Download if force is enabled or if the file is not on disk
+        if self.force_download or not meta.md5_matches(file_d, md5path):
 
             # New file, mirror to this folder
             while retries > 0:
@@ -224,16 +227,18 @@ class gdc_mirror(GDCtool):
             os.makedirs(cat_dir)
 
         file_metadata = api.get_files(project, category, workflow_type)
-        new_metadata = meta.files_diff(proj_dir, file_metadata, prev_metadata)
+        new_metadata = file_metadata
+        # If we aren't forcing a full mirror, check the existing metadata
+        # to see what files are new
+        if not self.force_download:
+            new_metadata = meta.files_diff(proj_dir, file_metadata, prev_metadata)
 
-        if self.options.meta_only:
-            logging.info("Metadata only option enabled, skipping full mirror")
-        else:
-            num_files = len(new_metadata)
-            logging.info("{0} new {1} files".format(num_files, category))
 
-            for n, file_d in enumerate(new_metadata):
-                self.__mirror_file(file_d, proj_dir, n+1, num_files)
+        num_files = len(new_metadata)
+        logging.info("{0} new {1} files".format(num_files, category))
+
+        for n, file_d in enumerate(new_metadata):
+            self.__mirror_file(file_d, proj_dir, n+1, num_files)
 
         return file_metadata
 
