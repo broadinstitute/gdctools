@@ -121,8 +121,12 @@ class sample_report(GDCtool):
         self.parse_args()
         opts = self.options
         # TODO: better error handling
-        logging.info("CMD Args: " + " ".join(self.cmdArgs))
-        #report_stdout = subprocess.check_output(self.cmdArgs)
+        #logging.info("CMD Args: " + " ".join(self.cmdArgs))
+        p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        print("stdout:\n" + stdout)
+
+        print('\nstderr:\n' + stderr)
 
 
     def create_agg_counts_file(self, diced_prog_root, timestamp):
@@ -242,6 +246,7 @@ def link_heatmaps(diced_prog_root, report_dir, timestamp):
         # Link high and low res heatmaps to the report dir
         heatmap_high = '.'.join([project, latest_tstamp, 'high_res.heatmap.png'])
         heatmap_high_dice = os.path.join(meta_dir, latest_tstamp, heatmap_high)
+        heatmap_high_dice = os.path.abspath(heatmap_high_dice)
         heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
         heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
 
@@ -250,6 +255,7 @@ def link_heatmaps(diced_prog_root, report_dir, timestamp):
 
         heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
         heatmap_low_dice = os.path.join(meta_dir, latest_tstamp, heatmap_low)
+        heatmap_low_dice = os.path.abspath(heatmap_low_dice)
         heatmap_low_rpt = heatmap_low.replace(latest_tstamp, timestamp)
         heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
         if os.path.isfile(heatmap_low_dice):
@@ -258,15 +264,20 @@ def link_heatmaps(diced_prog_root, report_dir, timestamp):
     return report_dir
 
 
-def link_sample_loadfile(program, load_dir, report_dir, timestamp=None):
-    if timestamp is None:
-        latest_tstamp = sorted(os.listdir(load_dir))[-1]
-    else:
-        latest_tstamp = timestamp
+def link_sample_loadfile(program, load_dir, report_dir, timestamp):
+    prog_dir = os.path.join(load_dir, program)
+    load_dirs = [d for d in os.listdir(prog_dir) if d <= timestamp]
+    if len(load_dirs) < 1:
+        _err =  "No loadfile found for " + program
+        _err += " earlier than " + timestamp
+        logging.error(_err)
 
-    lf = program + '.' + timestamp + ".Sample.loadfile.txt"
-    lf_report_path = os.path.join(report_dir, lf)
-    lf = os.path.join(load_dir, timestamp, lf)
+    latest_tstamp = sorted(load_dirs)[-1]
+
+    lf = program + '.' + latest_tstamp + ".Sample.loadfile.txt"
+    lf_report_path = os.path.join(report_dir, lf.replace(latest_tstamp, timestamp))
+    lf = os.path.join(load_dir, program, latest_tstamp, lf)
+    lf = os.path.abspath(lf)
 
     # Symlink to report folder
     os.symlink(lf, lf_report_path)

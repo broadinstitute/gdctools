@@ -8,6 +8,9 @@ HTML2PNG        = file.path(GDAC_BIN, "html2png")
 REDACTIONS.HEAD = 'redactions'
 FFPES.HEAD      = 'FFPEs'
 
+# Note, do not use 'require', as it does not fail correctly
+library(Nozzle.R1)
+
 DATA_TYPES = c("BCR", "Clinical", "CN", "LowP", "Methylation", "mRNA",
                "mRNASeq", "miR", "miRSeq", "RPPA", "MAF", "rawMAF")
 
@@ -42,7 +45,9 @@ main <- function(...)
     ############################################################################
     # Parse inputs
     ############################################################################
-    args = list(...)
+    # Why is this necessary?
+    args <- unlist(list(...))
+
     if (length(args) < 10 || length(args) > 11) {
         stop(
             paste(
@@ -72,9 +77,10 @@ main <- function(...)
     ############################################################################
     # Initialization
     ############################################################################
-    annotPaths = findAnnotationTSVs(redacDir, timestamp)
-    redacFile  = annotPaths[[REDACTIONS.HEAD]]
-    ffpeFile   = annotPaths[[FFPES.HEAD]]
+    ### GDC era doesn't have any AnnotationTSVs
+    ### annotPaths = findAnnotationTSVs(redacDir, timestamp)
+    ### redacFile  = annotPaths[[REDACTIONS.HEAD]]
+    ### ffpeFile   = annotPaths[[FFPES.HEAD]]
 
     validateSymlink(sampleCountsPath, reportDir)
 
@@ -92,8 +98,6 @@ main <- function(...)
     runStmp = paste(runDate, "Data Snapshot")
     runName = paste0("stddata__", runDate)
 
-    require("Nozzle.R1")
-
     title = sprintf("%s Samples Report", runName)
     report = newReport(title)
 
@@ -106,35 +110,35 @@ main <- function(...)
     ############################################################################
     # Summary
     ############################################################################
-    annotResults <- sapply(annotPaths, generateAnnotationsTable)
+    ### annotResults <- sapply(annotPaths, generateAnnotationsTable)
 
     redactionsTable = NULL
-    redactionsCount = NULL
-    if (REDACTIONS.HEAD %in% colnames(annotResults)) {
-        redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
-        redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
-    }
-    if (is.null(redactionsCount)) {
-        redactionsCount = 0
-    }
+    redactionsCount <- NULL
+    ### if (REDACTIONS.HEAD %in% colnames(annotResults)) {
+    ###    redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
+    ###    redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
+    ### }
+    #if (is.null(redactionsCount)) {
+    #    redactionsCount = 0
+    #}
 
     ffpeTable = NULL
     ffpeCount = NULL
-    if (FFPES.HEAD %in% colnames(annotResults)) {
-        ffpeTable = annotResults[[1, FFPES.HEAD]]
-        ffpeCount = annotResults[[2, FFPES.HEAD]]
-    }
+    ### if (FFPES.HEAD %in% colnames(annotResults)) {
+    ###    ffpeTable = annotResults[[1, FFPES.HEAD]]
+    ###    ffpeCount = annotResults[[2, FFPES.HEAD]]
+    ###}
     if (is.null(ffpeCount)) {
         ffpeCount = 0
     }
 
-    result          = generateFilterTable(filteredSamplesPath, reportDir)
-    filterTable     = result[[1]]
-    filterCount     = result[[2]]
+    ### result          = generateFilterTable(filteredSamplesPath, reportDir)
+    ### filterTable     = result[[1]]
+    filterCount     = 0 ### result[[2]]
 
-    result          = generateBlacklistTable(blacklistPath, reportDir)
-    blacklistTable  = result[[1]]
-    blacklistCount  = result[[2]]
+    ### result          = generateBlacklistTable(blacklistPath, reportDir)
+    ### blacklistTable  = result[[1]]
+    blacklistCount  = 0 ### result[[2]]
 
     summaryParagraph = generateSummaryParagraph(redactionsCount, filterCount,
                                                 blacklistCount, ffpeCount)
@@ -165,20 +169,21 @@ main <- function(...)
     print(sprintf("Heatmaps section generated in %s minutes.",
                   difftime(Sys.time(), heatmapsStart, units="min")))
 
+
     ############################################################################
     # Ingested Samples
     ############################################################################
     ingestSamplesStartTime = Sys.time()
-    sampleCountsTable      =
-        generateSampleCountsTable(
-            sampleCountsPath, sampleCountsTableRaw, sampleLoadfile,
-            heatmapsPath, timestamp, runStmp, reportDir, platformCodeMap,
-            centerCodeMap, sampleTypeMap, annotPaths, filteredSamplesPath,
-            blacklistPath, diseaseStudyMap, tumorTypeToAggregateNamesMap,
-            aggregateNameToTumorTypesMap, sampleToSampleSetsMap)
-    report                 = addToSummary(report, sampleCountsTable$tbl)
-    createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
-                          timestamp)
+    ### sampleCountsTable      =
+    ###    generateSampleCountsTable(
+    ###        sampleCountsPath, sampleCountsTableRaw, sampleLoadfile,
+    ###        heatmapsPath, timestamp, runStmp, reportDir, platformCodeMap,
+    ###        centerCodeMap, sampleTypeMap, annotPaths, filteredSamplesPath,
+    ###        blacklistPath, diseaseStudyMap, tumorTypeToAggregateNamesMap,
+    ###        aggregateNameToTumorTypesMap, sampleToSampleSetsMap)
+    ### report                 = addToSummary(report, sampleCountsTable$tbl)
+    ### createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
+    ###                      timestamp)
     print(sprintf("Created Ingested Samples section in %s minutes.",
                   difftime(Sys.time(), ingestSamplesStartTime, units="min")))
 
@@ -186,31 +191,31 @@ main <- function(...)
     # Filtered Samples SubSection
     ############################################################################
     filteredSamplesStart = Sys.time()
-    validateSymlink(redacFile, reportDir)
-    filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
-            runStmp, redactionsTable, filterTable, blacklistTable)
+    ### validateSymlink(redacFile, reportDir)
+    ### filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
+    ###        runStmp, redactionsTable, filterTable, blacklistTable)
     print(sprintf("Filtered samples section generated in %s minutes.",
                   difftime(Sys.time(), filteredSamplesStart, units="min")))
-    report = addToResults(report, filteredSamplesSubSection)
+    ### report = addToResults(report, filteredSamplesSubSection)
 
     ############################################################################
     # FFPEs Subsection
     ############################################################################
     ffpeStart = Sys.time()
-    ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
+    ### ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
     print(sprintf("FFPE samples section generated in %s minutes.",
                   difftime(Sys.time(), ffpeStart, units="min")))
-    report = addToResults(report, ffpeSubSection)
+    ### report = addToResults(report, ffpeSubSection)
 
     ############################################################################
     # Annotations Subsection
     ############################################################################
     annotStart = Sys.time()
-    annotSubSection = generateAnnotationsSubSection(reportDir, annotResults[1,],
-                                                    runStmp)
+    ### annotSubSection = generateAnnotationsSubSection(reportDir, annotResults[1,],
+    ###                                                runStmp)
     print(sprintf("Annotations section generated in %s minutes.",
                   difftime(Sys.time(), annotStart, units="min")))
-    report = addToResults(report, annotSubSection)
+    ### report = addToResults(report, annotSubSection)
 
     ############################################################################
     # Methods SubSection
@@ -847,7 +852,7 @@ generateFilterSubsection <- function(tumorType, filterTableRaw) {
 
 generateHeatmapsSubSection <- function(heatmapsDir, timestamp, destDir) {
     heatmapsFilePattern =
-        sprintf("^[0-9A-Za-z]+.%s.low_res.heatmap.png", timestamp)
+        sprintf("^[-0-9A-Za-z]+.%s.low_res.heatmap.png", timestamp)
     heatmaps = list.files(heatmapsDir, pattern=heatmapsFilePattern)
     heatmapsSubSection = newSubSection("Sample Heatmaps")
     for (heatmap in heatmaps) {
@@ -870,10 +875,11 @@ generateHeatmapsSubSection <- function(heatmapsDir, timestamp, destDir) {
 generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
                                         highResHeatmapPath, destDir) {
     if (file.exists(lowResHeatmapPath)) {
-        validateSymlink(lowResHeatmapPath, destDir)
+        ### All heatmaps are already in the reportDir, no need to symlink
+        ### validateSymlink(lowResHeatmapPath, destDir)
         figure = NULL
         if (file.exists(highResHeatmapPath)) {
-            validateSymlink(highResHeatmapPath, destDir)
+            ### validateSymlink(highResHeatmapPath, destDir)
             figure =
                 newFigure(basename(lowResHeatmapPath),
                           paste("This figure depicts the distribution of",
@@ -1156,16 +1162,15 @@ createTumorSamplesReport <- function(disease, fullName, runStmp, annotPaths,
 
     annotResults <- sapply(annotPaths, generateAnnotationsTable, disease,
                            aggregateNameToTumorTypesMap)
-
     redactionsTable = NULL
     redactionsCount = NULL
     if (REDACTIONS.HEAD %in% colnames(annotResults)) {
         redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
         redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
     }
-    if (is.null(redactionsCount)) {
-        redactionsCount = 0
-    }
+    #if (is.null(redactionsCount)) {
+    #    redactionsCount = 0
+    #}
 
     ffpeTable = NULL
     ffpeCount = NULL
