@@ -117,16 +117,17 @@ class sample_report(GDCtool):
 
     def execute(self):
         super(sample_report, self).execute()
+        common.init_logging()
         self.parse_args()
         opts = self.options
-        common.init_logging()
         # TODO: better error handling
-        #print(self.cmdArgs)
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
         #report_stdout = subprocess.check_output(self.cmdArgs)
 
 
     def create_agg_counts_file(self, diced_prog_root, timestamp):
+        '''Create a program-wide counts file combining all cohorts, including aggregates'''
+        # TODO: Add aggregate cohort counts
         agg_counts_file = '.'.join(['sample_counts', timestamp, 'tsv'])
         agg_counts_file = os.path.join(self.report_dir, agg_counts_file)
 
@@ -224,7 +225,6 @@ def _counts_files(diced_prog_root, timestamp):
 def link_heatmaps(diced_prog_root, report_dir, timestamp):
     '''Symlink all heatmaps into <reports_dir>/report_<timestamp> and return
     that directory'''
-    logging.info('Linking sample heatmaps...')
     root, dirs, files = os.walk(diced_prog_root).next()
     for project in dirs:
         meta_dir = os.path.join(root, project, 'metadata')
