@@ -222,6 +222,30 @@ class create_loadfile(GDCtool):
         logging.info("Writing sample set loadfile to " + sset_loadfile)
         write_sampleset(samples_lfp, sset_loadfile, projname)
 
+    def generate_master_loadfiles(self, projects, annotations):
+        # Generate master loadfiles for all samples & sample sets
+        program = self.program
+        datestamp = self.datestamp
+
+        logging.info("Generating master loadfiles for {0}".format(program))
+        loadfile_root = os.path.abspath(self.load_dir)
+        loadfile_root = os.path.join(loadfile_root, program, datestamp)
+        if not os.path.isdir(loadfile_root):
+            os.makedirs(loadfile_root)
+
+        all_samp_loadfile = program + '.' + datestamp + ".Sample.loadfile.txt"
+        all_samp_loadfile = os.path.join(loadfile_root, all_samp_loadfile)
+        with open(all_samp_loadfile, 'w+') as aslfp:
+            #Write all samples to one file
+
+
+        all_sset_loadfile = program + '.' + datestamp + ".Sample_Set.loadfile.txt"
+        all_sset_loadfile = os.path.join(loadfile_root, all_sset_loadfile)
+        with open(all_sset_loadfile, 'w+') as sslfp:
+            # Write all sample sets
+            
+
+
     def execute(self):
 
         super(create_loadfile, self).execute()
@@ -237,13 +261,17 @@ class create_loadfile(GDCtool):
         for project in sorted(projects.keys()):
             self.generate_loadfiles(project, annotations, [projects[project]])
 
-        # ... lastly, generate any aggregate loadfiles (>1 project/cohort)
+        # ... then, generate any aggregate loadfiles (>1 project/cohort)
         for aggr_name, aggr_definition in self.aggregates.items():
             print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
             aggregate = []
             for project in aggr_definition.split(","):
                 aggregate.append(projects[project])
             self.generate_loadfiles(aggr_name, annotations, aggregate)
+
+        # ... finally, assemble a compositle loadfile for all available samples
+        # and sample sets
+        self.generate_master_loadfile(projects, annotations)
 
 def get_diced_metadata(project_root, datestamp):
 
@@ -341,20 +369,6 @@ def write_sampleset(samples_lfp, sset_filename, sset_name):
         sset_data += sset_name + "-" + samp_id.split("-")[-1] + "\t" + samp_id + "\n"
         outfile.write(sset_data)
 
-# def write_heatmaps(ld, annots, project, datestamp, outdir):
-#     rownames, matrix = _build_heatmap_matrix(ld, annots)
-#     draw_heatmaps(rownames, matrix, project, datestamp, outdir)
-#
-# def _build_heatmap_matrix(ld, annots):
-#     '''Build a 2d matrix and rownames from annotations and load dict'''
-#     rownames = list(annots)
-#     matrix = [[] for row in rownames]
-#     for r in range(len(rownames)):
-#         for sid in sorted(ld.keys()):
-#             # append 1 if data is present, else 0
-#             matrix[r].append( 1 if rownames[r] in ld[sid] else 0)
-#
-#     return rownames, matrix
 
 if __name__ == "__main__":
     create_loadfile().execute()

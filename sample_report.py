@@ -33,8 +33,11 @@ class sample_report(GDCtool):
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
         cli.description = desc
-        cli.add_argument('timestamp',
-                         help='Generate sample summary report for the given date.')
+
+        tstmp_help = 'Use the available data as of this date. Default is the'
+        tstmp_help += ' current time.'
+        cli.add_argument('timestamp', nargs='?',
+                         default=common.timetuple2stamp(), help=tstmp_help)
 
     def parse_args(self):
         opts = self.options
@@ -42,7 +45,6 @@ class sample_report(GDCtool):
         # Parse custom [loadfiles] section from configuration file.
         # This logic is intentionally omitted from GDCtool:parse_config, since
         # loadfiles are only useful to FireHose, and this tool is not distributed
-
         if opts.config:
             cfg = ConfigParser.ConfigParser()
             cfg.read(opts.config)
@@ -56,7 +58,7 @@ class sample_report(GDCtool):
 
             #Filtered samples file, required
             filtered_samples_file = cfg.get('loadfiles', 'filtered_samples')
-            #Where redactions are stored
+            # Where redactions are stored
             redactions_dir = cfg.get('loadfiles', 'redactions_dir')
             # Blacklisted samples or aliquots
             blacklist_file = cfg.get('loadfiles', 'blacklist')
@@ -64,8 +66,8 @@ class sample_report(GDCtool):
             reference_dir = cfg.get('loadfiles', 'ref_dir')
             # Where the sample reports are stored
             reports_dir = cfg.get('loadfiles', 'reports_dir')
+            self.reports_dir = reports_dir
 
-            #
             if cfg.has_option('loadfiles', 'load_dir'):
                 self.load_dir = cfg.get('loadfiles', 'load_dir')
             if cfg.has_option('loadfiles', 'heatmaps_dir'):
@@ -80,14 +82,20 @@ class sample_report(GDCtool):
         else:
             raise ValueError('Config file required for sample report generation')
 
+        self.report_dir = os.path.join(self.reports_dir, 'report_' + opts.timestamp)
 
+        #FIXME: Hardcoded to just TCGA for now...
+        diced_prog_root = os.path.join(self.dice_root_dir, 'TCGA')
 
         # Now infer certain values from the diced data directory
-        sample_counts_file = create_agg_counts_file()
-        heatmaps_dir = get_heatmaps_dir()
-        sample_loadfile = get_sample_loadfile()
-        aggregates_file = get_aggregates_file()
-
+        sample_counts_file = create_agg_counts_file(diced_prog_root,
+                                                    self.report_dir,
+                                                    opts.timestamp)
+        heatmaps_dir = link_heatmaps(self.report_dir)
+        #FIXME: only works for TCGA
+        sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
+                                               self.report_dir, opts.timestamp)
+        aggregates_file = self.aggregates_file()
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
@@ -101,13 +109,9 @@ class sample_report(GDCtool):
                               blacklist_file,           # From config
                               sample_loadfile,          # Inferred from loadfile dir + timestamp
                               reference_dir,            # From config
-                              reports_dir,              # From config
+                              self.report_dir,          # From config
                               aggregates_file           # Created with aggregates in config
                             ])
-
-
-
-
 
     def execute(self):
         super(sample_report, self).execute()
@@ -115,21 +119,21 @@ class sample_report(GDCtool):
         opts = self.options
         common.init_logging()
         # TODO: better error handling
-        print(self.cmdArgs)
-        #logging.info("CMD Args: " + " ".join(self.cmdArgs))
+        #print(self.cmdArgs)
+        logging.info("CMD Args: " + " ".join(self.cmdArgs))
         #report_stdout = subprocess.check_output(self.cmdArgs)
 
-def create_agg_counts_file(diced_prog_root, timestamp, reports_dir):
-    agg_file = '.'.join('sample_counts', timestamp, 'tsv')
-    agg_file = os.path.join(reports_dir, 'report_' + timestamp, agg_file)
 
+def create_agg_counts_file(diced_prog_root, report_dir, timestamp):
+    agg_counts_file = '.'.join('sample_counts', timestamp, 'tsv')
+    agg_counts_file = os.path.join(report_dir, agg_file)
 
     agg_annots = set()
-    agg_counts = {'Totals': dict()}
-
+    agg_counts = dict()
+    agg_totals = dict()
     # NOTE: There is a lot of similarity between this inspection and
     # inspect_data in create_loadfile
-    for cf in _counts_files(diced_prog_root):
+    for cf in _counts_files(diced_prog_root, timestamp):
         # Filename is <project>
         cohort = cf.split('.')[0].replace('TCGA-', '')
 
@@ -137,6 +141,7 @@ def create_agg_counts_file(diced_prog_root, timestamp, reports_dir):
         annots = d_reader.fieldnames
         annots.remove('Sample Type')
         agg_annots.update(annots)
+
         for row in d_reader:
             sample_type = row['Sample Type']
             cohort_type = cohort
@@ -147,39 +152,114 @@ def create_agg_counts_file(diced_prog_root, timestamp, reports_dir):
             for a in annots:
                 agg_counts[cohort_type][a] = int(row[a])
                 if row['Sample Type'] == 'Totals':
-                    agg_counts['Totals'][a] = agg_counts['Totals'].get(a,0) + 1
+                    agg_totals[a] = agg_totals[a].get(a,0) + 1
+
+    # Now loop through aggregate cohorts if present, combining entries for those
+    for agg_cohort in self.aggregates:
+        sub_cohorts = self.aggregates[agg_cohort].split(',')
+        agg_counts[agg_cohort] = {a: sum(agg_counts.get(s,{}).get(a, 0) for a in agg_counts)
+                                  for s in sub_cohorts}
+
+    # Now write the resulting aggregate counts file
+    agg_annots = sorted(agg_annots)
+    with open(agg_counts_file, 'w') as f:
+        header = 'Cohort\t' + '\t'.join(agg_annots) + '\n'
+        f.write(header)
+        # Write row of counts for each annot
+        for cohort in agg_counts:
+            row = [cohort] + [str(agg_counts[cohort].get(a, 0)) for a in agg_annots]
+            row = '\t'.join(row) + '\n'
+            f.write(row)
+
+        # Write totals
+        tot_row = ['Totals'] + [str(agg_totals.get(a, 0)) for a in agg_annots]
+        tot_row = '\t'.join(tot_row) + '\n'
+        f.write(tot_row)
+
+    return agg_counts_file
+
+    def aggregates_file(self):
+        '''Creates an aggregates.txt file in the reports directory. aggregates
+        information is read from the [aggregates] section of the config file.
+        '''
+        agg_file = os.path.join(self.report_dir, 'aggregates.txt')
+
+        with open(agg_file, 'w') as f:
+            f.write('Aggregate Name\tTumor Types\n')
+            for agg in sorted(self.aggregates.keys()):
+                f.write(agg + '\t' + self.aggregates[agg] + '\n')
+
+        return agg_file
 
 
-
-
-
-    return agg_file
-
-def _counts_files(diced_prog_root):
+def _counts_files(diced_prog_root, timestamp):
     '''Generate the counts files for each project in a program'''
     # 'dirs' will be the diced project names
     root, dirs, files = os.walk(diced_prog_root).next()
 
     for project in dirs:
         meta_dir = os.path.join(root, project, 'metadata')
+
+        # Find the appropriate timestamp to use for the latest counts.
+        # The correct file is the one with the latest timestamp that is
+        # earlier than the given timestamp
+        meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
+
+        # If no such meta_dir exists, then there was no data for this project
+        # as of the provided date
+        if len(meta_dirs) > 0:
+            latest_tstamp = sorted(meta_dirs)[-1]
+            count_f = '.'.join([project, 'sample_counts', latest_tstamp, 'tsv'])
+            count_f = os.path.join(meta_dir, latest_tstamp, count_f)
+
+            # Final sanity check, file must exist
+            if os.path.isfile(count_f):
+                yield count_f
+
+
+def link_heatmaps(diced_prog_root, report_dir, timestamp=None):
+    '''Symlink all heatmaps into <reports_dir>/report_<timestamp> and return
+    that directory'''
+    root, dirs, files = os.walk(diced_prog_root).next()
+
+    for project in dirs:
+        meta_dir = os.path.join(root, project, 'metadata')
         # Uses the latest available timestamp to get the latest counts
-        latest_tstamp = sorted(os.listdir(meta_dir))[-1]
-        count_f = '.'.join([project, 'sample_counts', latest_tstamp, 'tsv'])
-        count_f = os.path.join(meta_dir, latest_tstamp, count_f)
+        if timestamp is None:
+            latest_tstamp = sorted(os.listdir(meta_dir))[-1]
+        else:
+            latest_tstamp = timestamp
 
-        # Final sanity check, file must exist
-        if os.path.isfile(count_f):
-            yield count_f
+        # Link high and low res heatmaps to the report dir
+        heatmap_high = '.'.join([project, latest_tstamp, 'high_res.heatmap.png'])
+        heatmap_high_dice = os.path.join(meta_dir, latest_tstamp, heatmap_high)
+        heatmap_high_rpt = os.path.join(report_dir, heatmap_high)
+        if os.path.isfile(heatmap_high_dice):
+            os.symlink(heatmap_high_dice, heatmap_high_rpt)
+
+        heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
+        heatmap_low_dice = os.path.join(meta_dir, latest_tstamp, heatmap_low)
+        heatmap_low_rpt = os.path.join(report_dir, heatmap_low)
+        if os.path.isfile(heatmap_low_dice):
+            os.symlink(heatmap_low_dice, heatmap_low_rpt)
+
+    return report_dir
 
 
-def get_heatmaps_dir():
-    pass
+def link_sample_loadfile(program, load_dir, report_dir, timestamp=None):
+    if timestamp is None:
+        latest_tstamp = sorted(os.listdir(load_dir))[-1]
+    else:
+        latest_tstamp = timestamp
 
-def get_sample_loadfile():
-    pass
+    lf = program + '.' + timestamp + ".Sample.loadfile.txt"
+    lf_report_path = os.path.join(report_dir, lf)
+    lf = os.path.join(load_dir, timestamp, lf)
 
-def get_aggregates_file(aggregates):
-    pass
+    # Symlink to report folder
+    os.symlink(lf, lf_report_path)
+    return lf_report_path
+
 
 if __name__ == "__main__":
     sample_report().execute()

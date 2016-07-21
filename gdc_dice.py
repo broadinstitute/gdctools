@@ -126,6 +126,9 @@ class gdc_dicer(GDCtool):
                     projects = common.immediate_subdirs(mirror_prog_root)
                     if "metadata" in projects:
                         projects.remove("metadata")
+                prog_counts = dict()
+                prog_annots = set()
+
                 for project in sorted(projects):
                     # Load metadata from mirror
                     raw_project_root = os.path.join(mirror_prog_root, project)
@@ -167,19 +170,28 @@ class gdc_dicer(GDCtool):
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
                     proj_counts, proj_annots = _count_samples(meta_file)
-                    counts_file = ".".join([project, 'sample_counts', timestamp, "tsv"])
+                    counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
-
-                    # Counts are written on a per-cohort (project) basis during
-                    # dicing, as these are the way the data are naturally
-                    # organized. Aggregate cohorts are not created during
-                    # dicing, so no aggregate counts file is generated until a
-                    # freeze (loadfile) specifying these groups is also created.
                     _write_counts(proj_counts, project, proj_annots, counts_file)
 
-                    # Heatmaps for each individual project
+                    # Heatmaps per sample
                     logging.info("Generating heatmaps for " + project)
                     create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
+
+                    #Add project level counts & annots to program dict
+                    prog_counts[project] = proj_counts
+                    prog_annots.update(annots)
+
+                # Write program level counts
+                prog_meta_folder = os.path.join(diced_prog_root,
+                                                "metadata",
+                                                timestamp)
+                if not os.path.isdir(prog_meta_folder):
+                    os.makedirs(prog_meta_folder)
+                prog_counts_file = os.path.join(prog_meta_folder,
+                                           ".".join([program, timestamp, "sample_counts.tsv"]))
+                _write_program_counts(prog_counts, program, prog_annots, )
+
 
         logging.info("Dicing completed successfuly")
 
