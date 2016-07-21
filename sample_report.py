@@ -83,15 +83,17 @@ class sample_report(GDCtool):
             raise ValueError('Config file required for sample report generation')
 
         self.report_dir = os.path.join(self.reports_dir, 'report_' + opts.timestamp)
+        if not os.path.isdir(self.report_dir):
+            os.makedirs(self.report_dir)
 
         #FIXME: Hardcoded to just TCGA for now...
         diced_prog_root = os.path.join(self.dice_root_dir, 'TCGA')
 
         # Now infer certain values from the diced data directory
-        sample_counts_file = create_agg_counts_file(diced_prog_root,
-                                                    self.report_dir,
-                                                    opts.timestamp)
-        heatmaps_dir = link_heatmaps(self.report_dir)
+        sample_counts_file = self.create_agg_counts_file(diced_prog_root,
+                                                        opts.timestamp)
+        heatmaps_dir = link_heatmaps(diced_prog_root, self.report_dir,
+                                     opts.timestamp)
         #FIXME: only works for TCGA
         sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
                                                self.report_dir, opts.timestamp)
@@ -124,59 +126,59 @@ class sample_report(GDCtool):
         #report_stdout = subprocess.check_output(self.cmdArgs)
 
 
-def create_agg_counts_file(diced_prog_root, report_dir, timestamp):
-    agg_counts_file = '.'.join('sample_counts', timestamp, 'tsv')
-    agg_counts_file = os.path.join(report_dir, agg_file)
+    def create_agg_counts_file(self, diced_prog_root, timestamp):
+        agg_counts_file = '.'.join(['sample_counts', timestamp, 'tsv'])
+        agg_counts_file = os.path.join(self.report_dir, agg_counts_file)
 
-    agg_annots = set()
-    agg_counts = dict()
-    agg_totals = dict()
-    # NOTE: There is a lot of similarity between this inspection and
-    # inspect_data in create_loadfile
-    for cf in _counts_files(diced_prog_root, timestamp):
-        # Filename is <project>
-        cohort = cf.split('.')[0].replace('TCGA-', '')
+        agg_annots = set()
+        agg_counts = dict()
+        agg_totals = dict()
+        # NOTE: There is a lot of similarity between this inspection and
+        # inspect_data in create_loadfile
+        for cf in _counts_files(diced_prog_root, timestamp):
+            # Filename is <project>
+            cohort = cf.split('.')[0].replace('TCGA-', '')
 
-        d_reader = csv.DictReader(cf, delimiter='\t')
-        annots = d_reader.fieldnames
-        annots.remove('Sample Type')
-        agg_annots.update(annots)
+            d_reader = csv.DictReader(cf, delimiter='\t')
+            annots = d_reader.fieldnames
+            annots.remove('Sample Type')
+            agg_annots.update(annots)
 
-        for row in d_reader:
-            sample_type = row['Sample Type']
-            cohort_type = cohort
-            if sample_type != 'Totals':
-                cohort_type += '-' + sample_type
+            for row in d_reader:
+                sample_type = row['Sample Type']
+                cohort_type = cohort
+                if sample_type != 'Totals':
+                    cohort_type += '-' + sample_type
 
-            agg_counts[cohort_type] = dict()
-            for a in annots:
-                agg_counts[cohort_type][a] = int(row[a])
-                if row['Sample Type'] == 'Totals':
-                    agg_totals[a] = agg_totals[a].get(a,0) + 1
+                agg_counts[cohort_type] = dict()
+                for a in annots:
+                    agg_counts[cohort_type][a] = int(row[a])
+                    if row['Sample Type'] == 'Totals':
+                        agg_totals[a] = agg_totals[a].get(a,0) + 1
 
-    # Now loop through aggregate cohorts if present, combining entries for those
-    for agg_cohort in self.aggregates:
-        sub_cohorts = self.aggregates[agg_cohort].split(',')
-        agg_counts[agg_cohort] = {a: sum(agg_counts.get(s,{}).get(a, 0) for a in agg_counts)
-                                  for s in sub_cohorts}
+        # Now loop through aggregate cohorts if present, combining entries for those
+        for agg_cohort in self.aggregates:
+            sub_cohorts = self.aggregates[agg_cohort].split(',')
+            agg_counts[agg_cohort] = {a: sum(agg_counts.get(s,{}).get(a, 0) for a in agg_counts)
+                                      for s in sub_cohorts}
 
-    # Now write the resulting aggregate counts file
-    agg_annots = sorted(agg_annots)
-    with open(agg_counts_file, 'w') as f:
-        header = 'Cohort\t' + '\t'.join(agg_annots) + '\n'
-        f.write(header)
-        # Write row of counts for each annot
-        for cohort in agg_counts:
-            row = [cohort] + [str(agg_counts[cohort].get(a, 0)) for a in agg_annots]
-            row = '\t'.join(row) + '\n'
-            f.write(row)
+        # Now write the resulting aggregate counts file
+        agg_annots = sorted(agg_annots)
+        with open(agg_counts_file, 'w') as f:
+            header = 'Cohort\t' + '\t'.join(agg_annots) + '\n'
+            f.write(header)
+            # Write row of counts for each annot
+            for cohort in agg_counts:
+                row = [cohort] + [str(agg_counts[cohort].get(a, 0)) for a in agg_annots]
+                row = '\t'.join(row) + '\n'
+                f.write(row)
 
-        # Write totals
-        tot_row = ['Totals'] + [str(agg_totals.get(a, 0)) for a in agg_annots]
-        tot_row = '\t'.join(tot_row) + '\n'
-        f.write(tot_row)
+            # Write totals
+            tot_row = ['Totals'] + [str(agg_totals.get(a, 0)) for a in agg_annots]
+            tot_row = '\t'.join(tot_row) + '\n'
+            f.write(tot_row)
 
-    return agg_counts_file
+        return agg_counts_file
 
     def aggregates_file(self):
         '''Creates an aggregates.txt file in the reports directory. aggregates
@@ -217,29 +219,37 @@ def _counts_files(diced_prog_root, timestamp):
                 yield count_f
 
 
-def link_heatmaps(diced_prog_root, report_dir, timestamp=None):
+def link_heatmaps(diced_prog_root, report_dir, timestamp):
     '''Symlink all heatmaps into <reports_dir>/report_<timestamp> and return
     that directory'''
+    logging.info('Linking sample heatmaps...')
     root, dirs, files = os.walk(diced_prog_root).next()
-
     for project in dirs:
         meta_dir = os.path.join(root, project, 'metadata')
         # Uses the latest available timestamp to get the latest counts
-        if timestamp is None:
-            latest_tstamp = sorted(os.listdir(meta_dir))[-1]
-        else:
-            latest_tstamp = timestamp
+        #TODO: This logic is repeated several places
+        meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
+        if len(meta_dirs) < 1:
+            _warning =  "No metadata found for " + project
+            _warning += " earlier than " + timestamp
+            logging.warning(_warning)
+            continue
+        latest_tstamp = sorted(meta_dirs)[-1]
+
 
         # Link high and low res heatmaps to the report dir
         heatmap_high = '.'.join([project, latest_tstamp, 'high_res.heatmap.png'])
         heatmap_high_dice = os.path.join(meta_dir, latest_tstamp, heatmap_high)
-        heatmap_high_rpt = os.path.join(report_dir, heatmap_high)
+        heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
+        heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
+
         if os.path.isfile(heatmap_high_dice):
             os.symlink(heatmap_high_dice, heatmap_high_rpt)
 
         heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
         heatmap_low_dice = os.path.join(meta_dir, latest_tstamp, heatmap_low)
-        heatmap_low_rpt = os.path.join(report_dir, heatmap_low)
+        heatmap_low_rpt = heatmap_low.replace(latest_tstamp, timestamp)
+        heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
         if os.path.isfile(heatmap_low_dice):
             os.symlink(heatmap_low_dice, heatmap_low_rpt)
 

@@ -50,7 +50,6 @@ class gdc_dicer(GDCtool):
         cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
         cli.add_argument('timestamp', nargs='?',
-                         default=common.timetuple2stamp(),
                          help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
         fd_help = "Skip detection of already diced files, and redice everything"
@@ -71,6 +70,8 @@ class gdc_dicer(GDCtool):
         mirror_root = self.mirror_root_dir
         #Sets timestamp for this run
         self.timestamp = opts.timestamp
+        if self.timestamp is None:
+            self.timestamp = common.timetuple2stamp()
 
         # Discover which GDC programs & projects data will be diced
         latest_tstamps = set()
