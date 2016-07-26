@@ -3,37 +3,37 @@
 # William Mallard / Redactions Report / April 2012
 # Dan DiCara / Updated to Samples Summary Report / January 2013
 # Tim DeFreitas / Updated for GD + GDAN era / June 2016
-GDAC_BIN        = "/xchip/tcga/Tools/gdac/bin"
-HTML2PNG        = file.path(GDAC_BIN, "html2png")
-REDACTIONS.HEAD = 'redactions'
-FFPES.HEAD      = 'FFPEs'
+### GDAC_BIN        = "/xchip/tcga/Tools/gdac/bin"
+### HTML2PNG        = file.path(GDAC_BIN, "html2png")
+### REDACTIONS.HEAD = 'redactions'
+### FFPES.HEAD      = 'FFPEs'
 
 # Note, do not use 'require', as it does not fail correctly
 library(Nozzle.R1)
 
-DATA_TYPES = c("BCR", "Clinical", "CN", "LowP", "Methylation", "mRNA",
-               "mRNASeq", "miR", "miRSeq", "RPPA", "MAF", "rawMAF")
+### DATA_TYPES = c("BCR", "Clinical", "CN", "LowP", "Methylation", "mRNA",
+###               "mRNASeq", "miR", "miRSeq", "RPPA", "MAF", "rawMAF")
 
-LEVEL_3_DATA_TYPES = c("CN", "Methylation", "mRNASeq", "mRNA", "miR")
+### LEVEL_3_DATA_TYPES = c("CN", "Methylation", "mRNASeq", "mRNA", "miR")
 
-PLATFORM_TO_DATATYPE_MAP                             = list()
-PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_dnaseqc"]]  = "LowP"
-PLATFORM_TO_DATATYPE_MAP[["humanmethylation27"]]     = "Methylation"
-PLATFORM_TO_DATATYPE_MAP[["humanmethylation450"]]    = "Methylation"
-PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15k"]]          = "miR"
-PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15kv2"]]        = "miR"
-PLATFORM_TO_DATATYPE_MAP[["illuminaga_mirnaseq"]]    = "miRSeq"
-PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_mirnaseq"]] = "miRSeq"
-PLATFORM_TO_DATATYPE_MAP[["mda_rppa_core"]]          = "RPPA"
-PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseq"]]      = "mRNASeq"
-PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseqv2"]]    = "mRNASeq"
-PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseq"]]   = "mRNASeq"
-PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseqv2"]] = "mRNASeq"
-PLATFORM_TO_DATATYPE_MAP[["genome_wide_snp_6"]]      = "CN"
-PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_1"]]     = "mRNA"
-PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_2"]]     = "mRNA"
-PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_3"]]     = "mRNA"
-PLATFORM_TO_DATATYPE_MAP[["ht_hg_u133a"]]            = "mRNA"
+### PLATFORM_TO_DATATYPE_MAP                             = list()
+### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_dnaseqc"]]  = "LowP"
+### PLATFORM_TO_DATATYPE_MAP[["humanmethylation27"]]     = "Methylation"
+### PLATFORM_TO_DATATYPE_MAP[["humanmethylation450"]]    = "Methylation"
+### PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15k"]]          = "miR"
+### PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15kv2"]]        = "miR"
+### PLATFORM_TO_DATATYPE_MAP[["illuminaga_mirnaseq"]]    = "miRSeq"
+### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_mirnaseq"]] = "miRSeq"
+### PLATFORM_TO_DATATYPE_MAP[["mda_rppa_core"]]          = "RPPA"
+### PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseq"]]      = "mRNASeq"
+### PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseqv2"]]    = "mRNASeq"
+### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseq"]]   = "mRNASeq"
+### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseqv2"]] = "mRNASeq"
+### PLATFORM_TO_DATATYPE_MAP[["genome_wide_snp_6"]]      = "CN"
+### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_1"]]     = "mRNA"
+### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_2"]]     = "mRNA"
+### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_3"]]     = "mRNA"
+### PLATFORM_TO_DATATYPE_MAP[["ht_hg_u133a"]]            = "mRNA"
 
 SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
                  "NB", "NT", "NBC", "NEBV", "NBM", "FFPE")
@@ -41,202 +41,212 @@ SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
 
 main <- function(...)
 {
-    startTime = Sys.time()
-    ############################################################################
-    # Parse inputs
-    ############################################################################
-    # Why is this necessary?
-    args <- unlist(list(...))
-
-    if (length(args) < 10 || length(args) > 11) {
-        stop(
-            paste(
-                "Usage: RedactionsReport.R <redactionsDir> <sampleCountsPath>",
-                "<timestamp> <filteredSamplesPath> <heatmapsDir>",
-                "<blacklistPath> <sampleLoadfile> <refDir> <reportDir>",
-                "<aggregatesPath> [sampleSet]"))
+  startTime = Sys.time()
+  ############################################################################
+  # Parse inputs
+  ############################################################################
+  # Why is this necessary?
+  args <- unlist(list(...))
+### TODO: Fix input arguments and make abbreviated list
+  if (length(args) < 10 || length(args) > 11) {
+    stop(
+      paste(
+            "Usage: RedactionsReport.R <redactionsDir> <sampleCountsPath>",
+            "<timestamp> <filteredSamplesPath> <heatmapsDir>",
+            "<blacklistPath> <sampleLoadfile> <refDir> <reportDir>",
+            "<aggregatesPath> [sampleSet]"))
     }
+###     The following report-specific inputs should all be in <reportDir> 
+###     rather than pass them as separate arguments
+###     redacDir            = args[[1]]
+###     sampleCountsPath    = args[[2]]
+###     filteredSamplesPath = args[[4]]
+###     heatmapsPath        = args[[5]]
+###     sampleLoadfile      = args[[7]]
+###     aggregatesPath      = args[[10]]
+  timestamp           = args[[3]]
+  blacklistPath       = args[[6]]
+  refDir              = args[[8]]
+  reportDir           = args[[9]]
 
-    redacDir            = args[[1]]
-    sampleCountsPath    = args[[2]]
-    timestamp           = args[[3]]
-    filteredSamplesPath = args[[4]]
-    heatmapsPath        = args[[5]]
-    blacklistPath       = args[[6]]
-    sampleLoadfile      = args[[7]]
-    refDir              = args[[8]]
-    reportDir           = args[[9]]
-    aggregatesPath      = args[[10]]
+###    Removed ability to split by sample sets for now, KISS
+###    sampleToSampleSetsMap = list()
+###    if (length(args) == 11) {
+###        sampleSetPath = args[[11]]
+###        sampleToSampleSetsMap = getSampleToSampleSetsMap(sampleSetPath)
+###    }
 
-    sampleToSampleSetsMap = list()
-    if (length(args) == 11) {
-        sampleSetPath = args[[11]]
-        sampleToSampleSetsMap = getSampleToSampleSetsMap(sampleSetPath)
-    }
+  ############################################################################
+  # Initialization
+  ############################################################################
+  ### GDC era doesn't have any AnnotationTSVs
+  ### annotPaths = findAnnotationTSVs(redacDir, timestamp)
+  ### redacFile  = annotPaths[[REDACTIONS.HEAD]]
+  ### ffpeFile   = annotPaths[[FFPES.HEAD]]
 
-    ############################################################################
-    # Initialization
-    ############################################################################
-    ### GDC era doesn't have any AnnotationTSVs
-    ### annotPaths = findAnnotationTSVs(redacDir, timestamp)
-    ### redacFile  = annotPaths[[REDACTIONS.HEAD]]
-    ### ffpeFile   = annotPaths[[FFPES.HEAD]]
+###   validateSymlink(sampleCountsPath, reportDir)
 
-    validateSymlink(sampleCountsPath, reportDir)
+###   maps            = getMaps(refDir)
+###   centerCodeMap   = maps[[1]]
+###   platformCodeMap = maps[[2]]
+###   diseaseStudyMap = maps[[3]]
+###   sampleTypeMap   = maps[[4]]
 
-    maps            = getMaps(refDir)
-    centerCodeMap   = maps[[1]]
-    platformCodeMap = maps[[2]]
-    diseaseStudyMap = maps[[3]]
-    sampleTypeMap   = maps[[4]]
+###   result = getAggregates(aggregatesPath)
+###   tumorTypeToAggregateNamesMap = result[[1]]
+###   aggregateNameToTumorTypesMap = result[[2]]
 
-    result = getAggregates(aggregatesPath)
-    tumorTypeToAggregateNamesMap = result[[1]]
-    aggregateNameToTumorTypesMap = result[[2]]
+  runDate = strsplit(timestamp, "__", TRUE)[[1]][1]
+  runStmp = paste(runDate, "Data Snapshot")
+  runName = paste0("stddata__", runDate)
 
-    runDate = strsplit(timestamp, "__", TRUE)[[1]][1]
-    runStmp = paste(runDate, "Data Snapshot")
-    runName = paste0("stddata__", runDate)
+  title = sprintf("%s Samples Report", runName)
+  report = newReport(title)
 
-    title = sprintf("%s Samples Report", runName)
-    report = newReport(title)
+  ############################################################################
+  # Introduction
+  ############################################################################
+  introduction = generateIntroduction()
+  report       = addToIntroduction(report, introduction)
 
-    ############################################################################
-    # Introduction
-    ############################################################################
-    introduction = generateIntroduction()
-    report       = addToIntroduction(report, introduction)
+  ############################################################################
+  # Summary
+  ############################################################################
+  ### Rather than look up the annotations implicitly, explicitly look
+  ### in reportDir for each kind 
+    
+  ##### NO #####
+  ### annotResults <- sapply(annotPaths, generateAnnotationsTable)
 
-    ############################################################################
-    # Summary
-    ############################################################################
-    ### annotResults <- sapply(annotPaths, generateAnnotationsTable)
+  ###     redactionsTable = NULL
+  ###     redactionsCount <- NULL
+  ### if (REDACTIONS.HEAD %in% colnames(annotResults)) {
+  ###    redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
+  ###    redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
+  ### }
+  ###     if (is.null(redactionsCount)) {
+  ###         redactionsCount = 0
+  ###     }
 
-    redactionsTable = NULL
-    redactionsCount <- NULL
-    ### if (REDACTIONS.HEAD %in% colnames(annotResults)) {
-    ###    redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
-    ###    redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
-    ### }
-    #if (is.null(redactionsCount)) {
-    #    redactionsCount = 0
-    #}
+  ### ffpeTable = NULL
+  ### ffpeCount = NULL
+  ### if (FFPES.HEAD %in% colnames(annotResults)) {
+  ###    ffpeTable = annotResults[[1, FFPES.HEAD]]
+  ###    ffpeCount = annotResults[[2, FFPES.HEAD]]
+  ###}
+  ### if (is.null(ffpeCount)) {
+  ###     ffpeCount = 0
+  ### }
 
-    ffpeTable = NULL
-    ffpeCount = NULL
-    ### if (FFPES.HEAD %in% colnames(annotResults)) {
-    ###    ffpeTable = annotResults[[1, FFPES.HEAD]]
-    ###    ffpeCount = annotResults[[2, FFPES.HEAD]]
-    ###}
-    if (is.null(ffpeCount)) {
-        ffpeCount = 0
-    }
+  ### result          = generateFilterTable(filteredSamplesPath, reportDir)
+  ### filterTable     = result[[1]]
+  ### filterCount     = 0 ### result[[2]]
 
-    ### result          = generateFilterTable(filteredSamplesPath, reportDir)
-    ### filterTable     = result[[1]]
-    filterCount     = 0 ### result[[2]]
+  ### result          = generateBlacklistTable(blacklistPath, reportDir)
+  ### blacklistTable  = result[[1]]
+  ### blacklistCount  = 0 ### result[[2]]
 
-    ### result          = generateBlacklistTable(blacklistPath, reportDir)
-    ### blacklistTable  = result[[1]]
-    blacklistCount  = 0 ### result[[2]]
+  ##### YES #####
+  # FIXME: nrow() the raw data, not the Nozzle table?
+  # redactionsTable  <- getRedactionsTable(reportDir)
+  redactionsCount  <- 0 # nrow(redactionsTable)
 
-    summaryParagraph = generateSummaryParagraph(redactionsCount, filterCount,
-                                                blacklistCount, ffpeCount)
-    report           = addToSummary(report, summaryParagraph)
+  # ffpeTable        <- getFFPETable(reportDir) 
+  ffpeCount        <- 0 # nrow(ffpeTable)
 
-    sampleCountsTableRaw = read.table(sampleCountsPath, header = TRUE,
-                                      sep = "\t", stringsAsFactors=FALSE)
+  # filterTable      <- getFilterTable(reportDir)
+  filterCount      <- 0 # nrow(filterTable)
+  
+  # blacklistTable   <- getBlacklistTable(blacklistPath)
+  blacklistCount   <- 0 # nrow(blacklistTable)
 
-    if ("Tumor" %in% colnames(sampleCountsTableRaw)) {
-        rownames(sampleCountsTableRaw) = sampleCountsTableRaw$Tumor
-    } else if ("Cohort" %in% colnames(sampleCountsTableRaw)) {
-        # Remove sample type rows (i.e. SKCM-TP, SKCM-NT, SKCM-FFPE, etc.)
-        sampleCountsTableRaw = subset(sampleCountsTableRaw, !(grepl("-", sampleCountsTableRaw$Cohort)))
-        rownames(sampleCountsTableRaw) = sampleCountsTableRaw$Cohort
-    } else {
-        stop("Neither Tumor or Cohort found in sample counts table header.")
-    }
+  summaryParagraph <- generateSummaryParagraph(redactionsCount, filterCount,
+                                              blacklistCount, ffpeCount)
+  report           <- addToSummary(report, summaryParagraph)
 
-    ############################################################################
-    # Heatmaps SubSection - generateHeatmapsSubSection() symlinks all the
-    # heatmaps to the current working directory. This is where the ingested
-    # samples section looks for them, so this must come first.
-    ############################################################################
-    heatmapsStart = Sys.time()
-    heatmaps      = generateHeatmapsSubSection(heatmapsPath, timestamp,
-                                               reportDir)
-    report        = addToResults(report, heatmaps)
-    print(sprintf("Heatmaps section generated in %s minutes.",
-                  difftime(Sys.time(), heatmapsStart, units="min")))
+  ############################################################################
+  # Heatmaps SubSection 
+  ############################################################################
+  heatmapsStart   <- Sys.time()
+  heatmaps        <- generateHeatmapsSubSection(timestamp, reportDir)
+  report          <- addToResults(report, heatmaps)
+  print(sprintf("Heatmaps section generated in %s minutes.",
+                difftime(Sys.time(), heatmapsStart, units="min")))
 
 
-    ############################################################################
-    # Ingested Samples
-    ############################################################################
-    ingestSamplesStartTime = Sys.time()
-    ### sampleCountsTable      =
-    ###    generateSampleCountsTable(
-    ###        sampleCountsPath, sampleCountsTableRaw, sampleLoadfile,
-    ###        heatmapsPath, timestamp, runStmp, reportDir, platformCodeMap,
-    ###        centerCodeMap, sampleTypeMap, annotPaths, filteredSamplesPath,
-    ###        blacklistPath, diseaseStudyMap, tumorTypeToAggregateNamesMap,
-    ###        aggregateNameToTumorTypesMap, sampleToSampleSetsMap)
-    ### report                 = addToSummary(report, sampleCountsTable$tbl)
-    ### createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
-    ###                      timestamp)
-    print(sprintf("Created Ingested Samples section in %s minutes.",
-                  difftime(Sys.time(), ingestSamplesStartTime, units="min")))
+  ############################################################################
+  # Ingested Samples
+  ############################################################################
+  ingestSamplesStartTime <- Sys.time()
+  sampleCountsPath <- paste("sample_counts", timestamp, "tsv", sep=".") 
+  sampleCountsPath <- file.path(reportDir, sampleCountsPath)
+  sampleCountsTableRaw <- read.table(sampleCountsPath, header = TRUE,
+                                    sep = "\t", stringsAsFactors=FALSE)
 
-    ############################################################################
-    # Filtered Samples SubSection
-    ############################################################################
-    filteredSamplesStart = Sys.time()
-    ### validateSymlink(redacFile, reportDir)
-    ### filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
-    ###        runStmp, redactionsTable, filterTable, blacklistTable)
-    print(sprintf("Filtered samples section generated in %s minutes.",
-                  difftime(Sys.time(), filteredSamplesStart, units="min")))
-    ### report = addToResults(report, filteredSamplesSubSection)
+  # Remove sample type rows (i.e. SKCM-TP, SKCM-NT, SKCM-FFPE, etc.)
+  sampleCountsTableRaw <- subset(sampleCountsTableRaw, !(grepl("-", sampleCountsTableRaw$Cohort)))
+  rownames(sampleCountsTableRaw) <- sampleCountsTableRaw$Cohort
+  
+  sampleCountsTable <- generateSampleCountsTable(sampleCountsPath, 
+                                     sampleCountsTableRaw,
+                                     refDir, timestamp, reportDir, 
+                                     blacklistPath)
+  report  <- addToSummary(report, sampleCountsTable$tbl)
+#    createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
+#                          timestamp)
+  print(sprintf("Created Ingested Samples section in %s minutes.",
+                 difftime(Sys.time(), ingestSamplesStartTime, units="min")))
 
-    ############################################################################
-    # FFPEs Subsection
-    ############################################################################
-    ffpeStart = Sys.time()
-    ### ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
-    print(sprintf("FFPE samples section generated in %s minutes.",
-                  difftime(Sys.time(), ffpeStart, units="min")))
-    ### report = addToResults(report, ffpeSubSection)
+  ############################################################################
+  # Filtered Samples SubSection
+  ############################################################################
+  filteredSamplesStart = Sys.time()
+  ### validateSymlink(redacFile, reportDir)
+  ### filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
+  ###        runStmp, redactionsTable, filterTable, blacklistTable)
+  print(sprintf("Filtered samples section generated in %s minutes.",
+                 difftime(Sys.time(), filteredSamplesStart, units="min")))
+  ### report = addToResults(report, filteredSamplesSubSection)
 
-    ############################################################################
-    # Annotations Subsection
-    ############################################################################
-    annotStart = Sys.time()
-    ### annotSubSection = generateAnnotationsSubSection(reportDir, annotResults[1,],
-    ###                                                runStmp)
-    print(sprintf("Annotations section generated in %s minutes.",
-                  difftime(Sys.time(), annotStart, units="min")))
-    ### report = addToResults(report, annotSubSection)
+  ############################################################################
+  # FFPEs Subsection
+  ############################################################################
+  ffpeStart = Sys.time()
+  ### ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
+  print(sprintf("FFPE samples section generated in %s minutes.",
+                difftime(Sys.time(), ffpeStart, units="min")))
+  ### report = addToResults(report, ffpeSubSection)
 
-    ############################################################################
-    # Methods SubSection
-    ############################################################################
-    methodsStart = Sys.time()
-    report       = addToMethodsSection(report)
-    print(sprintf("Methods section generated in %s minutes.",
-                  difftime(Sys.time(), methodsStart, units="min")))
+  ############################################################################
+  # Annotations Subsection
+  ############################################################################
+  annotStart = Sys.time()
+  ### annotSubSection = generateAnnotationsSubSection(reportDir, annotResults[1,],
+  ###                                                runStmp)
+  print(sprintf("Annotations section generated in %s minutes.",
+                difftime(Sys.time(), annotStart, units="min")))
+  ### report = addToResults(report, annotSubSection)
 
-    ############################################################################
-    # Generate the report.
-    ############################################################################
-    reportFile = file.path(reportDir, "index", fsep = .Platform$file.sep)
+  ############################################################################
+  # Methods SubSection
+  ############################################################################
+  methodsStart = Sys.time()
+  report       = addToMethodsSection(report)
+  print(sprintf("Methods section generated in %s minutes.",
+                difftime(Sys.time(), methodsStart, units="min")))
 
-    writeStart = Sys.time()
-    writeReport(report, filename=reportFile)
-    print(sprintf("Report written in %s minutes.",
-                  difftime(Sys.time(), writeStart, units="min")))
+  ############################################################################
+  # Generate the report.
+  ############################################################################
+  reportFile = file.path(reportDir, "index", fsep = .Platform$file.sep)
 
-    print(sprintf("Successfully completed report creation in %s minutes.",
-                  difftime(Sys.time(), startTime, units="min")))
+  writeStart = Sys.time()
+  writeReport(report, filename=reportFile)
+  print(sprintf("Report written in %s minutes.",
+                difftime(Sys.time(), writeStart, units="min")))
+
+  print(sprintf("Successfully completed report creation in %s minutes.",
+                 difftime(Sys.time(), startTime, units="min")))
 }
 
 ################################################################################
@@ -305,97 +315,127 @@ findAnnotationTSVs <- function(redactionsDir, timestamp) {
     return(annotationTSVs)
 }
 
-getSampleToSampleSetsMap <- function(sampleSetPath) {
-    sampleToSampleSetsMap = list()
+### getSampleToSampleSetsMap <- function(sampleSetPath) {
+###     sampleToSampleSetsMap = list()
+### 
+###     if (file.exists(sampleSetPath)) {
+###         sampleSetTable =
+###             read.table(
+###                 sampleSetPath, sep="\t", header=TRUE, comment.char="", quote="",
+###                 stringsAsFactors=FALSE)
+###         for (i in 1:nrow(sampleSetTable)) {
+###             sampleSet = sampleSetTable$sample_set_id[i]
+###             sample    = sampleSetTable$sample_id[i]
+### 
+###             if (! (sample %in% names(sampleToSampleSetsMap))) {
+###                 sampleToSampleSetsMap[[sample]] = c()
+###             }
+###             sampleToSampleSetsMap[[sample]] =
+###                 c(sampleToSampleSetsMap[[sample]], sampleSet)
+###         }
+###     }
+###     return(sampleToSampleSetsMap)
+### }
 
-    if (file.exists(sampleSetPath)) {
-        sampleSetTable =
-            read.table(
-                sampleSetPath, sep="\t", header=TRUE, comment.char="", quote="",
-                stringsAsFactors=FALSE)
-        for (i in 1:nrow(sampleSetTable)) {
-            sampleSet = sampleSetTable$sample_set_id[i]
-            sample    = sampleSetTable$sample_id[i]
+### getMaps <- function(refDir) {
+### 
+###     centerCodeMap    = list()
+###     platformCodeMap  = list()
+###     diseaseStudyMap  = list()
+###     sampleTypeMap    = list()
+### 
+###     if (! file.exists(refDir)) {
+###         return(list(centerCodeMap, platformCodeMap, diseaseStudyMap,
+###                     sampleTypeMap))
+###     }
+### 
+###     centerCodePath = file.path(refDir, "centerCode.txt")
+###     if (file.exists(centerCodePath)) {
+###         centerCodeTable =
+###             read.table(centerCodePath, sep="\t", header=TRUE, comment.char="",
+###                        quote="", stringsAsFactors=FALSE)
+###         for (i in 1:nrow(centerCodeTable)) {
+###             centerName = gsub("\\.", "_",centerCodeTable$Center.Name[i])
+###             centerName = gsub("-", "_",centerName)
+###             # Ignore duplicates (i.e. Broad listed twice, once for GSC and once
+###             # for GDAC)
+###             if (! (centerName %in% centerCodeMap)) {
+###                 centerCodeMap[[centerName]] = centerCodeTable$Display.Name[i]
+###             }
+###         }
+###     }
+### 
+###     platformCodePath = file.path(refDir, "platformCode.txt")
+###     if (file.exists(platformCodePath)) {
+###         platformCodeTable =
+###             read.table(platformCodePath, sep="\t", header=TRUE, comment.char="",
+###                        quote="", stringsAsFactors=FALSE)
+###         for (i in 1:nrow(platformCodeTable)) {
+###             platformCode = tolower(platformCodeTable$Platform.Code[i])
+###             platformCode = gsub("-", "_", platformCode)
+###             platformName = platformCodeTable$Platform.Name[i]
+###             platformCodeMap[[platformCode]] = platformName
+###         }
+###         platformCodeMap[[platformCode]] = platformName
+###     }
+### 
+###     diseaseStudyPath = file.path(refDir, "diseaseStudy.txt")
+###     if (file.exists(diseaseStudyPath)) {
+###         diseaseStudyTable =
+###             read.table(diseaseStudyPath, sep="\t", header=TRUE, comment.char="",
+###                        quote="", stringsAsFactors=FALSE)
+###         for (i in 1:nrow(diseaseStudyTable)) {
+###             studyAbbreviation = diseaseStudyTable$Study.Abbreviation[i]
+###             studyName         = diseaseStudyTable$Study.Name[i]
+###             diseaseStudyMap[[studyAbbreviation]] = studyName
+###         }
+###     }
+### 
+###     sampleTypePath = file.path(refDir, "sampleType.txt")
+###     if (file.exists(sampleTypePath)) {
+###         sampleTypeTable =
+###             read.table(sampleTypePath, sep="\t", header=TRUE, comment.char="",
+###                        quote="", stringsAsFactors=FALSE)
+###         for (i in 1:nrow(sampleTypeTable)) {
+###             shortLetterCode = sampleTypeTable$Short.Letter.Code[i]
+###             sampleType      = sampleTypeTable$Definition[i]
+###             sampleTypeMap[[shortLetterCode]] = sampleType
+###         }
+###     }
+### 
+###     return(list(centerCodeMap, platformCodeMap, diseaseStudyMap, sampleTypeMap))
+### }
+getSampleTypeMap <- function(refDir) { 
+  sampleTypePath <- file.path(refDir, "sampleType.txt")
+  sampleTypeMap <- list()
+  if (file.exists(sampleTypePath)) {
+      sampleTypeTable =
+          read.table(sampleTypePath, sep="\t", header=TRUE, comment.char="",
+                     quote="", stringsAsFactors=FALSE)
+      for (i in 1:nrow(sampleTypeTable)) {
+          shortLetterCode = sampleTypeTable$Short.Letter.Code[i]
+          sampleType      = sampleTypeTable$Definition[i]
+          sampleTypeMap[[shortLetterCode]] = sampleType
+      }
+  }
 
-            if (! (sample %in% names(sampleToSampleSetsMap))) {
-                sampleToSampleSetsMap[[sample]] = c()
-            }
-            sampleToSampleSetsMap[[sample]] =
-                c(sampleToSampleSetsMap[[sample]], sampleSet)
-        }
-    }
-    return(sampleToSampleSetsMap)
+  return(sampleTypeMap)
 }
-
-getMaps <- function(refDir) {
-
-    centerCodeMap    = list()
-    platformCodeMap  = list()
-    diseaseStudyMap  = list()
-    sampleTypeMap    = list()
-
-    if (! file.exists(refDir)) {
-        return(list(centerCodeMap, platformCodeMap, diseaseStudyMap,
-                    sampleTypeMap))
-    }
-
-    centerCodePath = file.path(refDir, "centerCode.txt")
-    if (file.exists(centerCodePath)) {
-        centerCodeTable =
-            read.table(centerCodePath, sep="\t", header=TRUE, comment.char="",
-                       quote="", stringsAsFactors=FALSE)
-        for (i in 1:nrow(centerCodeTable)) {
-            centerName = gsub("\\.", "_",centerCodeTable$Center.Name[i])
-            centerName = gsub("-", "_",centerName)
-            # Ignore duplicates (i.e. Broad listed twice, once for GSC and once
-            # for GDAC)
-            if (! (centerName %in% centerCodeMap)) {
-                centerCodeMap[[centerName]] = centerCodeTable$Display.Name[i]
-            }
-        }
-    }
-
-    platformCodePath = file.path(refDir, "platformCode.txt")
-    if (file.exists(platformCodePath)) {
-        platformCodeTable =
-            read.table(platformCodePath, sep="\t", header=TRUE, comment.char="",
-                       quote="", stringsAsFactors=FALSE)
-        for (i in 1:nrow(platformCodeTable)) {
-            platformCode = tolower(platformCodeTable$Platform.Code[i])
-            platformCode = gsub("-", "_", platformCode)
-            platformName = platformCodeTable$Platform.Name[i]
-            platformCodeMap[[platformCode]] = platformName
-        }
-        platformCodeMap[[platformCode]] = platformName
-    }
-
-    diseaseStudyPath = file.path(refDir, "diseaseStudy.txt")
-    if (file.exists(diseaseStudyPath)) {
-        diseaseStudyTable =
-            read.table(diseaseStudyPath, sep="\t", header=TRUE, comment.char="",
-                       quote="", stringsAsFactors=FALSE)
-        for (i in 1:nrow(diseaseStudyTable)) {
-            studyAbbreviation = diseaseStudyTable$Study.Abbreviation[i]
-            studyName         = diseaseStudyTable$Study.Name[i]
-            diseaseStudyMap[[studyAbbreviation]] = studyName
-        }
-    }
-
-    sampleTypePath = file.path(refDir, "sampleType.txt")
-    if (file.exists(sampleTypePath)) {
-        sampleTypeTable =
-            read.table(sampleTypePath, sep="\t", header=TRUE, comment.char="",
-                       quote="", stringsAsFactors=FALSE)
-        for (i in 1:nrow(sampleTypeTable)) {
-            shortLetterCode = sampleTypeTable$Short.Letter.Code[i]
-            sampleType      = sampleTypeTable$Definition[i]
-            sampleTypeMap[[shortLetterCode]] = sampleType
-        }
-    }
-
-    return(list(centerCodeMap, platformCodeMap, diseaseStudyMap, sampleTypeMap))
+getDiseaseStudyMap <- function(refDir) {
+  diseaseStudyPath <- file.path(refDir, "diseaseStudy.txt")
+  diseaseStudyMap <- list()
+  if (file.exists(diseaseStudyPath)) {
+      diseaseStudyTable =
+          read.table(diseaseStudyPath, sep="\t", header=TRUE, comment.char="",
+                     quote="", stringsAsFactors=FALSE)
+      for (i in 1:nrow(diseaseStudyTable)) {
+          studyAbbreviation = diseaseStudyTable$Study.Abbreviation[i]
+          studyName         = diseaseStudyTable$Study.Name[i]
+          diseaseStudyMap[[studyAbbreviation]] = studyName
+      }
+  }
+  return(diseaseStudyMap)
 }
-
 getAggregates <- function(aggregatesPath) {
     tumorTypeToAggregateNamesMap  = list()
     aggregateNameToTumorTypesMap  = list()
@@ -850,21 +890,21 @@ generateFilterSubsection <- function(tumorType, filterTableRaw) {
     return(subsection)
 }
 
-generateHeatmapsSubSection <- function(heatmapsDir, timestamp, destDir) {
+generateHeatmapsSubSection <- function(timestamp, reportDir) {
     heatmapsFilePattern =
         sprintf("^[-0-9A-Za-z]+.%s.low_res.heatmap.png", timestamp)
-    heatmaps = list.files(heatmapsDir, pattern=heatmapsFilePattern)
+    heatmaps = list.files(reportDir, pattern=heatmapsFilePattern)
     heatmapsSubSection = newSubSection("Sample Heatmaps")
     for (heatmap in heatmaps) {
         splitResult = strsplit(heatmap, ".", fixed=TRUE)
         splitArray  = splitResult[[length(splitResult)]]
         tumorType = splitArray[[1]]
-        lowResHeatmapPath = file.path(heatmapsDir, heatmap)
+        lowResHeatmapPath = file.path(reportDir, heatmap)
         highResHeatmapPath =
-            file.path(heatmapsDir, sub("low_res","high_res", heatmap))
+            file.path(reportDir, sub("low_res","high_res", heatmap))
         heatmapSubSubSection =
             generateHeatmapSubSubSection(tumorType, lowResHeatmapPath,
-                                         highResHeatmapPath, destDir)
+                                         highResHeatmapPath, reportDir)
         if (! is.null(heatmapSubSubSection)) {
             heatmapsSubSection = addTo(heatmapsSubSection, heatmapSubSubSection)
         }
@@ -903,99 +943,110 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
 # Generate Sample Counts Table
 ################################################################################
 generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
-                                     sampleLoadfile, heatmapsPath, timestamp,
-                                     runStmp, reportDir, platformCodeMap,
-                                     centerCodeMap, sampleTypeMap, annotPaths,
-                                     filteredSamplesPath, blacklistPath,
-                                     diseaseStudyMap,
-                                     tumorTypeToAggregateNamesMap,
-                                     aggregateNameToTumorTypesMap,
-                                     sampleToSampleSetsMap) {
-    results = parseLoadfile(sampleLoadfile, heatmapsPath, timestamp, reportDir,
-                            platformCodeMap, centerCodeMap,
-                            tumorTypeToAggregateNamesMap, sampleToSampleSetsMap)
+                                   refDir, timestamp, reportDir, 
+                                   blacklistPath) {
+  ###  results = parseLoadfile(sampleLoadfile, heatmapsPath, timestamp, reportDir,
+  ###                         platformCodeMap, centerCodeMap,
+  ###                         tumorTypeToAggregateNamesMap, sampleToSampleSetsMap)
 
-    tumorTypeToSampleTypesMap = results[[1]]
-    sampleTypes               = results[[2]]
-    ignoredPlatforms          = results[[3]]
+  ### tumorTypeToSampleTypesMap = results[[1]]
+  ### sampleTypes               = results[[2]]
+  ### ignoredPlatforms          = results[[3]]
 
-    ignoredPlatformsDescription =
-        newParagraph("The following platforms are outdated and are not ",
-                     "included in the counts depicted in the table above.")
-    ignoredPlatformsList = NULL
-    if (length(ignoredPlatforms) > 0) {
-        for (ignoredPlatform in ignoredPlatforms) {
-            if ((! is.null(names(platformCodeMap))) &&
-                ignoredPlatform %in% names(platformCodeMap)) {
-                if (is.null(ignoredPlatformsList)) {
-                    ignoredPlatformsList = newList(isNumbered=FALSE)
-                }
-                ignoredPlatformsList =
-                    addTo(ignoredPlatformsList,
-                          newParagraph(platformCodeMap[[ignoredPlatform]]))
-            }
-        }
+  ### ignoredPlatformsDescription =
+  ###     newParagraph("The following platforms are outdated and are not ",
+  ###                  "included in the counts depicted in the table above.")
+  ### ignoredPlatformsList = NULL
+  ### if (length(ignoredPlatforms) > 0) {
+  ###     for (ignoredPlatform in ignoredPlatforms) {
+  ###         if ((! is.null(names(platformCodeMap))) &&
+  ###             ignoredPlatform %in% names(platformCodeMap)) {
+  ###             if (is.null(ignoredPlatformsList)) {
+  ###                 ignoredPlatformsList = newList(isNumbered=FALSE)
+  ###            }
+  ###           ignoredPlatformsList =
+  ###                addTo(ignoredPlatformsList,
+  ###                      newParagraph(platformCodeMap[[ignoredPlatform]]))
+  ###        }
+  ###    }
+  ###}
+
+  ### Create a list of sample types and their abbreviations
+  sampleTypeMap <- getSampleTypeMap(refDir)
+  sampleTypeDescription =
+      newParagraph("The sample type short letter codes in the table above ",
+                   "are defined in the following list.")
+  sampleTypeList = newList(isNumbered=FALSE)
+  for (sampleType in names(sampleTypeMap)) {
+     sampleTypeList <-
+       addTo(sampleTypeList,
+         newParagraph(
+                   sprintf("%s: %s", sampleType, sampleTypeMap[[sampleType]])))
+  }
+  countsPattern <- paste("", timestamp, "sample_counts.tsv", sep='.')
+  cohortCountsFiles <- list.files(reportDir, pattern=countsPattern)
+  cohorts <- lapply(cohortCountsFiles, function(fn) {
+    unlist(strsplit(fn, "\\."))[1]
+  })
+  ### Get full names of cohorts
+  diseaseStudyMap <- getDiseaseStudyMap(refDir)
+
+  ### TODO: Vectorize w/lapply
+  for (tumorType in cohorts){
+    # Create the tumor specific heatmap and sample counts table
+    fullName = tumorType
+    if ((! is.null(names(diseaseStudyMap))) &&
+        tumorType %in% names(diseaseStudyMap)) {
+        fullName = diseaseStudyMap[[tumorType]]
     }
 
-    sampleTypeDescription =
-        newParagraph("The sample type short letter codes in the table above ",
-                     "are defined in the following list.")
-    sampleTypeList = NULL
-    for (sampleType in names(sampleTypeMap)) {
-        if (sampleType %in% sampleTypes) {
-            if (is.null(sampleTypeList)) {
-                sampleTypeList = newList(isNumbered=FALSE)
-            }
-            sampleTypeList =
-                addTo(sampleTypeList,
-                      newParagraph(
-                          sprintf("%s: %s", sampleType,
-                                  sampleTypeMap[[sampleType]])))
-        }
-    }
+    # Update row for this cohort  with link to cohort report
+    url = NULL
+    row = which(sampleCountsTableRaw$Cohort == tumorType)
+    sampleCountsTableRaw[row,1] = asLink(url, tumorType)
+  }
+###   for (tumorType in names(tumorTypeToSampleTypesMap)) {
+###     sampleTypesToDataTypesMap = tumorTypeToSampleTypesMap[[tumorType]]
+### 
+###     # Generate the tumor specific heatmap and sample counts table broken
+###     # down by sample type.
+###     sampleCountsTable =
+###         generateTumorTypeSampleCountsTable(
+###             tumorType, sampleTypesToDataTypesMap, sampleTypeMap,
+###             sampleCountsTableRaw)
+### 
+###     heatmap =
+###         generateHeatmapFigure(heatmapsPath, tumorType, timestamp, reportDir)
+### 
+###     fullName = tumorType
+###     if ((! is.null(names(diseaseStudyMap))) &&
+###         tumorType %in% names(diseaseStudyMap)) {
+###         fullName = diseaseStudyMap[[tumorType]]
+###     }
+###     url =
+###         createTumorSamplesReport(
+###             tumorType, fullName, runStmp, annotPaths, reportDir,
+###             filteredSamplesPath, blacklistPath, sampleCountsTable,
+###             ignoredPlatformsDescription, ignoredPlatformsList,
+###             sampleTypeDescription, sampleTypeList, heatmap,
+###             aggregateNameToTumorTypesMap, timestamp)
+### 
+###     if ("Tumor" %in% colnames(sampleCountsTableRaw)) {
+###         row = which(sampleCountsTableRaw$Tumor == tumorType)
+###     } else if ("Cohort" %in%  colnames(sampleCountsTableRaw)) {
+###         row = which(sampleCountsTableRaw$Cohort == tumorType)
+###     }
+### 
+###     sampleCountsTableRaw[row,1] = asLink(url, tumorType)
+###   }
 
-    for (tumorType in names(tumorTypeToSampleTypesMap)) {
-        sampleTypesToDataTypesMap = tumorTypeToSampleTypesMap[[tumorType]]
-
-        # Generate the tumor specific heatmap and sample counts table broken
-        # down by sample type.
-        sampleCountsTable =
-            generateTumorTypeSampleCountsTable(
-                tumorType, sampleTypesToDataTypesMap, sampleTypeMap,
-                sampleCountsTableRaw)
-
-        heatmap =
-            generateHeatmapFigure(heatmapsPath, tumorType, timestamp, reportDir)
-
-        fullName = tumorType
-        if ((! is.null(names(diseaseStudyMap))) &&
-            tumorType %in% names(diseaseStudyMap)) {
-            fullName = diseaseStudyMap[[tumorType]]
-        }
-        url =
-            createTumorSamplesReport(
-                tumorType, fullName, runStmp, annotPaths, reportDir,
-                filteredSamplesPath, blacklistPath, sampleCountsTable,
-                ignoredPlatformsDescription, ignoredPlatformsList,
-                sampleTypeDescription, sampleTypeList, heatmap,
-                aggregateNameToTumorTypesMap, timestamp)
-
-        if ("Tumor" %in% colnames(sampleCountsTableRaw)) {
-            row = which(sampleCountsTableRaw$Tumor == tumorType)
-        } else if ("Cohort" %in%  colnames(sampleCountsTableRaw)) {
-            row = which(sampleCountsTableRaw$Cohort == tumorType)
-        }
-
-        sampleCountsTableRaw[row,1] = asLink(url, tumorType)
-    }
-
-    # Add links to sample counts summary table
-    sampleCountsTable =
+###    # Add links to sample counts summary table
+sampleCountsTable <-
             newTable(
                     sampleCountsTableRaw, file=basename(sampleCountsPath),
                     paste("Summary of TCGA Tumor Data. Click on a tumor type to",
-                            "display a tumor type specific Samples Report."))
-    return(list("tbl" = sampleCountsTable, "df" = sampleCountsTableRaw))
+                          "display a tumor type specific Samples Report."))
+  return(list("tbl" = sampleCountsTable, "df" = sampleCountsTableRaw))
 }
 
 ################################################################################

@@ -31,6 +31,7 @@ from lib.convert import tsv2magetab as gdac_tsv2magetab
 from lib.report import draw_heatmaps
 from lib import common
 from lib import meta
+from lib.constants import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 
@@ -115,8 +116,6 @@ class gdc_dicer(GDCtool):
             with common.lock_context(diced_prog_root, "dice"), \
                  common.lock_context(mirror_prog_root, "mirror"):
                 projects = self.dice_projects
-                prog_counts = dict()
-                prog_annots = set()
 
                 for project in sorted(projects):
                     # Load metadata from mirror, getting the latest metadata
@@ -158,14 +157,12 @@ class gdc_dicer(GDCtool):
                     meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
                     # Count project annotations
-                    annots = set()
                     with open(meta_file, 'w') as mf:
                         # Header
                         mf.write("case_id\tsample_type\tannotation\tfile_name\n")
 
                         for tcga_id in tcga_lookup:
                             for annot, file_d in tcga_lookup[tcga_id].iteritems():
-                                annots.add(annot)
                                 dice_one(file_d, trans_dict, raw_project_root,
                                          diced_project_root, mf,
                                          dry_run=self.options.dry_run,
@@ -173,18 +170,17 @@ class gdc_dicer(GDCtool):
 
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
-                    proj_counts, proj_annots = _count_samples(meta_file)
+                    case_data = _case_data(meta_file)
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
-                    _write_counts(proj_counts, project, proj_annots, counts_file)
+                    _write_counts(case_data, project, counts_file)
 
                     # Heatmaps per sample
                     logging.info("Generating heatmaps for " + project)
-                    create_heatmaps(meta_file, annots, project, timestamp, diced_meta_dir)
+                    create_heatmaps(case_data, project, timestamp, diced_meta_dir)
 
-                    #Add project level counts & annots to program dict
-                    prog_counts[project] = proj_counts
-                    prog_annots.update(annots)
+
+
 
         logging.info("Dicing completed successfuly")
 
@@ -313,101 +309,97 @@ def append_diced_metadata(file_dict, diced_path, annot, meta_file):
 
     meta_file.write("\t".join([cid, sample_type, annot, diced_path]) + "\n")
 
-def _count_samples(diced_metadata_file):
-    '''Count the number of diced files for each annotation/tumor-type'''
-    counts = dict()
+def _case_data(diced_metadata_file):
+    '''Create a case-based lookup of available data types'''
+    # Use a case-based dictionary to count each data type on a case/sample basis
+    # cases[<case_id>][<sample_type>] = set([REPORT_DATA_TYPE, ...])
+    cases = dict()
     cases_with_clinical = set()
     cases_with_biospecimen = set()
-    case_codes = dict()
-    annotations = set()
 
     with open(diced_metadata_file, 'r') as dmf:
         reader = csv.DictReader(dmf, delimiter='\t')
         # Loop through counting non-case-level annotations
         for row in reader:
-
             annot = row['annotation']
             case_id = row['case_id']
+            report_dtype = ANNOT_TO_DATATYPE[annot]
 
-            annotations.add(annot)
-
-            # FIXME: This should probably not be hard-coded
-            if 'clinical__primary' == annot:
+            if report_dtype == 'BCR':
                 cases_with_clinical.add(case_id)
-            elif 'clinical__biospecimen' == annot:
+            elif report_dtype == 'Clinical':
                 cases_with_biospecimen.add(case_id)
             else:
                 _, sample_type = meta.tumor_code(row['sample_type'])
-                counts[sample_type] = counts.get(sample_type, dict())
-                counts[sample_type][annot] = counts[sample_type].get(annot, 0) + 1
-                if case_id not in case_codes: case_codes[case_id] = set()
-                case_codes[case_id].add(sample_type)
+                case_dict = cases.get(case_id, {})
+                case_dict[sample_type] = case_dict.get(sample_type, set())
+                case_dict[sample_type].add(report_dtype)
+                cases[case_id] = case_dict
 
-    # Now go back through and count the Biospecimen and Clinical data
-    # Each sample type is counted as 1 if present
-    for case in case_codes:
-        codes = case_codes[case]
-        for c in codes:
-            if case in cases_with_clinical:
-                count = counts[c].get('clinical__primary', 0) + 1
-                counts[c]['clinical__primary'] = count
-            if case in cases_with_biospecimen:
-                count = counts[c].get('clinical__biospecimen', 0) + 1
-                counts[c]['clinical__biospecimen'] = count
+    # Now go back through and add BCR & Clinical to all sample_types
+    for c in cases:
+        case_dict = cases[c]
+        for st in case_dict:
+            if c in cases_with_clinical:
+                case_dict[st].add('Clinical')
+            if c in cases_with_biospecimen:
+                case_dict[st].add('BCR')
 
-    return counts, annotations
+    return cases
 
-def _write_counts(sample_counts, proj_name, annots, f):
-    '''Write sample counts dict to file.
-    counts = { 'TP' : {'clinical__primary' : 10, '...': 15, ...},
-               'TR' : {'clinical__primary' : 10, '...': 15, ...},
-               ...}
-    '''
+def _write_counts(case_data, proj_name, f):
+    '''Write case data as counts '''
+    # First, put the case data into an easier format:
+    # { 'TP' : {'BCR' : 10, '...': 15, ...},
+    #   'TR' : {'Clinical' : 10, '...': 15, ...},
+    #           ...}
+    counts = dict()
+    for case in case_data:
+        c_dict = case_data[case]
+        for sample_type in c_dict:
+            counts[sample_type] = counts.get(sample_type, {})
+            for report_type in c_dict[sample_type]:
+                counts[sample_type][report_type] = counts[sample_type].get(report_type, 0) + 1
 
-    # FIXME: insert short data type codes, rather than full type names
-    # E.g. BCR instead of Biospecimen
-
-    annots = sorted(annots)
-    # Abbreviate data types, if possible
-    with open(f, "w") as out:
+    # Now write the counts table
+    rdt = REPORT_DATA_TYPES
+    with open(f, 'w') as out:
         # Write header
-        out.write("Sample Type\t" + "\t".join(annots) + '\n')
-        for code in sample_counts:
+        out.write("Sample Type\t" + "\t".join(rdt) + '\n')
+        for code in counts:
             line = code + "\t"
             # Headers can use abbreviated data types
-            abbr_types = [meta.type_abbr(dt) for dt in annots]
-            line += "\t".join([str(sample_counts[code].get(t, 0)) for t in annots]) + "\n"
+            line += "\t".join([str(counts[code].get(t, 0)) for t in rdt]) + "\n"
 
             out.write(line)
 
         # Write totals. Totals is dependent on the main analyzed tumor type
         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
-        tots = [str(sample_counts.get(main_code,{}).get(t, 0)) for t in annots]
+        tots = [str(counts.get(main_code,{}).get(t, 0)) for t in rdt]
         out.write('Totals\t' + '\t'.join(tots) + "\n")
 
-def create_heatmaps(diced_metadata_file, annots, project, timestamp, outdir):
-    rownames, matrix = _build_heatmap_matrix(diced_metadata_file, annots)
-    draw_heatmaps(rownames, matrix, project, timestamp, outdir)
+def create_heatmaps(case_data, project, timestamp, diced_meta_dir):
+    rownames, matrix = _build_heatmap_matrix(case_data)
+    draw_heatmaps(rownames, matrix, project, timestamp, diced_meta_dir)
 
-def _build_heatmap_matrix(diced_metadata_file, annots):
+def _build_heatmap_matrix(case_data):
     '''Build a 2d matrix and rownames from annotations and load dict'''
-    rownames = sorted(list(annots))
+    rownames = REPORT_DATA_TYPES
     annot_sample_data = dict()
-    # Extract a matrix of whether each annotation has a sample id
-    with open(diced_metadata_file, 'r') as dmf:
-        reader = csv.DictReader(dmf, delimiter='\t')
-        for row in reader:
-            case_id = row['case_id']
-            annot = row['annotation']
-            annot_sample_data[case_id] = annot_sample_data.get(case_id, set())
-            annot_sample_data[case_id].add(annot)
+    for case in case_data:
+        c_dict = case_data[case]
+        # Flatten case_data[case_id][sample_type] = set(Data types)
+        # into annot_sample_data[case_id] = set(Data types)
+        # for simpler heatmap
+        data_types = {dt for st in c_dict for dt in c_dict[st]}
+        annot_sample_data[case] = data_types
 
     matrix = [[] for row in rownames]
     # Now iterate over samples, inserting a 1 if data is presente
     for r in range(len(rownames)):
-        for sid in sorted(annot_sample_data.keys()):
+        for cid in sorted(annot_sample_data.keys()):
             # append 1 if data is present, else 0
-            matrix[r].append( 1 if rownames[r] in annot_sample_data[sid] else 0)
+            matrix[r].append( 1 if rownames[r] in annot_sample_data[cid] else 0)
 
     return rownames, matrix
 
