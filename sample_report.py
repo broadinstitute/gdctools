@@ -92,8 +92,9 @@ class sample_report(GDCtool):
         # Now infer certain values from the diced data directory
         sample_counts_file = self.create_agg_counts_file(diced_prog_root,
                                                         opts.timestamp)
-        heatmaps_dir = link_heatmaps(diced_prog_root, self.report_dir,
-                                     opts.timestamp)
+        heatmaps_dir = self.report_dir
+        link_diced_metadata(diced_prog_root, self.report_dir,
+                            opts.timestamp)
         #FIXME: only works for TCGA
         sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
                                                self.report_dir, opts.timestamp)
@@ -226,7 +227,7 @@ def _counts_files(diced_prog_root, timestamp):
                 yield count_f
 
 
-def link_heatmaps(diced_prog_root, report_dir, timestamp):
+def link_diced_metadata(diced_prog_root, report_dir, timestamp):
     '''Symlink all heatmaps into <reports_dir>/report_<timestamp> and return
     that directory'''
     root, dirs, files = os.walk(diced_prog_root).next()
@@ -249,7 +250,6 @@ def link_heatmaps(diced_prog_root, report_dir, timestamp):
         heatmap_high_dice = os.path.abspath(heatmap_high_dice)
         heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
         heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
-
         if os.path.isfile(heatmap_high_dice):
             os.symlink(heatmap_high_dice, heatmap_high_rpt)
 
@@ -260,6 +260,14 @@ def link_heatmaps(diced_prog_root, report_dir, timestamp):
         heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
         if os.path.isfile(heatmap_low_dice):
             os.symlink(heatmap_low_dice, heatmap_low_rpt)
+
+        samp_counts = '.'.join([project, latest_tstamp, 'sample_counts', 'tsv'])
+        samp_counts_d = os.path.join(meta_dir, latest_tstamp, samp_counts)
+        samp_counts_d = os.path.abspath(samp_counts_d)
+        samp_counts_rpt = samp_counts.replace(latest_tstamp, timestamp)
+        samp_counts_rpt = os.path.join(report_dir, samp_counts_rpt)
+        if os.path.isfile(samp_counts_d):
+            os.symlink(samp_counts_d, samp_counts_rpt)
 
     return report_dir
 

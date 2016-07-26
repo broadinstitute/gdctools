@@ -1001,7 +1001,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     }
 
     # Update row for this cohort  with link to cohort report
-    url = NULL
+    url = sampleCountsPath
     row = which(sampleCountsTableRaw$Cohort == tumorType)
     sampleCountsTableRaw[row,1] = asLink(url, tumorType)
   }
