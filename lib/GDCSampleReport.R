@@ -2,7 +2,7 @@
 
 # William Mallard / Redactions Report / April 2012
 # Dan DiCara / Updated to Samples Summary Report / January 2013
-# Tim DeFreitas / Updated for GD + GDAN era / June 2016
+# Tim DeFreitas / Updated for GDC + GDAN era / June 2016
 ### GDAC_BIN        = "/xchip/tcga/Tools/gdac/bin"
 ### HTML2PNG        = file.path(GDAC_BIN, "html2png")
 ### REDACTIONS.HEAD = 'redactions'
@@ -39,8 +39,7 @@ SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
                  "NB", "NT", "NBC", "NEBV", "NBM", "FFPE")
 
 
-main <- function(...)
-{
+main <- function(...) {
   startTime = Sys.time()
   ############################################################################
   # Parse inputs
@@ -84,8 +83,6 @@ main <- function(...)
   ### redacFile  = annotPaths[[REDACTIONS.HEAD]]
   ### ffpeFile   = annotPaths[[FFPES.HEAD]]
 
-###   validateSymlink(sampleCountsPath, reportDir)
-
 ###   maps            = getMaps(refDir)
 ###   centerCodeMap   = maps[[1]]
 ###   platformCodeMap = maps[[2]]
@@ -112,42 +109,7 @@ main <- function(...)
   ############################################################################
   # Summary
   ############################################################################
-  ### Rather than look up the annotations implicitly, explicitly look
-  ### in reportDir for each kind 
-    
-  ##### NO #####
-  ### annotResults <- sapply(annotPaths, generateAnnotationsTable)
-
-  ###     redactionsTable = NULL
-  ###     redactionsCount <- NULL
-  ### if (REDACTIONS.HEAD %in% colnames(annotResults)) {
-  ###    redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
-  ###    redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
-  ### }
-  ###     if (is.null(redactionsCount)) {
-  ###         redactionsCount = 0
-  ###     }
-
-  ### ffpeTable = NULL
-  ### ffpeCount = NULL
-  ### if (FFPES.HEAD %in% colnames(annotResults)) {
-  ###    ffpeTable = annotResults[[1, FFPES.HEAD]]
-  ###    ffpeCount = annotResults[[2, FFPES.HEAD]]
-  ###}
-  ### if (is.null(ffpeCount)) {
-  ###     ffpeCount = 0
-  ### }
-
-  ### result          = generateFilterTable(filteredSamplesPath, reportDir)
-  ### filterTable     = result[[1]]
-  ### filterCount     = 0 ### result[[2]]
-
-  ### result          = generateBlacklistTable(blacklistPath, reportDir)
-  ### blacklistTable  = result[[1]]
-  ### blacklistCount  = 0 ### result[[2]]
-
-  ##### YES #####
-  # FIXME: nrow() the raw data, not the Nozzle table?
+  #  FIXME: nrow() the raw data, not the Nozzle table?
   # redactionsTable  <- getRedactionsTable(reportDir)
   redactionsCount  <- 0 # nrow(redactionsTable)
 
@@ -201,7 +163,6 @@ main <- function(...)
   # Filtered Samples SubSection
   ############################################################################
   filteredSamplesStart = Sys.time()
-  ### validateSymlink(redacFile, reportDir)
   ### filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
   ###        runStmp, redactionsTable, filterTable, blacklistTable)
   print(sprintf("Filtered samples section generated in %s minutes.",
@@ -291,120 +252,8 @@ addTable <- function(container, table, nullMsg) {
     return(container)
 }
 
-################################################################################
-# Validate existance of a symlink, create it if it doesn't exist
-################################################################################
-validateSymlink <- function(sourceFile, destDir) {
-    symlinkPath = file.path(destDir, basename(sourceFile))
-    if ((! file.exists(symlinkPath)) && is.na(Sys.readlink(symlinkPath))) {
-        file.symlink(sourceFile, destDir)
-    }
-}
-
-################################################################################
-# Discover Annotation Tables
-################################################################################
-findAnnotationTSVs <- function(redactionsDir, timestamp) {
-    tsvSuffix = paste0('_', timestamp, '.tsv')
-    annotationGlob = file.path(redactionsDir, paste0('*', tsvSuffix))
-    annotationTSVs = list()
-    for (filename in Sys.glob(annotationGlob)) {
-        annotationTSVs[sub(paste0(tsvSuffix, '$'), '', basename(filename))] =
-            filename
-    }
-    return(annotationTSVs)
-}
-
-### getSampleToSampleSetsMap <- function(sampleSetPath) {
-###     sampleToSampleSetsMap = list()
-### 
-###     if (file.exists(sampleSetPath)) {
-###         sampleSetTable =
-###             read.table(
-###                 sampleSetPath, sep="\t", header=TRUE, comment.char="", quote="",
-###                 stringsAsFactors=FALSE)
-###         for (i in 1:nrow(sampleSetTable)) {
-###             sampleSet = sampleSetTable$sample_set_id[i]
-###             sample    = sampleSetTable$sample_id[i]
-### 
-###             if (! (sample %in% names(sampleToSampleSetsMap))) {
-###                 sampleToSampleSetsMap[[sample]] = c()
-###             }
-###             sampleToSampleSetsMap[[sample]] =
-###                 c(sampleToSampleSetsMap[[sample]], sampleSet)
-###         }
-###     }
-###     return(sampleToSampleSetsMap)
-### }
-
-### getMaps <- function(refDir) {
-### 
-###     centerCodeMap    = list()
-###     platformCodeMap  = list()
-###     diseaseStudyMap  = list()
-###     sampleTypeMap    = list()
-### 
-###     if (! file.exists(refDir)) {
-###         return(list(centerCodeMap, platformCodeMap, diseaseStudyMap,
-###                     sampleTypeMap))
-###     }
-### 
-###     centerCodePath = file.path(refDir, "centerCode.txt")
-###     if (file.exists(centerCodePath)) {
-###         centerCodeTable =
-###             read.table(centerCodePath, sep="\t", header=TRUE, comment.char="",
-###                        quote="", stringsAsFactors=FALSE)
-###         for (i in 1:nrow(centerCodeTable)) {
-###             centerName = gsub("\\.", "_",centerCodeTable$Center.Name[i])
-###             centerName = gsub("-", "_",centerName)
-###             # Ignore duplicates (i.e. Broad listed twice, once for GSC and once
-###             # for GDAC)
-###             if (! (centerName %in% centerCodeMap)) {
-###                 centerCodeMap[[centerName]] = centerCodeTable$Display.Name[i]
-###             }
-###         }
-###     }
-### 
-###     platformCodePath = file.path(refDir, "platformCode.txt")
-###     if (file.exists(platformCodePath)) {
-###         platformCodeTable =
-###             read.table(platformCodePath, sep="\t", header=TRUE, comment.char="",
-###                        quote="", stringsAsFactors=FALSE)
-###         for (i in 1:nrow(platformCodeTable)) {
-###             platformCode = tolower(platformCodeTable$Platform.Code[i])
-###             platformCode = gsub("-", "_", platformCode)
-###             platformName = platformCodeTable$Platform.Name[i]
-###             platformCodeMap[[platformCode]] = platformName
-###         }
-###         platformCodeMap[[platformCode]] = platformName
-###     }
-### 
-###     diseaseStudyPath = file.path(refDir, "diseaseStudy.txt")
-###     if (file.exists(diseaseStudyPath)) {
-###         diseaseStudyTable =
-###             read.table(diseaseStudyPath, sep="\t", header=TRUE, comment.char="",
-###                        quote="", stringsAsFactors=FALSE)
-###         for (i in 1:nrow(diseaseStudyTable)) {
-###             studyAbbreviation = diseaseStudyTable$Study.Abbreviation[i]
-###             studyName         = diseaseStudyTable$Study.Name[i]
-###             diseaseStudyMap[[studyAbbreviation]] = studyName
-###         }
-###     }
-### 
-###     sampleTypePath = file.path(refDir, "sampleType.txt")
-###     if (file.exists(sampleTypePath)) {
-###         sampleTypeTable =
-###             read.table(sampleTypePath, sep="\t", header=TRUE, comment.char="",
-###                        quote="", stringsAsFactors=FALSE)
-###         for (i in 1:nrow(sampleTypeTable)) {
-###             shortLetterCode = sampleTypeTable$Short.Letter.Code[i]
-###             sampleType      = sampleTypeTable$Definition[i]
-###             sampleTypeMap[[shortLetterCode]] = sampleType
-###         }
-###     }
-### 
-###     return(list(centerCodeMap, platformCodeMap, diseaseStudyMap, sampleTypeMap))
-### }
+### Return a map of sample type codes to full names.
+### e.g. "TP" -> "Tumor Primary" 
 getSampleTypeMap <- function(refDir) { 
   sampleTypePath <- file.path(refDir, "sampleType.txt")
   sampleTypeMap <- list()
@@ -421,6 +270,8 @@ getSampleTypeMap <- function(refDir) {
 
   return(sampleTypeMap)
 }
+### Return a map of cohort abbreviations to full names.
+### e.g. "ACC" -> "Adrenocortical Carcinoma"
 getDiseaseStudyMap <- function(refDir) {
   diseaseStudyPath <- file.path(refDir, "diseaseStudy.txt")
   diseaseStudyMap <- list()
@@ -787,7 +638,6 @@ generateAnnotationsTable <- function(annotFile, tumorType = NULL,
 generateBlacklistTable <- function(blacklistPath, destDir, tumorType = NULL,
                                   aggregateNameToTumorTypesMap = NULL) {
     if ((! is.null(blacklistPath)) && file.exists(blacklistPath)) {
-        validateSymlink(blacklistPath, destDir)
         blacklistTableRaw =
             read.table(blacklistPath, header = TRUE, sep = "\t",
                        stringsAsFactors=FALSE, blank.lines.skip=TRUE)
@@ -823,7 +673,6 @@ generateBlacklistTable <- function(blacklistPath, destDir, tumorType = NULL,
 generateFilterTable <- function(filteredSamplesPath, destDir, tumorType = NULL,
                                aggregateNameToTumorTypesMap = NULL) {
     if ((! is.null(filteredSamplesPath)) && file.exists(filteredSamplesPath)) {
-        validateSymlink(filteredSamplesPath, destDir)
         filterTableRaw = read.table(filteredSamplesPath, header = TRUE,
                                     sep = "\t", stringsAsFactors=FALSE)
 
@@ -916,10 +765,8 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
                                         highResHeatmapPath, destDir) {
     if (file.exists(lowResHeatmapPath)) {
         ### All heatmaps are already in the reportDir, no need to symlink
-        ### validateSymlink(lowResHeatmapPath, destDir)
         figure = NULL
         if (file.exists(highResHeatmapPath)) {
-            ### validateSymlink(highResHeatmapPath, destDir)
             figure =
                 newFigure(basename(lowResHeatmapPath),
                           paste("This figure depicts the distribution of",
@@ -1036,77 +883,11 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
 ################################################################################
 generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, sampleTypeMap) {
 
-###   columns = list()
-###   columns[["Sample Type"]] = c()
-  ### FIXME: Only works for TCGA samples...
- tumorTable.df <- read.table(tumorCountsPath, header=TRUE,
+### FIXME: Only works for TCGA samples...
+  tumorTable.df <- read.table(tumorCountsPath, header=TRUE,
                               sep="\t", stringsAsFactors=FALSE)
 
-###   for (dataType in DATA_TYPES) {
-###       columns[[dataType]] = c()
-###   }
-### 
-###   for (sampleType in names(sampleTypesToDataTypesMap)) {
-###     columns[["Sample Type"]] = c(columns[["Sample Type"]], sampleType)
-###     dataTypesToSamplesMap = sampleTypesToDataTypesMap[[sampleType]]
-### 
-###       for (dataType in DATA_TYPES) {
-###           if (dataType %in% names(dataTypesToSamplesMap)) {
-###               columns[[dataType]] =
-###                   c(columns[[dataType]],
-###                     length(dataTypesToSamplesMap[[dataType]]))
-###           } else {
-###               columns[[dataType]] = c(columns[[dataType]], 0)
-###           }
-###       }
-###   }
-### 
-###     # Add Totals row
-###     if (tumorType %in% row.names(sampleCountsTableRaw)) {
-###         columns[["Sample Type"]] = c(columns[["Sample Type"]], "Totals")
-###         for (dataType in DATA_TYPES) {
-###             if (dataType %in% names(sampleCountsTableRaw)) {
-###                 columns[[dataType]] =
-###                     c(columns[[dataType]],
-###                       sampleCountsTableRaw[tumorType, dataType])
-###             } else {
-###                 print(sprintf("Unrecognized data type: %s", dataType))
-###                 columns[[dataType]] = c(columns[[dataType]], 0)
-###             }
-###         }
-###     }
-### 
-###     df = NULL
-###     for (column in columns) {
-###         if (is.null(df)) {
-###             df = data.frame(column)
-###         } else {
-###             df = data.frame(df, column)
-###         }
-###     }
-### 
-###     rownames(df) = df[,1]
-###     colnames(df) = cbind(names(columns))
-### 
-###     orderedRowNames = c()
-###     for (sampleType in names(sampleTypeMap)) {
-###         if (sampleType %in% row.names(df)) {
-###             orderedRowNames = c(orderedRowNames, sampleType)
-###         }
-###     }
-### 
-###     for (type in row.names(df)) {
-###         if (type != "Totals" && ! (type %in% names(sampleTypeMap))) {
-###             orderedRowNames = c(orderedRowNames, type)
-###         }
-###     }
-### 
-###     if ("Totals" %in% row.names(df)) {
-###         orderedRowNames = c(orderedRowNames, "Totals")
-###     }
-###     df = df[orderedRowNames,]
-
-    table = newTable(tumorTable.df,
+  table <-  newTable(tumorTable.df,
         paste("This table provides a breakdown of sample counts on a per",
               "sample type and, if applicable, per subtype basis. Each count",
               "is a link to a table containing a list of the samples that",
