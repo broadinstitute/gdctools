@@ -110,16 +110,16 @@ main <- function(...) {
   # Summary
   ############################################################################
   #  FIXME: nrow() the raw data, not the Nozzle table?
-  # redactionsTable  <- getRedactionsTable(reportDir)
+  redactionsTable  <- getRedactionsTable(reportDir)
   redactionsCount  <- 0 # nrow(redactionsTable)
 
-  # ffpeTable        <- getFFPETable(reportDir) 
+  ffpeTable        <- getFFPETable(reportDir) 
   ffpeCount        <- 0 # nrow(ffpeTable)
 
-  # filterTable      <- getFilterTable(reportDir)
+  filterTable      <- getFilterTable(reportDir)
   filterCount      <- 0 # nrow(filterTable)
   
-  # blacklistTable   <- getBlacklistTable(blacklistPath)
+  blacklistTable   <- getBlacklistTable(blacklistPath)
   blacklistCount   <- 0 # nrow(blacklistTable)
 
   summaryParagraph <- generateSummaryParagraph(redactionsCount, filterCount,
@@ -163,30 +163,30 @@ main <- function(...) {
   # Filtered Samples SubSection
   ############################################################################
   filteredSamplesStart = Sys.time()
-  ### filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
-  ###        runStmp, redactionsTable, filterTable, blacklistTable)
+  filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
+         runStmp, redactionsTable, filterTable, blacklistTable)
   print(sprintf("Filtered samples section generated in %s minutes.",
                  difftime(Sys.time(), filteredSamplesStart, units="min")))
-  ### report = addToResults(report, filteredSamplesSubSection)
+  report = addToResults(report, filteredSamplesSubSection)
 
   ############################################################################
   # FFPEs Subsection
   ############################################################################
   ffpeStart = Sys.time()
-  ### ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
+  ffpeSubSection = generateFFPEsSubSection(reportDir, ffpeTable, runStmp)
   print(sprintf("FFPE samples section generated in %s minutes.",
                 difftime(Sys.time(), ffpeStart, units="min")))
-  ### report = addToResults(report, ffpeSubSection)
+  report = addToResults(report, ffpeSubSection)
 
   ############################################################################
   # Annotations Subsection
   ############################################################################
   annotStart = Sys.time()
-  ### annotSubSection = generateAnnotationsSubSection(reportDir, annotResults[1,],
-  ###                                                runStmp)
+  annotSubSection = generateAnnotationsSubSection(reportDir, NULL,
+                                                  runStmp)
   print(sprintf("Annotations section generated in %s minutes.",
                 difftime(Sys.time(), annotStart, units="min")))
-  ### report = addToResults(report, annotSubSection)
+  report = addToResults(report, annotSubSection)
 
   ############################################################################
   # Methods SubSection
@@ -827,16 +827,16 @@ createTumorSamplesReport <- function(disease, fullName,
 ################################################################################
 generateFilteredSamplesSubSection <- function(reportDir, runStmp,
         redactionsTable, filterTable, blacklistTable, disease=NULL) {
-
+### TODO: fix not yet implemented messages
     redactionsReportLink = writeSectionReport(reportDir, redactionsTable,
             "Redactions", runStmp, getRedactionsDescriptions,
-            "There were no redactions.", disease)
+            "NOT YET IMPLEMENTED", disease)
     replicateFilterLink = writeSectionReport(reportDir, filterTable,
             "Replicate Samples", runStmp, getReplicateFilterDescriptions,
-            "There were no replicate samples.", disease)
+            "NOT YET IMPLEMENTED", disease)
     blacklistLink  = writeSectionReport(reportDir, blacklistTable,
             "Blacklisted Samples", runStmp, getBlacklistDescription,
-            "There were no blacklisted samples.", disease)
+            "NOT YET IMPLEMENTED", disease)
 
     filteredSamplesSubSection = newSubSection("Filtered Samples")
     filteredSamplesSubSection = addTo(filteredSamplesSubSection,
@@ -929,10 +929,11 @@ getBlacklistDescription <- function() {
 # Generate FFPEs SubSection
 ################################################################################
 generateFFPEsSubSection <- function(reportDir, ffpeTable, runStmp, disease=NULL) {
+    # TODO: Fix not yet implemented message
     title = "FFPE Cases"
     ffpeSubSection = newSubSection(title)
     ffpeLink = writeSectionReport(reportDir, ffpeTable, title, runStmp,
-            getFfpeDescriptions, "There were no FFPE cases.", disease)
+            getFfpeDescriptions, "NOT YET IMPLEMENTED", disease)
     ffpeSubSection = addTo(ffpeSubSection, ffpeLink)
     return(ffpeSubSection)
 }
@@ -961,22 +962,22 @@ getFfpeDescriptions <- function() {
 generateAnnotationsSubSection <- function(reportDir, annotTables, runStmp,
         disease=NULL){
     annotationsSubsection <- newSubSection(
-        "Additional Annotations from the DCC's ",
+        "[NOT YET IMPLEMENTED] Additional Annotations from the DCC's ",
         asLink("https://tcga-data.nci.nih.gov/annotations",
                "Annotations Manager")
         )
 
-    for (classification in names(annotTables)) {
-        if ((! (classification %in% c(REDACTIONS.HEAD, FFPES.HEAD))) &&
-            (! is.null(annotTables[[classification]]))) {
-            annotationLink = writeSectionReport(reportDir,
-                                                annotTables[[classification]],
-                                                classification, runStmp, NULL,
-                                                sprintf("There were no %s", classification),
-                                                disease)
-            annotationsSubsection = addTo(annotationsSubsection, annotationLink)
-        }
-    }
+###     for (classification in names(annotTables)) {
+###         if ((! (classification %in% c(REDACTIONS.HEAD, FFPES.HEAD))) &&
+###             (! is.null(annotTables[[classification]]))) {
+###             annotationLink = writeSectionReport(reportDir,
+###                                                 annotTables[[classification]],
+###                                                 classification, runStmp, NULL,
+###                                                 sprintf("There were no %s", classification),
+###                                                 disease)
+###             annotationsSubsection = addTo(annotationsSubsection, annotationLink)
+###         }
+###     }
     return(annotationsSubsection)
 }
 
@@ -1068,7 +1069,19 @@ addToMethodsSection <- function(report) {
     report = addToMethods(report, preprocessorsSubSection)
     return(report)
 }
-
+#TODO: Fully implement these functions
+getRedactionsTable <- function(reportDir){
+  return(NULL)
+}
+getFFPETable <- function (reportDir){
+  return(NULL)
+}
+getFilterTable <- function (reportDir){
+  return(NULL)
+}
+getBlacklistTable <- function(blacklistPath){
+  return(NULL)
+}
 #===============================================================================
 # Call main(args)
 #===============================================================================
