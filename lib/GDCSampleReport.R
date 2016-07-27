@@ -702,7 +702,7 @@ generateSamplesSubsection <- function(tumorType, sampleType, dataType,
     return(subsection)
 }
 
-generateHeatmapFigure <- function(heatmapsDir, tumorType, timestamp, destDir) {
+generateHeatmapFigure <- function(heatmapsDir, tumorType, timestamp) {
     heatmapFilename    =
         sprintf("%s.%s.low_res.heatmap.png", tumorType, timestamp)
     lowResHeatmapPath  =
@@ -990,137 +990,123 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
   })
   ### Get full names of cohorts
   diseaseStudyMap <- getDiseaseStudyMap(refDir)
-
+  
   ### TODO: Vectorize w/lapply
   for (tumorType in cohorts){
     # Create the tumor specific heatmap and sample counts table
-    fullName = tumorType
+    # TODO: These steps should be moved to createTumorSamplesReport
+    tumorCountsPath <- paste0(tumorType, ".", timestamp, ".sample_counts.tsv")
+    tumorCountsPath <- file.path(reportDir, tumorCountsPath)
+    sampleCountsTable <-
+        generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath, sampleTypeMap)
+    heatmap <-
+        generateHeatmapFigure(reportDir, tumorType, timestamp)
+
+    fullName <- tumorType
     if ((! is.null(names(diseaseStudyMap))) &&
         tumorType %in% names(diseaseStudyMap)) {
         fullName = diseaseStudyMap[[tumorType]]
     }
 
+    ### Create the tumor specific report
+    url <-
+      createTumorSamplesReport(tumorType, fullName, 
+        reportDir, sampleCountsTable, sampleTypeDescription, 
+        sampleTypeList, heatmap, timestamp)
+
     # Update row for this cohort  with link to cohort report
-    url = sampleCountsPath
-    row = which(sampleCountsTableRaw$Cohort == tumorType)
-    sampleCountsTableRaw[row,1] = asLink(url, tumorType)
+    # FIXME: TCGA-Hard coded here
+    tcga.cohort <- unlist(strsplit(tumorType, split='-'))[2]
+    row = which(sampleCountsTableRaw$Cohort == tcga.cohort)
+    sampleCountsTableRaw[row,1] = asLink(url, tcga.cohort)
+    
   }
-###   for (tumorType in names(tumorTypeToSampleTypesMap)) {
-###     sampleTypesToDataTypesMap = tumorTypeToSampleTypesMap[[tumorType]]
-### 
-###     # Generate the tumor specific heatmap and sample counts table broken
-###     # down by sample type.
-###     sampleCountsTable =
-###         generateTumorTypeSampleCountsTable(
-###             tumorType, sampleTypesToDataTypesMap, sampleTypeMap,
-###             sampleCountsTableRaw)
-### 
-###     heatmap =
-###         generateHeatmapFigure(heatmapsPath, tumorType, timestamp, reportDir)
-### 
-###     fullName = tumorType
-###     if ((! is.null(names(diseaseStudyMap))) &&
-###         tumorType %in% names(diseaseStudyMap)) {
-###         fullName = diseaseStudyMap[[tumorType]]
-###     }
-###     url =
-###         createTumorSamplesReport(
-###             tumorType, fullName, runStmp, annotPaths, reportDir,
-###             filteredSamplesPath, blacklistPath, sampleCountsTable,
-###             ignoredPlatformsDescription, ignoredPlatformsList,
-###             sampleTypeDescription, sampleTypeList, heatmap,
-###             aggregateNameToTumorTypesMap, timestamp)
-### 
-###     if ("Tumor" %in% colnames(sampleCountsTableRaw)) {
-###         row = which(sampleCountsTableRaw$Tumor == tumorType)
-###     } else if ("Cohort" %in%  colnames(sampleCountsTableRaw)) {
-###         row = which(sampleCountsTableRaw$Cohort == tumorType)
-###     }
-### 
-###     sampleCountsTableRaw[row,1] = asLink(url, tumorType)
-###   }
 
 ###    # Add links to sample counts summary table
-sampleCountsTable <-
-            newTable(
-                    sampleCountsTableRaw, file=basename(sampleCountsPath),
-                    paste("Summary of TCGA Tumor Data. Click on a tumor type to",
-                          "display a tumor type specific Samples Report."))
+  
+  sampleCountsTable <-
+            newTable(sampleCountsTableRaw, file=basename(sampleCountsPath),
+                     paste("Summary of TCGA Tumor Data. Click on a tumor type to",
+                           "display a tumor type specific Samples Report."))
   return(list("tbl" = sampleCountsTable, "df" = sampleCountsTableRaw))
 }
 
 ################################################################################
 # Generate Tumor Specific Sample Counts Table
 ################################################################################
-generateTumorTypeSampleCountsTable <- function(tumorType,
-    sampleTypesToDataTypesMap, sampleTypeMap, sampleCountsTableRaw) {
-    columns = list()
-    columns[["Sample Type"]] = c()
-    for (dataType in DATA_TYPES) {
-        columns[[dataType]] = c()
-    }
+generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, sampleTypeMap) {
 
-    for (sampleType in names(sampleTypesToDataTypesMap)) {
-        columns[["Sample Type"]] = c(columns[["Sample Type"]], sampleType)
-        dataTypesToSamplesMap = sampleTypesToDataTypesMap[[sampleType]]
+###   columns = list()
+###   columns[["Sample Type"]] = c()
+  ### FIXME: Only works for TCGA samples...
+ tumorTable.df <- read.table(tumorCountsPath, header=TRUE,
+                              sep="\t", stringsAsFactors=FALSE)
 
-        for (dataType in DATA_TYPES) {
-            if (dataType %in% names(dataTypesToSamplesMap)) {
-                columns[[dataType]] =
-                    c(columns[[dataType]],
-                      length(dataTypesToSamplesMap[[dataType]]))
-            } else {
-                columns[[dataType]] = c(columns[[dataType]], 0)
-            }
-        }
-    }
+###   for (dataType in DATA_TYPES) {
+###       columns[[dataType]] = c()
+###   }
+### 
+###   for (sampleType in names(sampleTypesToDataTypesMap)) {
+###     columns[["Sample Type"]] = c(columns[["Sample Type"]], sampleType)
+###     dataTypesToSamplesMap = sampleTypesToDataTypesMap[[sampleType]]
+### 
+###       for (dataType in DATA_TYPES) {
+###           if (dataType %in% names(dataTypesToSamplesMap)) {
+###               columns[[dataType]] =
+###                   c(columns[[dataType]],
+###                     length(dataTypesToSamplesMap[[dataType]]))
+###           } else {
+###               columns[[dataType]] = c(columns[[dataType]], 0)
+###           }
+###       }
+###   }
+### 
+###     # Add Totals row
+###     if (tumorType %in% row.names(sampleCountsTableRaw)) {
+###         columns[["Sample Type"]] = c(columns[["Sample Type"]], "Totals")
+###         for (dataType in DATA_TYPES) {
+###             if (dataType %in% names(sampleCountsTableRaw)) {
+###                 columns[[dataType]] =
+###                     c(columns[[dataType]],
+###                       sampleCountsTableRaw[tumorType, dataType])
+###             } else {
+###                 print(sprintf("Unrecognized data type: %s", dataType))
+###                 columns[[dataType]] = c(columns[[dataType]], 0)
+###             }
+###         }
+###     }
+### 
+###     df = NULL
+###     for (column in columns) {
+###         if (is.null(df)) {
+###             df = data.frame(column)
+###         } else {
+###             df = data.frame(df, column)
+###         }
+###     }
+### 
+###     rownames(df) = df[,1]
+###     colnames(df) = cbind(names(columns))
+### 
+###     orderedRowNames = c()
+###     for (sampleType in names(sampleTypeMap)) {
+###         if (sampleType %in% row.names(df)) {
+###             orderedRowNames = c(orderedRowNames, sampleType)
+###         }
+###     }
+### 
+###     for (type in row.names(df)) {
+###         if (type != "Totals" && ! (type %in% names(sampleTypeMap))) {
+###             orderedRowNames = c(orderedRowNames, type)
+###         }
+###     }
+### 
+###     if ("Totals" %in% row.names(df)) {
+###         orderedRowNames = c(orderedRowNames, "Totals")
+###     }
+###     df = df[orderedRowNames,]
 
-    # Add Totals row
-    if (tumorType %in% row.names(sampleCountsTableRaw)) {
-        columns[["Sample Type"]] = c(columns[["Sample Type"]], "Totals")
-        for (dataType in DATA_TYPES) {
-            if (dataType %in% names(sampleCountsTableRaw)) {
-                columns[[dataType]] =
-                    c(columns[[dataType]],
-                      sampleCountsTableRaw[tumorType, dataType])
-            } else {
-                print(sprintf("Unrecognized data type: %s", dataType))
-                columns[[dataType]] = c(columns[[dataType]], 0)
-            }
-        }
-    }
-
-    df = NULL
-    for (column in columns) {
-        if (is.null(df)) {
-            df = data.frame(column)
-        } else {
-            df = data.frame(df, column)
-        }
-    }
-
-    rownames(df) = df[,1]
-    colnames(df) = cbind(names(columns))
-
-    orderedRowNames = c()
-    for (sampleType in names(sampleTypeMap)) {
-        if (sampleType %in% row.names(df)) {
-            orderedRowNames = c(orderedRowNames, sampleType)
-        }
-    }
-
-    for (type in row.names(df)) {
-        if (type != "Totals" && ! (type %in% names(sampleTypeMap))) {
-            orderedRowNames = c(orderedRowNames, type)
-        }
-    }
-
-    if ("Totals" %in% row.names(df)) {
-        orderedRowNames = c(orderedRowNames, "Totals")
-    }
-    df = df[orderedRowNames,]
-
-    table = newTable(df,
+    table = newTable(tumorTable.df,
         paste("This table provides a breakdown of sample counts on a per",
               "sample type and, if applicable, per subtype basis. Each count",
               "is a link to a table containing a list of the samples that",
@@ -1129,24 +1115,26 @@ generateTumorTypeSampleCountsTable <- function(tumorType,
               "there are usually multiple protocols per data type, so there",
               "are typically many more rows than the count implies."))
 
-    for (r in 1:nrow(df)) {
-        sampleType = rownames(df)[r]
-        for (c in 2:ncol(df)) {
-            dataType   = colnames(df)[c]
-            if (dataType %in% names(sampleTypesToDataTypesMap[[sampleType]])) {
-                samplesToDataMap =
-                    sampleTypesToDataTypesMap[[sampleType]][[dataType]]
 
-                samplesSubsection =
-                    generateSamplesSubsection(tumorType, sampleType, dataType,
-                                              samplesToDataMap, sampleTypeMap)
-
-                result = addTo(newResult(""), samplesSubsection)
-                table  = addTo(table, result, row=r, column=c)
-            }
-        }
-    }
-    return(list("tbl" = table, "df" = df))
+###  For each table entry, append the sample subsection for the relevant samples
+###     for (r in 1:nrow(df)) {
+###         sampleType = rownames(df)[r]
+###         for (c in 2:ncol(df)) {
+###             dataType   = colnames(df)[c]
+###             if (dataType %in% names(sampleTypesToDataTypesMap[[sampleType]])) {
+###                 samplesToDataMap =
+###                     sampleTypesToDataTypesMap[[sampleType]][[dataType]]
+### 
+###                 samplesSubsection =
+###                     generateSamplesSubsection(tumorType, sampleType, dataType,
+###                                               samplesToDataMap, sampleTypeMap)
+### 
+###                 result = addTo(newResult(""), samplesSubsection)
+###                 table  = addTo(table, result, row=r, column=c)
+###             }
+###         }
+###     }
+    return(list("tbl" = table, "df" = tumorTable.df))
 }
 
 ################################################################################
@@ -1193,70 +1181,74 @@ html2png <- function(htmlFile, del = FALSE) {
 ################################################################################
 # Generate Tumor Specific Samples Report
 ################################################################################
-createTumorSamplesReport <- function(disease, fullName, runStmp, annotPaths,
-    reportDir, filteredSamplesPath, blacklistPath, sampleCountsTable,
-    ignoredPlatformsDescription, ignoredPlatformsList, sampleTypeDescription,
-    sampleTypeList, heatmap, aggregateNameToTumorTypesMap, timestamp) {
-    reportStartTime = Sys.time()
-    print(sprintf("Generating sample report for %s...", disease))
+createTumorSamplesReport <- function(disease, fullName, 
+  reportDir, sampleCountsTable, sampleTypeDescription, 
+  sampleTypeList, heatmap, timestamp) {
 
-    if (disease == fullName) {
-        reportName = sprintf("%s", disease)
-    } else {
-        reportName = sprintf("%s (%s)", fullName, disease)
-    }
+  reportStartTime <- Sys.time()
+  print(sprintf("Generating sample report for %s...", disease))
 
-    reportName = paste(reportName, " Samples Report")
+  if (disease == fullName) {
+      reportName <- sprintf("%s", disease)
+  } else {
+      reportName <- sprintf("%s (%s)", fullName, disease)
+  }
 
-    diseaseReport = newReport(reportName)
-    diseaseReport = setReportSubTitle(diseaseReport, runStmp)
+  reportName <- paste(reportName, " Samples Report")
 
-    annotResults <- sapply(annotPaths, generateAnnotationsTable, disease,
-                           aggregateNameToTumorTypesMap)
-    redactionsTable = NULL
-    redactionsCount = NULL
-    if (REDACTIONS.HEAD %in% colnames(annotResults)) {
-        redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
-        redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
-    }
-    #if (is.null(redactionsCount)) {
-    #    redactionsCount = 0
-    #}
+  runDate <- strsplit(timestamp, "__", TRUE)[[1]][1]
+  runStmp <- paste(runDate, "Data Snapshot")
 
-    ffpeTable = NULL
-    ffpeCount = NULL
-    if (FFPES.HEAD %in% colnames(annotResults)) {
-        ffpeTable = annotResults[[1, FFPES.HEAD]]
-        ffpeCount = annotResults[[2, FFPES.HEAD]]
-    }
-    if (is.null(ffpeCount)) {
-        ffpeCount = 0
-    }
+  diseaseReport <- newReport(reportName)
+  diseaseReport <- setReportSubTitle(diseaseReport, runStmp)
+### TODO: re-insert redactions, filtered samples, etc..
+###     annotResults <- sapply(annotPaths, generateAnnotationsTable, disease,
+###                            aggregateNameToTumorTypesMap)
+###     redactionsTable = NULL
+###     redactionsCount = NULL
+###     if (REDACTIONS.HEAD %in% colnames(annotResults)) {
+###         redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
+###         redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
+###     }
+###     #if (is.null(redactionsCount)) {
+###     #    redactionsCount = 0
+###     #}
+### 
+###     ffpeTable = NULL
+###     ffpeCount = NULL
+###     if (FFPES.HEAD %in% colnames(annotResults)) {
+###         ffpeTable = annotResults[[1, FFPES.HEAD]]
+###         ffpeCount = annotResults[[2, FFPES.HEAD]]
+###     }
+###     if (is.null(ffpeCount)) {
+###         ffpeCount = 0
+###     }
+### 
+###     result         = generateFilterTable(filteredSamplesPath, reportDir,
+###                                          disease, aggregateNameToTumorTypesMap)
+###     filterTable    = result[[1]]
+###     filterCount    = result[[2]]
+### 
+###     result         = generateBlacklistTable(blacklistPath, reportDir, disease,
+###                                              aggregateNameToTumorTypesMap)
+###     blacklistTable = result[[1]]
+###     blacklistCount = result[[2]]
 
-    result         = generateFilterTable(filteredSamplesPath, reportDir,
-                                         disease, aggregateNameToTumorTypesMap)
-    filterTable    = result[[1]]
-    filterCount    = result[[2]]
-
-    result         = generateBlacklistTable(blacklistPath, reportDir, disease,
-                                             aggregateNameToTumorTypesMap)
-    blacklistTable = result[[1]]
-    blacklistCount = result[[2]]
-
-    summaryParagraph          = generateSummaryParagraph(redactionsCount,
-                                                         filterCount,
-                                                         blacklistCount,
-                                                         ffpeCount)
-
-    filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
-            runStmp, redactionsTable, filterTable, blacklistTable, disease)
-    ffpeSubSection            = generateFFPEsSubSection(reportDir, ffpeTable,
-                                                        runStmp, disease)
-    annotSubSection           = generateAnnotationsSubSection(reportDir,
-                                                              annotResults[1,],
-                                                              runStmp,
-                                                              disease)
-
+###    summaryParagraph          = generateSummaryParagraph(redactionsCount,
+###                                                         filterCount,
+###                                                         blacklistCount,
+###                                                         ffpeCount)
+  summaryParagraph <- generateSummaryParagraph(0,0,0,0)
+    
+###   filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
+###           runStmp, redactionsTable, filterTable, blacklistTable, disease)
+###   ffpeSubSection            = generateFFPEsSubSection(reportDir, ffpeTable,
+###                                                       runStmp, disease)
+###   annotSubSection           = generateAnnotationsSubSection(reportDir,
+###                                                             annotResults[1,],
+###                                                             runStmp,
+###                                                             disease)
+### 
     diseaseReport = addToIntroduction(diseaseReport, generateIntroduction())
     diseaseReport = addToSummary(
         diseaseReport, summaryParagraph, sampleCountsTable$tbl)
@@ -1264,20 +1256,20 @@ createTumorSamplesReport <- function(disease, fullName, runStmp, annotPaths,
         diseaseReport = addToSummary(diseaseReport,
                                      sampleTypeDescription, sampleTypeList)
     }
-    if (! is.null(ignoredPlatformsList)) {
-        diseaseReport = addToSummary(
-            diseaseReport, ignoredPlatformsDescription, ignoredPlatformsList)
-    }
+###     if (! is.null(ignoredPlatformsList)) {
+###         diseaseReport = addToSummary(
+###             diseaseReport, ignoredPlatformsDescription, ignoredPlatformsList)
+###     }
     diseaseReport = addToSummary(diseaseReport, heatmap)
-    diseaseReport = addToResults(diseaseReport, filteredSamplesSubSection,
-                                 ffpeSubSection, annotSubSection)
-    diseaseReport = addToMethodsSection(diseaseReport)
+###     diseaseReport = addToResults(diseaseReport, filteredSamplesSubSection,
+###                                  ffpeSubSection, annotSubSection)
+###     diseaseReport = addToMethodsSection(diseaseReport)
 
-    reportPath = file.path(reportDir, disease, fsep = .Platform$file.sep)
+    reportPath = file.path(reportDir, disease)
 
-    createStandaloneTable(sampleCountsTable$df,
-                          paste(disease, "sample_counts", sep = "."), reportDir,
-                          timestamp, del = TRUE)
+###     createStandaloneTable(sampleCountsTable$df,
+###                           paste(disease, "sample_counts", sep = "."), reportDir,
+###                           timestamp, del = TRUE)
     writeReport(diseaseReport, filename=reportPath)
     print(sprintf("Finished generating sample report for %s in %s minutes",
                   disease,  difftime(Sys.time(), reportStartTime, units="min")))
