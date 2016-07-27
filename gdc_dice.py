@@ -151,7 +151,8 @@ class gdc_dicer(GDCtool):
                     # Diced Metadata
                     diced_meta_dir = os.path.join(diced_project_root,
                                                   "metadata", timestamp)
-                    diced_meta_fname = ".".join(['diced_metadata', timestamp, 'tsv'])
+                    diced_meta_fname = ".".join([project, timestamp,
+                                                'diced_metadata', 'tsv'])
                     if not os.path.isdir(diced_meta_dir):
                         os.makedirs(diced_meta_dir)
                     meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
@@ -159,15 +160,22 @@ class gdc_dicer(GDCtool):
                     # Count project annotations
                     with open(meta_file, 'w') as mf:
                         # Header
-                        mf.write("case_id\tsample_type\tannotation\tfile_name\n")
+                        META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
+                                        'annotation', 'file_name', 'center',
+                                        'platform', 'report_type']
+                        mfw = csv.DictWriter(mf, fieldnames=META_HEADERS,
+                                             delimiter='\t')
+                        mfw.writeheader()
 
                         for tcga_id in tcga_lookup:
                             for annot, file_d in tcga_lookup[tcga_id].iteritems():
                                 dice_one(file_d, trans_dict, raw_project_root,
-                                         diced_project_root, mf,
+                                         diced_project_root, mfw,
                                          dry_run=self.options.dry_run,
                                          force=self.force_dice)
 
+                    # Bookkeeping code -- write some useful tables
+                    # and figures needed for downstream sample reports.
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
                     case_data = _case_data(meta_file)
@@ -178,9 +186,6 @@ class gdc_dicer(GDCtool):
                     # Heatmaps per sample
                     logging.info("Generating heatmaps for " + project)
                     create_heatmaps(case_data, project, timestamp, diced_meta_dir)
-
-
-
 
         logging.info("Dicing completed successfuly")
 
@@ -241,7 +246,7 @@ def build_translation_dict(translation_file):
     return d
 
 def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
-             meta_file, dry_run=False, force=False):
+             meta_file_writer, dry_run=False, force=False):
     """Dice a single file from a GDC mirror.
 
     Diced data will be placed in /<diced_root>/<annotation>/. If dry_run is
@@ -266,7 +271,7 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                     convert(file_dict, mirror_path, dice_path)
 
                 append_diced_metadata(file_dict, expected_path,
-                                      annot, meta_file)
+                                      annot, meta_file_writer)
         else:
             logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
                                                                indent=2))
@@ -300,14 +305,26 @@ def metadata_to_key(file_dict):
         "workflow_type" : workflow_type
     }.items())
 
-def append_diced_metadata(file_dict, diced_path, annot, meta_file):
+def append_diced_metadata(file_dict, diced_path, annot, meta_file_writer):
+    '''Write a row for the given file_dict using meta_file_writer.
+
+    meta_file_writer must be a csv.DictWriter
+    '''
+    sample_type = None
     if meta.has_sample(file_dict):
         sample_type = meta.sample_type(file_dict)
-    else:
-        sample_type = "None" # Case_level
-    cid = meta.case_id(file_dict)
 
-    meta_file.write("\t".join([cid, sample_type, annot, diced_path]) + "\n")
+    # Write row with csv.DictWriter.writerow()
+    meta_file_writer.writerow({
+        'case_id'      : meta.case_id(file_dict),
+        'tcga_barcode' : meta.tcga_id(file_dict),
+        'sample_type'  : sample_type,
+        'annotation'   : annot,
+        'file_name'    : diced_path,
+        'center'       : meta.center(file_dict),
+        'platform'     : meta.platform(file_dict),
+        'report_type'  : ANNOT_TO_DATATYPE[annot]
+    })
 
 def _case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''

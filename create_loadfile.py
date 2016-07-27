@@ -136,7 +136,7 @@ class create_loadfile(GDCtool):
                 logging.info("Inspecting data for {0} version {1}"\
                                 .format(projname, self.datestamp))
 
-                metapath = get_diced_metadata(projpath, self.datestamp)
+                metapath = get_diced_metadata(projname, projpath, self.datestamp)
                 with open(metapath) as metafile:
                     reader = csv.DictReader(metafile, delimiter='\t')
                     # Stores the files and annotations for each case
@@ -149,7 +149,7 @@ class create_loadfile(GDCtool):
                         filepath = row['file_name']
                         annotations.add(annot)
 
-                        if row['sample_type'] == "None":
+                        if row['sample_type'] == '':
                             # This file exists only at the case-level (e.g.
                             # clinical data) and so does not have a tissue
                             # sample type (e.g. Primary Tumor).  Therefore
@@ -295,13 +295,13 @@ class create_loadfile(GDCtool):
         # and sample sets
         self.generate_master_loadfiles(projects, annotations)
 
-def get_diced_metadata(project_root, datestamp):
+def get_diced_metadata(project, project_root, datestamp):
 
     # At this point the datestamp has been vetted to be the latest HH_MM_SS
     # dicing for the given YYYY_MM_DD date; and so there MUST be EXACTLY 1
     # 1 metadata file summarizing that given YYYY_MM_DD__HH_MM_SS dicing.
     mpath = os.path.join(project_root, "metadata", datestamp)
-    mpath = os.path.join(mpath, "diced_metadata." + datestamp + ".tsv")
+    mpath = os.path.join(mpath, project + '.' + datestamp + ".diced_metadata.tsv")
     if os.path.exists(mpath):
         return mpath
     raise ValueError("Could not find dicing metadata: "+mpath)

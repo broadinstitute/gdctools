@@ -214,6 +214,14 @@ def tcga_id(file_dict):
             print(json.dumps(file_dict, indent=2))
             raise
 
+def center(file_dict):
+    '''Returns the analysis center that submitted the data (or 'GDC')'''
+    # TODO: get this info from the file_dict
+    return '(TODO) -- GDC'
+
+def platform(file_dict):
+    return file_dict.get('platform', None)
+
 def has_sample(file_dict):
     '''Returns true if there is exactly one sample associated with this file.'''
 
