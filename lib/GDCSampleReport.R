@@ -315,241 +315,25 @@ getAggregates <- function(aggregatesPath) {
     return(list(tumorTypeToAggregateNamesMap, aggregateNameToTumorTypesMap))
 }
 
-parseLoadfile <- function(samplesLoadfile, heatmapsDir, timestamp, destDir,
-                         platformCodeMap, centerCodeMap,
-                         tumorTypeToAggregateNamesMap, sampleToSampleSetsMap) {
-
-    loadfile = read.table(samplesLoadfile, header = TRUE, sep = "\t")
-
-    # Header begins with sample_id, individual_id, sample_type, and
-    # tcga_sample_id.
-    # BLCA-BL-A0C8-NB::BLCA-BL-A0C8::NB::TCGA-BL-A0C8-10
-    annotations = names(loadfile)
-
-    annotationsMap   = list()
-    ignoredPlatforms = c()
-    data_types       = c()
-    centers          = c()
-
-    if (length(annotations) > 4) {
-        for (i in 5:length(annotations)) {
-            annotation = annotations[i]
-            # <data_type>__<     platform    >__< center  >__<level>__<           protocol            >__<  >
-            # methylation__humanmethylation450__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data
-            fields = strsplit(annotation, "__")[[1]]
-            numFieldsExpected = 6
-            if (length(fields) != numFieldsExpected) {
-                print(
-                    sprintf(
-                        "Annotation doesn't have %d fields (has %d), skipping.",
-                        numFieldsExpected, length(fields)))
-                next
-            }
-            type     = fields[1]
-            platform = fields[2]
-            center   = fields[3]
-            level    = fields[4]
-            protocol = fields[5]
-
-            dataType = getDataType(platform, protocol)
-
-            # Skip outdated data types for now
-            if (is.null(dataType)) {
-                if (!(platform %in% ignoredPlatforms)) {
-                    ignoredPlatforms = c(ignoredPlatforms, platform)
-                }
-                next
-            }
-
-            if (dataType %in% LEVEL_3_DATA_TYPES && level != "Level_3") {
-                next
-            }
-
-            # Improve the platform and center names for clarity
-            if ((! is.null(names(platformCodeMap))) &&
-                platform %in% names(platformCodeMap)) {
-                platform = platformCodeMap[[platform]]
-            } else {
-                print(sprintf("Unknown platform: %s", platform))
-            }
-
-            if ((! is.null(names(centerCodeMap))) &&
-                center %in% names(centerCodeMap)) {
-                center = centerCodeMap[[center]]
-            } else {
-                print(sprintf("Unknown Center: %s", center))
-            }
-
-            level = gsub("^Level_", "", level, ignore.case = TRUE)
-
-            fieldsMap               = list()
-            fieldsMap[["type"]]     = type
-            fieldsMap[["platform"]] = platform
-            fieldsMap[["center"]]   = center
-            fieldsMap[["level"]]    = level
-            fieldsMap[["protocol"]] = protocol
-            fieldsMap[["datatype"]] = dataType
-
-            if (! (dataType %in% data_types)) {
-                data_types = c(data_types, dataType)
-            }
-
-            annotationsMap[[annotation]] = fieldsMap
-        }
-    }
-
-    #tumorTypeToSampleTypesMap
-    #    [tumorType][sampleType][dataType][sampleId][annotationName]
-    tumorTypeToSampleTypesMap = list()
-    sampleTypes               = c()
-    for (i in 1:length(loadfile[[annotations[1]]])) {
-        sampleId   = paste(loadfile[i, annotations[1]])
-        tumorType  = strsplit(sampleId, "-")[[1]][1]
-        sampleType = paste(loadfile[i, annotations[3]])
-        if (grepl("^.*FFPE$",tumorType) == TRUE) {
-            tumorType  = gsub("FFPE","", tumorType)
-            sampleType = "FFPE"
-        }
-
-        diseaseTypes = c(tumorType)
-        if (tumorType %in% names(tumorTypeToAggregateNamesMap)) {
-            diseaseTypes =
-                c(diseaseTypes, tumorTypeToAggregateNamesMap[[tumorType]])
-        }
-
-        for (disease in diseaseTypes) {
-            if (! (disease %in% names(tumorTypeToSampleTypesMap))) {
-                tumorTypeToSampleTypesMap[[disease]] = list()
-            }
-
-            if (! (sampleType %in%
-                   names(tumorTypeToSampleTypesMap[[disease]]))) {
-                tumorTypeToSampleTypesMap[[disease]][[sampleType]] = list()
-            }
-
-            if (! (sampleType %in% sampleTypes)) {
-                sampleTypes = c(sampleTypes, sampleType)
-            }
-
-            types = c(sampleType)
-
-            if (sampleId %in% names(sampleToSampleSetsMap)) {
-                sampleSets = sampleToSampleSetsMap[[sampleId]]
-                for (sampleSet in sampleSets) {
-                    sampleSetSplit  = strsplit(sampleSet, "-")
-                    subtype = sampleSetSplit[[1]][2]
-                    if (sampleSet != tumorType && !(subtype %in% SAMPLE_TYPES)) {
-                        types = c(types, sampleSet)
-                        if (! (sampleSet %in%
-                                    names(tumorTypeToSampleTypesMap[[disease]]))) {
-                            tumorTypeToSampleTypesMap[[disease]][[sampleSet]] =
-                                    list()
-                        }
-                    }
-                }
-            }
-
-            annotationsMapNames = names(annotationsMap)
-            for (annotationName in annotationsMapNames) {
-                annotation = paste(loadfile[i, annotationName])
-                if (annotation != "__DELETE__") {
-                    filename = basename(annotation)
-                    tcgaId   = strsplit(filename, ".", fixed=TRUE)[[1]][1]
-                    dataType =
-                        paste(annotationsMap[[annotationName]][["datatype"]])
-
-                    for (type in types) {
-
-                        if (! (dataType %in%
-                               names(
-                                   tumorTypeToSampleTypesMap[[disease]][[type]]))) {
-                            tumorTypeToSampleTypesMap[[disease]][[type]][[dataType]] =
-                                list()
-                        }
-
-                        if (! (sampleId %in%
-                               names(
-                                   tumorTypeToSampleTypesMap[[disease]][[type]][[dataType]]))) {
-                            tumorTypeToSampleTypesMap[[disease]][[type]][[dataType]][[sampleId]] =
-                                list()
-                        }
-
-                        annotationsMap[[annotationName]][["tcgaId"]] = tcgaId
-                        tumorTypeToSampleTypesMap[[disease]][[type]][[dataType]][[sampleId]][[annotationName]] =
-                            annotationsMap[[annotationName]]
-                    }
-                }
-            }
-        }
-    }
-
-    return(list(tumorTypeToSampleTypesMap, sampleTypes, ignoredPlatforms))
-}
-
-getDataType <- function(platform, protocol) {
-    if (platform %in% names(PLATFORM_TO_DATATYPE_MAP)) {
-        return(paste(PLATFORM_TO_DATATYPE_MAP[platform]))
-    }
-
-    if (platform == "bio") {
-        if (protocol == "clinical") {
-            return("Clinical")
-        } else if (protocol == "biospecimen") {
-            return("BCR")
-        } else {
-            return(protocol)
-        }
-    } else if (platform == "illuminaga_dnaseq" || platform == "solid_dna") {
-        if (protocol == "Coverage_Calculation") {
-            return("WIG")
-        } else if (protocol == "Mutation_Calling") {
-            return("MAF")
-        } else {
-            return(NULL)
-        }
-    } else if (platform == "illuminaga_dnaseq_automated" || platform == "solid_dna_automated") {
-        if (protocol == "Coverage_Calculation") {
-            return("rawWIG")
-        } else if (protocol == "Mutation_Calling") {
-            return("rawMAF")
-        } else {
-            return(NULL)
-        }
-    }
-    return(NULL)
-}
-
 generateSamplesSubsection <- function(tumorType, sampleType, dataType,
-                                     samplesToDataMap, sampleTypeMap) {
-    samples   = c()
-    platforms = c()
-    centers   = c()
-    levels    = c()
-    protocols = c()
-    for (sample in names(samplesToDataMap)) {
-        dataMap = samplesToDataMap[[sample]]
-
-        for (sampleInfo in dataMap) {
-            samples   = c(samples, sampleInfo[["tcgaId"]])
-            platforms = c(platforms, sampleInfo[["platform"]])
-            centers   = c(centers, sampleInfo[["center"]])
-            levels    = c(levels, sampleInfo[["level"]])
-            protocols = c(protocols, sampleInfo[["protocol"]])
-        }
+                                     tumorMeta.df) {
+    # Filter matching report type
+    dataType.df <- tumorMeta.df[tumorMeta.df$report_type == dataType, ]
+    # Filter by correct sample type
+    # TODO: sample_types are slightly different between GDC and TCGA
+    # There should be a better way to verify that the expected values are the same
+    if (!(dataType %in% c("BCR", "Clinical"))) {
+       dataType.df <- tumorMeta.df[tumorMeta.df$sample_type == sampleType, ]
     }
-    df = data.frame(samples, platforms, centers, levels, protocols)
-    colnames(df) =
-        cbind("TCGA Barcode", "Platform", "Center", "Data Level", "Protocol")
-    table = newTable(df)
+    columns <- c("tcga_barcode", "platform", "center", "annotation")
+    dataType.df <- dataType.df[,columns]
+    names(dataType.df) <- c("TCGA Barcode", "Platform", "Center", "Annotation")
 
-    if ((! is.null(names(sampleTypeMap))) &&
-        sampleType %in% names(sampleTypeMap)) {
-        sampleType = sampleTypeMap[[sampleType]]
-    }
+    table <- newTable(dataType.df)
 
-    subsection =
+    subsection <-
         newSubSection(sprintf("%s %s %s Data", tumorType, sampleType, dataType))
-    subsection = addTo(subsection, table)
+    subsection <- addTo(subsection, table)
     return(subsection)
 }
 
@@ -792,32 +576,6 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
 generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
                                    refDir, timestamp, reportDir, 
                                    blacklistPath) {
-  ###  results = parseLoadfile(sampleLoadfile, heatmapsPath, timestamp, reportDir,
-  ###                         platformCodeMap, centerCodeMap,
-  ###                         tumorTypeToAggregateNamesMap, sampleToSampleSetsMap)
-
-  ### tumorTypeToSampleTypesMap = results[[1]]
-  ### sampleTypes               = results[[2]]
-  ### ignoredPlatforms          = results[[3]]
-
-  ### ignoredPlatformsDescription =
-  ###     newParagraph("The following platforms are outdated and are not ",
-  ###                  "included in the counts depicted in the table above.")
-  ### ignoredPlatformsList = NULL
-  ### if (length(ignoredPlatforms) > 0) {
-  ###     for (ignoredPlatform in ignoredPlatforms) {
-  ###         if ((! is.null(names(platformCodeMap))) &&
-  ###             ignoredPlatform %in% names(platformCodeMap)) {
-  ###             if (is.null(ignoredPlatformsList)) {
-  ###                 ignoredPlatformsList = newList(isNumbered=FALSE)
-  ###            }
-  ###           ignoredPlatformsList =
-  ###                addTo(ignoredPlatformsList,
-  ###                      newParagraph(platformCodeMap[[ignoredPlatform]]))
-  ###        }
-  ###    }
-  ###}
-
   ### Create a list of sample types and their abbreviations
   sampleTypeMap <- getSampleTypeMap(refDir)
   sampleTypeDescription =
@@ -844,8 +602,11 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     # TODO: These steps should be moved to createTumorSamplesReport
     tumorCountsPath <- paste0(tumorType, ".", timestamp, ".sample_counts.tsv")
     tumorCountsPath <- file.path(reportDir, tumorCountsPath)
+    tumorDicedMetaPath <- paste0(tumorType, ".", timestamp, ".diced_metadata.tsv")
+    tumorDicedMetaPath <- file.path(reportDir, tumorDicedMetaPath)
     sampleCountsTable <-
-        generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath, sampleTypeMap)
+        generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath, 
+                                           tumorDicedMetaPath, sampleTypeMap)
     heatmap <-
         generateHeatmapFigure(reportDir, tumorType, timestamp)
 
@@ -881,10 +642,13 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
 ################################################################################
 # Generate Tumor Specific Sample Counts Table
 ################################################################################
-generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, sampleTypeMap) {
+generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, tumorDicedMetaPath, sampleTypeMap) {
 
 ### FIXME: Only works for TCGA samples...
   tumorTable.df <- read.table(tumorCountsPath, header=TRUE,
+                              sep="\t", stringsAsFactors=FALSE)
+
+  tumorMeta.df <- read.table(tumorDicedMetaPath, header=TRUE,
                               sep="\t", stringsAsFactors=FALSE)
 
   table <-  newTable(tumorTable.df,
@@ -898,24 +662,25 @@ generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, sampl
 
 
 ###  For each table entry, append the sample subsection for the relevant samples
-###     for (r in 1:nrow(df)) {
-###         sampleType = rownames(df)[r]
-###         for (c in 2:ncol(df)) {
-###             dataType   = colnames(df)[c]
-###             if (dataType %in% names(sampleTypesToDataTypesMap[[sampleType]])) {
-###                 samplesToDataMap =
-###                     sampleTypesToDataTypesMap[[sampleType]][[dataType]]
-### 
-###                 samplesSubsection =
-###                     generateSamplesSubsection(tumorType, sampleType, dataType,
-###                                               samplesToDataMap, sampleTypeMap)
-### 
-###                 result = addTo(newResult(""), samplesSubsection)
-###                 table  = addTo(table, result, row=r, column=c)
-###             }
-###         }
-###     }
-    return(list("tbl" = table, "df" = tumorTable.df))
+### Note -1 to skip Totals row, which does not need this.
+  last <- nrow(tumorTable.df) - 1
+  for (r in 1:last) {
+    sampleType <- tumorTable.df[r,1]
+    sampleTypeLong <- sampleTypeMap[[sampleType]]
+    for (c in 2:ncol(tumorTable.df)) {
+          dataType   = colnames(tumorTable.df)[c]
+          if (tumorTable.df[r,c] > 0 ) {
+	      # Set sampleType to the full name
+              samplesSubsection <-
+                  generateSamplesSubsection(tumorType, sampleTypeLong, dataType,
+                                            tumorMeta.df)
+
+              result = addTo(newResult(""), samplesSubsection)
+              table  = addTo(table, result, row=r, column=c)
+          }
+      }
+  }
+  return(list("tbl" = table, "df" = tumorTable.df))
 }
 
 ################################################################################

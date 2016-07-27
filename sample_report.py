@@ -242,11 +242,12 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
             logging.warning(_warning)
             continue
         latest_tstamp = sorted(meta_dirs)[-1]
+        meta_dir = os.path.join(meta_dir, latest_tstamp)
 
 
         # Link high and low res heatmaps to the report dir
         heatmap_high = '.'.join([project, latest_tstamp, 'high_res.heatmap.png'])
-        heatmap_high_dice = os.path.join(meta_dir, latest_tstamp, heatmap_high)
+        heatmap_high_dice = os.path.join(meta_dir, heatmap_high)
         heatmap_high_dice = os.path.abspath(heatmap_high_dice)
         heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
         heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
@@ -254,20 +255,30 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
             os.symlink(heatmap_high_dice, heatmap_high_rpt)
 
         heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
-        heatmap_low_dice = os.path.join(meta_dir, latest_tstamp, heatmap_low)
+        heatmap_low_dice = os.path.join(meta_dir, heatmap_low)
         heatmap_low_dice = os.path.abspath(heatmap_low_dice)
         heatmap_low_rpt = heatmap_low.replace(latest_tstamp, timestamp)
         heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
         if os.path.isfile(heatmap_low_dice):
             os.symlink(heatmap_low_dice, heatmap_low_rpt)
 
+        #Link project-level sample counts
         samp_counts = '.'.join([project, latest_tstamp, 'sample_counts', 'tsv'])
-        samp_counts_d = os.path.join(meta_dir, latest_tstamp, samp_counts)
+        samp_counts_d = os.path.join(meta_dir, samp_counts)
         samp_counts_d = os.path.abspath(samp_counts_d)
         samp_counts_rpt = samp_counts.replace(latest_tstamp, timestamp)
         samp_counts_rpt = os.path.join(report_dir, samp_counts_rpt)
         if os.path.isfile(samp_counts_d):
             os.symlink(samp_counts_d, samp_counts_rpt)
+
+        # Link the diced metadata TSV
+        diced_meta = '.'.join([project, latest_tstamp, 'diced_metadata', 'tsv'])
+        diced_meta_d = os.path.join(meta_dir, diced_meta)
+        diced_meta_d = os.path.abspath(diced_meta_d)
+        diced_meta_rpt = diced_meta.replace(latest_tstamp, timestamp)
+        diced_meta_rpt = os.path.join(report_dir, diced_meta_rpt)
+        if os.path.isfile(diced_meta_d):
+            os.symlink(diced_meta_d, diced_meta_rpt)
 
     return report_dir
 
