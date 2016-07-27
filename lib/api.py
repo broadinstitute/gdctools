@@ -20,7 +20,10 @@ import json
 import os
 import sys
 
+#FIXME: this should be part of configuration, not hardcoded
 GDC_API_ROOT = 'https://gdc-api.nci.nih.gov/'
+GDC_LEGACY_ROOT = GDC_API_ROOT + 'legacy/'
+
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 def get_programs():
@@ -28,9 +31,9 @@ def get_programs():
     #TODO: eliminate hard coded values (no direct API call yet)
     return ["TCGA", "TARGET"]
 
-def get_program(project):
+def get_program(project, legacy=False):
     '''Return the program name of a project.'''
-    endpoint = GDC_API_ROOT + 'projects'
+    endpoint = (GDC_LEGACY_ROOT if legacy else GDC_API_ROOT) + 'projects'
     filt = _eq_filter("project_id", project)
     params = {
                 'fields' : 'program.name',
@@ -44,15 +47,15 @@ def get_program(project):
         raise ValueError("Uh oh, more than one project matched '" + project + "'")
     return hits[0]['program']['name']
 
-def get_projects(program, page_size=500):
-    endpoint = GDC_API_ROOT + 'projects'
+def get_projects(program, page_size=500, legacy=False):
+    endpoint = (GDC_LEGACY_ROOT if legacy else GDC_API_ROOT) + 'projects'
     filt = _eq_filter('program.name', program)
     params = {'fields': 'project_id', 'filters': json.dumps(filt)}
     projs = [ obj['project_id'] for obj in _query_paginator(endpoint, params, page_size)]
     return sorted(projs)
 
-def get_data_categories(project):
-    endpoint = GDC_API_ROOT + 'projects'
+def get_data_categories(project, legacy=False):
+    endpoint = (GDC_LEGACY_ROOT if legacy else GDC_API_ROOT) + 'projects'
     filt = _eq_filter("project_id", project)
     params = {
                 'fields' : 'summary.data_categories.data_category',
@@ -70,8 +73,9 @@ def get_data_categories(project):
     categories = [obj['data_category'] for obj in hits[0]['summary']['data_categories']] if 'summary' in hits[0] else []
     return categories
 
-def get_files(project_id, data_category, workflow_type=None, page_size=500):
-    endpoint = 'https://gdc-api.nci.nih.gov/files'
+def get_files(project_id, data_category, workflow_type=None, page_size=500,
+              legacy=False):
+    endpoint = (GDC_LEGACY_ROOT if legacy else GDC_API_ROOT) + 'files'
     proj_filter = _eq_filter("cases.project.project_id", project_id)
     data_filter = _eq_filter("files.data_category", data_category)
     acc_filter = _eq_filter("access", "open")
@@ -88,7 +92,7 @@ def get_files(project_id, data_category, workflow_type=None, page_size=500):
               'platform','tags', 'center.namespace', 'cases.submitter_id',
               'cases.project.project_id', 'analysis.workflow_type']
 
-    if data_category == 'Protein Expression':
+    if data_category == 'Protein ' + ('expression' if legacy else 'Expression'):
         fields.append('cases.samples.portions.submitter_id')
     elif data_category not in ['Clinical', 'Biospecimen']:
         fields.append('cases.samples.portions.analytes.aliquots.submitter_id')
@@ -103,9 +107,10 @@ def get_files(project_id, data_category, workflow_type=None, page_size=500):
 
     return _query_paginator(endpoint, params, page_size)
 
-def get_file(uuid, file_name):
+def get_file(uuid, file_name, legacy=False):
     """Download a single file from GDC."""
-    curl_args =  ["curl", "--fail", "-o", file_name, GDC_API_ROOT+ "data/" + uuid]
+    curl_args = ["curl", "--fail", "-o", file_name,
+                 (GDC_LEGACY_ROOT if legacy else GDC_API_ROOT) + "data/" + uuid]
     return subprocess.check_call(curl_args)
 
 
@@ -117,11 +122,11 @@ def _query_paginator(endpoint, params, size=500, from_idx=1, to_idx=-1):
 
     # For pagination to work, the records must specify a sort order. This
     # lookup tells the right field to use based on the endpoint
-    sort_lookup = { 'https://gdc-api.nci.nih.gov/files' : 'file_id',
-                    'https://gdc-api.nci.nih.gov/cases' : 'case_id',
-                    'https://gdc-api.nci.nih.gov/projects' : 'project_id'}
+    sort_lookup = { 'files' : 'file_id',
+                    'cases' : 'case_id',
+                    'projects' : 'project_id'}
 
-    sort = sort_lookup[endpoint]
+    sort = sort_lookup[endpoint.rstrip('/').split('/')[-1]]
     p['sort'] = sort
     # Make initial call
     r = requests.get(endpoint, params=p)
