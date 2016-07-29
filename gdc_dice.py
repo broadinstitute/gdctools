@@ -84,6 +84,7 @@ class gdc_dicer(GDCtool):
         if not self.dice_projects:
             projects = []
             for program in self.dice_programs:
+                mirror_prog_root = os.path.join(mirror_root, program)
                 projects.extend(common.immediate_subdirs(mirror_prog_root))
             # Filter the metadata folders out
             self.dice_projects = [p for p in projects if p != 'metadata']
