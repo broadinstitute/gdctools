@@ -100,20 +100,16 @@ class sample_report(GDCtool):
                                                self.report_dir, opts.timestamp)
         aggregates_file = self.aggregates_file()
 
+
+
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
         gdc_sample_report = resource_filename("gdctools","lib/GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
-                              redactions_dir,           # From config
-                              sample_counts_file,       # Inferred from dicer + timestamp
                               opts.timestamp,           # Specified from cli
-                              filtered_samples_file,    # From config
-                              heatmaps_dir,             # Infered from dicer + timestamp
-                              blacklist_file,           # From config
-                              sample_loadfile,          # Inferred from loadfile dir + timestamp
-                              reference_dir,            # From config
                               self.report_dir,          # From config
-                              aggregates_file           # Created with aggregates in config
+                              reference_dir,            # From config
+                              blacklist_file           # From config
                             ])
 
     def execute(self):

@@ -47,13 +47,11 @@ main <- function(...) {
   # Why is this necessary?
   args <- unlist(list(...))
 ### TODO: Fix input arguments and make abbreviated list
-  if (length(args) < 10 || length(args) > 11) {
+  if (length(args)  != 4) {
     stop(
       paste(
-            "Usage: RedactionsReport.R <redactionsDir> <sampleCountsPath>",
-            "<timestamp> <filteredSamplesPath> <heatmapsDir>",
-            "<blacklistPath> <sampleLoadfile> <refDir> <reportDir>",
-            "<aggregatesPath> [sampleSet]"))
+            "Usage: RedactionsReport.R <timestamp> <reportDir> <refDir>",
+            "<blacklist>"))
     }
 ###     The following report-specific inputs should all be in <reportDir> 
 ###     rather than pass them as separate arguments
@@ -63,11 +61,10 @@ main <- function(...) {
 ###     heatmapsPath        = args[[5]]
 ###     sampleLoadfile      = args[[7]]
 ###     aggregatesPath      = args[[10]]
-  timestamp           = args[[3]]
-  blacklistPath       = args[[6]]
-  refDir              = args[[8]]
-  reportDir           = args[[9]]
-
+  timestamp           = args[[1]]
+  reportDir           = args[[2]]
+  refDir              = args[[3]]
+  blacklistPath       = args[[4]]
 ###    Removed ability to split by sample sets for now, KISS
 ###    sampleToSampleSetsMap = list()
 ###    if (length(args) == 11) {
