@@ -118,7 +118,7 @@ class sample_report(GDCtool):
         self.parse_args()
         opts = self.options
         # TODO: better error handling
-        #logging.info("CMD Args: " + " ".join(self.cmdArgs))
+        logging.info("CMD Args: " + " ".join(self.cmdArgs))
         p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         print("stdout:\n" + stdout)
