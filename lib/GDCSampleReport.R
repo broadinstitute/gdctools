@@ -38,7 +38,6 @@ library(Nozzle.R1)
 SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
                  "NB", "NT", "NBC", "NEBV", "NBM", "FFPE")
 
-
 main <- function(...) {
   startTime = Sys.time()
   ############################################################################
@@ -53,25 +52,10 @@ main <- function(...) {
             "Usage: RedactionsReport.R <timestamp> <reportDir> <refDir>",
             "<blacklist>"))
     }
-###     The following report-specific inputs should all be in <reportDir> 
-###     rather than pass them as separate arguments
-###     redacDir            = args[[1]]
-###     sampleCountsPath    = args[[2]]
-###     filteredSamplesPath = args[[4]]
-###     heatmapsPath        = args[[5]]
-###     sampleLoadfile      = args[[7]]
-###     aggregatesPath      = args[[10]]
   timestamp           = args[[1]]
   reportDir           = args[[2]]
   refDir              = args[[3]]
   blacklistPath       = args[[4]]
-###    Removed ability to split by sample sets for now, KISS
-###    sampleToSampleSetsMap = list()
-###    if (length(args) == 11) {
-###        sampleSetPath = args[[11]]
-###        sampleToSampleSetsMap = getSampleToSampleSetsMap(sampleSetPath)
-###    }
-
   ############################################################################
   # Initialization
   ############################################################################
@@ -320,7 +304,7 @@ generateSamplesSubsection <- function(tumorType, sampleType, dataType,
     # TODO: sample_types are slightly different between GDC and TCGA
     # There should be a better way to verify that the expected values are the same
     if (!(dataType %in% c("BCR", "Clinical"))) {
-       dataType.df <- tumorMeta.df[tumorMeta.df$sample_type == sampleType, ]
+       dataType.df <- dataType.df[tumorMeta.df$sample_type == sampleType, ]
     }
     columns <- c("tcga_barcode", "platform", "center", "annotation")
     dataType.df <- dataType.df[,columns]
@@ -592,7 +576,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
   })
   ### Get full names of cohorts
   diseaseStudyMap <- getDiseaseStudyMap(refDir)
-  
+ 
   ### TODO: Vectorize w/lapply
   for (tumorType in cohorts){
     # Create the tumor specific heatmap and sample counts table
@@ -727,7 +711,7 @@ html2png <- function(htmlFile, del = FALSE) {
 createTumorSamplesReport <- function(disease, fullName, 
   reportDir, sampleCountsTable, sampleTypeDescription, 
   sampleTypeList, heatmap, timestamp) {
-
+ 
   reportStartTime <- Sys.time()
   print(sprintf("Generating sample report for %s...", disease))
 
@@ -813,6 +797,7 @@ createTumorSamplesReport <- function(disease, fullName,
 ###     createStandaloneTable(sampleCountsTable$df,
 ###                           paste(disease, "sample_counts", sep = "."), reportDir,
 ###                           timestamp, del = TRUE)
+     
     writeReport(diseaseReport, filename=reportPath)
     print(sprintf("Finished generating sample report for %s in %s minutes",
                   disease,  difftime(Sys.time(), reportStartTime, units="min")))
