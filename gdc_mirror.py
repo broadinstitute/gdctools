@@ -143,10 +143,10 @@ class gdc_mirror(GDCtool):
                 try:
                     #Download file
                     uuid = file_d['file_id']
-                    api.get_file(uuid, savepath)
+                    api.download_file(uuid, savepath)
                     break
-                except subprocess.CalledProcessError as e:
-                    logging.warning("Curl call failed: " + str(e))
+                except Exception as e:
+                    logging.warning("Download failed: " + str(e))
                     retries = retries - 1
 
             if retries == 0:
@@ -226,7 +226,7 @@ class gdc_mirror(GDCtool):
             logging.info("Creating folder: " + cat_dir)
             os.makedirs(cat_dir)
 
-        file_metadata = api.get_files(project, category, workflow_type)
+        file_metadata = api.get_project_files(project, category, workflow_type)
         new_metadata = file_metadata
         # If we aren't forcing a full mirror, check the existing metadata
         # to see what files are new
