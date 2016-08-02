@@ -86,6 +86,12 @@ class GDCtool(object):
         for conf in CONFIG_LISTS:
             self.__configure(conf, cfg, True)
 
+        self.aggregates = dict()
+        if cfg.has_section('aggregates'):
+            for aggr in cfg.options('aggregates'):
+                aggr = aggr.upper()
+                self.aggregates[aggr] = cfg.get('aggregates', aggr)
+
     def status(self):
         # Emit system info (as header comments suitable for TSV, etc) ...
         gprint('#')  # @UndefinedVariable

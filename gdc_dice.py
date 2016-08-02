@@ -103,6 +103,9 @@ class gdc_dicer(GDCtool):
         timestamp = self.timestamp
         logging.info("Timestamp: " + timestamp)
 
+        # Get cohort to aggregate map
+        cohort_agg_dict = self.cohort_aggregates()
+
         # Iterable of programs, either user specified or discovered from folder names in the diced root
         if self.dice_programs:
             programs = self.dice_programs
@@ -117,6 +120,8 @@ class gdc_dicer(GDCtool):
             with common.lock_context(diced_prog_root, "dice"), \
                  common.lock_context(mirror_prog_root, "mirror"):
                 projects = self.dice_projects
+
+                agg_case_data = dict()
 
                 for project in sorted(projects):
                     # Load metadata from mirror, getting the latest metadata
@@ -188,6 +193,29 @@ class gdc_dicer(GDCtool):
                     logging.info("Generating heatmaps for " + project)
                     create_heatmaps(case_data, project, timestamp, diced_meta_dir)
 
+                    # keep track of aggregate case data
+                    project_aggregates = cohort_agg_dict[project]
+                    for agg in project_aggregates:
+                        agg_case_data[agg] = agg_case_data.get(agg, {})
+                        agg_case_data[agg].update(case_data)
+
+                # Create aggregate diced_metadata.tsvs
+                self.aggregate_diced_metadata(diced_prog_root, timestamp)
+
+                # As well as aggregate counts and heatmaps
+                for agg in agg_case_data:
+                    ac_data = agg_case_data[agg]
+                    meta_dir = os.path.join(diced_prog_root, agg,
+                                              "metadata", timestamp)
+
+                    logging.info("Generating aggregate counts for " + agg)
+                    counts_file = ".".join([agg, timestamp, "sample_counts.tsv"])
+                    counts_file = os.path.join(meta_dir, counts_file)
+                    _write_counts(ac_data, agg, counts_file)
+
+                    logging.info("Generating aggregate heatmaps for " + agg)
+                    create_heatmaps(ac_data, agg, timestamp, meta_dir)
+
         logging.info("Dicing completed successfuly")
 
     def execute(self):
@@ -196,9 +224,46 @@ class gdc_dicer(GDCtool):
         self.parse_args()
         common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
         try:
+            logging.info(self.aggregates)
             self.dice()
         except Exception as e:
             logging.exception("Dicing FAILED:")
+
+    def cohort_aggregates(self):
+        '''Invert the Aggregate->Cohort dictionary to list all aggregates for
+        a cohort.'''
+        cohort_agg = dict()
+        for k, v in self.aggregates.iteritems():
+            cohorts = v.split(',')
+            for c in cohorts:
+                cohort_agg[c] = cohort_agg.get(c, []) + [k]
+        self.c_aggregates = cohort_agg
+        return cohort_agg
+
+    def aggregate_diced_metadata(self, prog_dir, timestamp):
+        '''Aggregates the diced metadata files for aggregates'''
+        aggregates = self.aggregates
+        for agg, cohorts in aggregates.iteritems():
+            cohorts = sorted(cohorts.split(','))
+            agg_meta_folder = os.path.join(prog_dir, agg, "metadata", timestamp)
+            if not os.path.isdir(agg_meta_folder):
+                os.makedirs(agg_meta_folder)
+            agg_meta_file = ".".join([agg, timestamp, 'diced_metadata', 'tsv'])
+            agg_meta_file = os.path.abspath(os.path.join(agg_meta_folder,
+                                                        agg_meta_file))
+            skip_header = False
+            with open(agg_meta_file, 'w') as out:
+                for c in cohorts:
+                    c_meta_folder = os.path.join(prog_dir, c, "metadata", timestamp)
+                    c_meta_file = ".".join([c, timestamp, 'diced_metadata', 'tsv'])
+                    c_meta_file = os.path.abspath(os.path.join(c_meta_folder,
+                                                               c_meta_file))
+                    with open(c_meta_file, 'r') as f_in:
+                        if skip_header:
+                            f_in.next()
+                        for line in f_in:
+                            out.write(line)
+                    skip_header = True
 
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,
