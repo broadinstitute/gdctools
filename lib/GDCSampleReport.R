@@ -304,7 +304,7 @@ generateSamplesSubsection <- function(tumorType, sampleType, dataType,
     # TODO: sample_types are slightly different between GDC and TCGA
     # There should be a better way to verify that the expected values are the same
     if (!(dataType %in% c("BCR", "Clinical"))) {
-       dataType.df <- dataType.df[tumorMeta.df$sample_type == sampleType, ]
+       dataType.df <- dataType.df[dataType.df$sample_type == sampleType, ]
     }
     columns <- c("tcga_barcode", "platform", "center", "annotation")
     dataType.df <- dataType.df[,columns]
