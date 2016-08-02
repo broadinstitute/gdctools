@@ -128,7 +128,10 @@ class sample_report(GDCtool):
 
     def create_agg_counts_file(self, diced_prog_root, timestamp):
         '''Create a program-wide counts file combining all cohorts, including aggregates'''
-        # TODO: Add aggregate cohort counts
+        # FIXME: TCGA hardcoded here
+        aggregate_cohorts = self.aggregates.keys()
+        aggregate_cohorts = [ag.replace('TCGA-', '') for ag in aggregate_cohorts]
+
         agg_counts_file = '.'.join(['sample_counts', timestamp, 'tsv'])
         agg_counts_file = os.path.join(self.report_dir, agg_counts_file)
 
@@ -157,7 +160,8 @@ class sample_report(GDCtool):
                     for a in annots:
                         count = int(row[a])
                         agg_counts[cohort_type][a] = count
-                        if row['Sample Type'] == 'Totals':
+                        # Update totals, but only for base cohorts, not aggregates
+                        if row['Sample Type'] == 'Totals' and cohort not in aggregate_cohorts:
                             agg_totals[a] = agg_totals.get(a,0) + count
 
         # Now loop through aggregate cohorts if present, combining entries for those
