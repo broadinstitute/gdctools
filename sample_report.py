@@ -89,18 +89,19 @@ class sample_report(GDCtool):
         #FIXME: Hardcoded to just TCGA for now...
         diced_prog_root = os.path.join(self.dice_root_dir, 'TCGA')
 
+        logging.info("Creating aggregate counts file...")
         # Now infer certain values from the diced data directory
         sample_counts_file = self.create_agg_counts_file(diced_prog_root,
                                                         opts.timestamp)
         heatmaps_dir = self.report_dir
+        logging.info("Linking diced metadata...")
         link_diced_metadata(diced_prog_root, self.report_dir,
                             opts.timestamp)
         #FIXME: only works for TCGA
         sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
                                                self.report_dir, opts.timestamp)
+        logging.info("Writing aggregates.txt to report dir...")
         aggregates_file = self.aggregates_file()
-
-
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
@@ -118,12 +119,11 @@ class sample_report(GDCtool):
         self.parse_args()
         opts = self.options
         # TODO: better error handling
+        logging.info("Running GDCSampleReport.R, ")
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
-        p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        print("stdout:\n" + stdout)
-
-        print('\nstderr:\n' + stderr)
+        p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for line in iter(p.stdout.readline, ''):
+            logging.info(line.rstrip())
 
 
     def create_agg_counts_file(self, diced_prog_root, timestamp):
