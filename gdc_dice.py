@@ -194,7 +194,7 @@ class gdc_dicer(GDCtool):
                     create_heatmaps(case_data, project, timestamp, diced_meta_dir)
 
                     # keep track of aggregate case data
-                    project_aggregates = cohort_agg_dict[project]
+                    project_aggregates = cohort_agg_dict.get(project, [])
                     for agg in project_aggregates:
                         agg_case_data[agg] = agg_case_data.get(agg, {})
                         agg_case_data[agg].update(case_data)
