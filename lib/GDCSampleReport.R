@@ -298,18 +298,33 @@ getAggregates <- function(aggregatesPath) {
 
 generateSamplesSubsection <- function(tumorType, sampleType, dataType,
                                      tumorMeta.df) {
-    # Filter matching report type
+
+    # Filter matching report type    
     dataType.df <- tumorMeta.df[tumorMeta.df$report_type == dataType, ]
     # Filter by correct sample type
     # TODO: sample_types are slightly different between GDC and TCGA
     # There should be a better way to verify that the expected values are the same
+    #FIXME: Hack for FFPE's should be rearchitected
     if (!(dataType %in% c("BCR", "Clinical"))) {
-       dataType.df <- dataType.df[dataType.df$sample_type == sampleType, ]
+      if (sampleType != "FFPE") {
+        dataType.df <- dataType.df[dataType.df$sample_type == sampleType, ]
+        dataType.df <- dataType.df[dataType.df$is_ffpe == "False", ]
+      } else {
+        dataType.df <- dataType.df[dataType.df$is_ffpe == "True", ]
+      }
+    } else {
+    # We need to search tumorMeta.df to figure out which cases have the right
+    # tumorType
+      if (sampleType != "FFPE") {
+       cases.df <- tumorMeta.df[tumorMeta.df$sample_type == sampleType, ]
+      } else {
+       cases.df <- tumorMeta.df[tumorMeta.df$is_ffpe =="True", ]
+      }
+      dataType.df <- dataType.df[dataType.df$case_id %in% cases.df$case_id, ]
     }
     columns <- c("tcga_barcode", "platform", "center", "annotation")
     dataType.df <- dataType.df[,columns]
     names(dataType.df) <- c("TCGA Barcode", "Platform", "Center", "Annotation")
-
     table <- newTable(dataType.df)
 
     subsection <-
@@ -648,6 +663,10 @@ generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, tumor
   for (r in 1:last) {
     sampleType <- tumorTable.df[r,1]
     sampleTypeLong <- sampleTypeMap[[sampleType]]
+    #FIXME:  Hack for FFPE's, must be a better way to write this...
+    if (sampleType == "FFPE") {
+      sampleTypeLong <- "FFPE"
+    }
     for (c in 2:ncol(tumorTable.df)) {
           dataType   = colnames(tumorTable.df)[c]
           if (tumorTable.df[r,c] > 0 ) {

@@ -141,13 +141,17 @@ class gdc_mirror(GDCtool):
             # New file, mirror to this folder
             while retries > 0:
                 try:
+                    time = 180
                     #Download file
                     uuid = file_d['file_id']
-                    api.download_file(uuid, savepath)
+                    api.curl_download_file(uuid, savepath, max_time=time)
                     break
                 except Exception as e:
-                    logging.warning("Download failed: " + str(e))
+                    logging.warning("Download failed: " + str(e) +'\nRetrying...')
                     retries = retries - 1
+                    # Give some more time, in case the file is large...
+                    # TODO: is this worth it?
+                    time += 180
 
             if retries == 0:
                 logging.error("Error downloading file {0}, too many retries ({1})".format(savepath, retries))

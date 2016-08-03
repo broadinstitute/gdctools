@@ -168,7 +168,7 @@ class gdc_dicer(GDCtool):
                         # Header
                         META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
                                         'annotation', 'file_name', 'center',
-                                        'platform', 'report_type']
+                                        'platform', 'report_type', 'is_ffpe']
                         mfw = csv.DictWriter(mf, fieldnames=META_HEADERS,
                                              delimiter='\t')
                         mfw.writeheader()
@@ -185,6 +185,8 @@ class gdc_dicer(GDCtool):
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
                     case_data = _case_data(meta_file)
+                    print(case_data)
+                    raise Exception
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
                     _write_counts(case_data, project, counts_file)
@@ -389,7 +391,8 @@ def append_diced_metadata(file_dict, diced_path, annot, meta_file_writer):
         'file_name'    : diced_path,
         'center'       : meta.center(file_dict),
         'platform'     : meta.platform(file_dict),
-        'report_type'  : ANNOT_TO_DATATYPE[annot]
+        'report_type'  : ANNOT_TO_DATATYPE[annot],
+        'is_ffpe'      : meta.is_ffpe(file_dict)
     })
 
 def _case_data(diced_metadata_file):
@@ -414,10 +417,14 @@ def _case_data(diced_metadata_file):
                 cases_with_biospecimen.add(case_id)
             else:
                 _, sample_type = meta.tumor_code(row['sample_type'])
+                # Filter out ffpe samples into a separate sample_type
+                if row['is_ffpe'] == 'True':
+                    sample_type = 'FFPE'
                 case_dict = cases.get(case_id, {})
                 case_dict[sample_type] = case_dict.get(sample_type, set())
                 case_dict[sample_type].add(report_dtype)
                 cases[case_id] = case_dict
+
 
     # Now go back through and add BCR & Clinical to all sample_types
     for c in cases:

@@ -179,6 +179,7 @@ def case_id(file_dict):
 
 def sample_type(file_dict):
     '''Return the sample type associated with the file.'''
+
     try:
         _check_dict_array_size(file_dict, 'cases')
         _check_dict_array_size(file_dict['cases'][0], 'samples')
@@ -187,6 +188,16 @@ def sample_type(file_dict):
         raise
 
     return file_dict['cases'][0]['samples'][0]["sample_type"]
+
+def is_ffpe(file_dict):
+    '''Return true if the file_dict is an ffpe sample'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+    except:
+        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        raise
+
+    return file_dict['cases'][0].get('samples', [{}])[0].get("is_ffpe", False)
 
 
 def project_id(file_dict):

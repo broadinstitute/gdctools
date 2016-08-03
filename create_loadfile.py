@@ -351,7 +351,12 @@ def master_load_entry(project, row_dict):
     sample_type = row_dict['sample_type']
     sample_type_abbr, sample_code = sample_type_lookup(sample_type)
 
-    samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
+    # FFPE samples get seggregated regardless of actual sample_type
+    if row_dict['is_ffpe'] == 'True':
+        samp_id = "-".join([cohort + 'FFPE', indiv_base, sample_type_abbr])
+    else:
+        samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
+
     indiv_id = "-".join([cohort, indiv_base])
     tcga_sample_id = "-".join([case_id, sample_code])
 
@@ -386,9 +391,22 @@ def write_sampleset(samples_lfp, sset_filename, sset_name):
     reader = csv.DictReader(samples_lfp, delimiter='\t')
     for sample in reader:
         samp_id = sample['sample_id']
-        # FIXME: clarify this code a little
-        sset_data = sset_name + "\t" + samp_id + "\n"
-        sset_data += sset_name + "-" + samp_id.split("-")[-1] + "\t" + samp_id + "\n"
+
+        # Get the tumor type from the last field of the sample id
+        # e.g. ACC-OR-A5J1-NB is in the ACC-NB sample set
+        sset_type = samp_id.split('-')[-1]
+        sset_data = sset_name + "-" + sset_type + "\t" + samp_id + "\n"
+
+        # A sample is ffpe if the cohort name ends with FFPE.
+        # e.g. BRCAFFPE-A7-A0DB-TP is FFPE, ACC-OR-A5J1-NB is not
+        # Only add to the full sample set if the sample is not FFPE
+        is_ffpe = samp_id.split('-')[0].endswith('FFPE')
+        if is_ffpe:
+            sset_data += sset_name + "-FFPE" + '\t' + samp_id + '\n'
+        else:
+            sset_data += sset_name + "\t" + samp_id + "\n"
+
+
         outfile.write(sset_data)
 
 

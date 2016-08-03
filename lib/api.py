@@ -15,6 +15,7 @@ GDCQuery class and high-level API functions
 import requests
 import json
 import logging
+import subprocess
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
@@ -174,7 +175,7 @@ def get_project_files(project_id, data_category, workflow_type=None,
     return query.get(page_size=page_size)
 
 
-def download_file(uuid, file_name, legacy=False, chunk_size=4096):
+def py_download_file(uuid, file_name, legacy=False, chunk_size=4096):
     """Download a single file from GDC."""
     url = GDCQuery.GDC_ROOT
     if legacy: url += 'legacy/'
@@ -189,6 +190,15 @@ def download_file(uuid, file_name, legacy=False, chunk_size=4096):
 
     # Return the response, which includes status_code, http headers, etc.
     return r
+
+def curl_download_file(uuid, file_name, legacy=False, max_time=180):
+    """Download a single file from the GDC, using cURL"""
+    url = GDCQuery.GDC_ROOT
+    if legacy:
+        url += 'legacy/'
+    url += 'data/' + uuid
+    curl_args = ['curl', '--max-time', str(max_time), '--fail', '-o', file_name, url]
+    return subprocess.check_call(curl_args)
 
 
 def get_program(project, legacy=False):
