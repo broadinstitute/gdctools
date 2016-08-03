@@ -164,12 +164,6 @@ class sample_report(GDCtool):
                         if row['Sample Type'] == 'Totals' and cohort not in aggregate_cohorts:
                             agg_totals[a] = agg_totals.get(a,0) + count
 
-        # Now loop through aggregate cohorts if present, combining entries for those
-        for agg_cohort in self.aggregates:
-            sub_cohorts = self.aggregates[agg_cohort].split(',')
-            agg_counts[agg_cohort] = {a: sum(agg_counts.get(s,{}).get(a, 0) for a in agg_counts)
-                                      for s in sub_cohorts}
-
         # Now write the resulting aggregate counts file
         agg_annots = sorted(agg_annots)
         with open(agg_counts_file, 'w') as f:
