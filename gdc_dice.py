@@ -185,8 +185,6 @@ class gdc_dicer(GDCtool):
                     # Count available data per sample
                     logging.info("Generating counts for " + project)
                     case_data = _case_data(meta_file)
-                    print(case_data)
-                    raise Exception
                     counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
                     counts_file = os.path.join(diced_meta_dir, counts_file)
                     _write_counts(case_data, project, counts_file)
