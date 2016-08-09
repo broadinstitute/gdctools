@@ -15,20 +15,22 @@ See the <root>/COPYRIGHT file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 # }}}
 
 from __future__ import print_function
+import subprocess
 import logging
 import os
 import csv
 import ConfigParser
-from lib import common
 from pkg_resources import resource_filename
-import subprocess
+
+from lib import common
+from lib import meta
 from GDCtool import GDCtool
 
 
 class sample_report(GDCtool):
 
     def __init__(self):
-        super(sample_report, self).__init__(version="0.1.0")
+        super(sample_report, self).__init__(version="0.2.0")
         cli = self.cli
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
@@ -36,8 +38,7 @@ class sample_report(GDCtool):
 
         tstmp_help = 'Use the available data as of this date. Default is the'
         tstmp_help += ' current time.'
-        cli.add_argument('timestamp', nargs='?',
-                         default=common.timetuple2stamp(), help=tstmp_help)
+        cli.add_argument('timestamp', nargs='?', help=tstmp_help)
 
     def parse_args(self):
         opts = self.options
@@ -82,24 +83,30 @@ class sample_report(GDCtool):
         else:
             raise ValueError('Config file required for sample report generation')
 
-        self.report_dir = os.path.join(self.reports_dir, 'report_' + opts.timestamp)
-        if not os.path.isdir(self.report_dir):
-            os.makedirs(self.report_dir)
-
         #FIXME: Hardcoded to just TCGA for now...
         diced_prog_root = os.path.join(self.dice_root_dir, 'TCGA')
+
+        # Get the latest timestamp as the sample report date, otherwise use
+        # timestamp
+        timestamp = opts.timestamp
+        if timestamp is None:
+            timestamp = meta.latest_prog_timestamp(diced_prog_root)
+
+        self.report_dir = os.path.join(self.reports_dir, 'report_' + timestamp)
+        if not os.path.isdir(self.report_dir):
+            os.makedirs(self.report_dir)
 
         logging.info("Creating aggregate counts file...")
         # Now infer certain values from the diced data directory
         sample_counts_file = self.create_agg_counts_file(diced_prog_root,
-                                                        opts.timestamp)
+                                                         timestamp)
         heatmaps_dir = self.report_dir
         logging.info("Linking diced metadata...")
         link_diced_metadata(diced_prog_root, self.report_dir,
-                            opts.timestamp)
+                            timestamp)
         #FIXME: only works for TCGA
         sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
-                                               self.report_dir, opts.timestamp)
+                                               self.report_dir, timestamp)
         logging.info("Writing aggregates.txt to report dir...")
         aggregates_file = self.aggregates_file()
 
@@ -107,7 +114,7 @@ class sample_report(GDCtool):
         self.cmdArgs = ["Rscript", "--vanilla"]
         gdc_sample_report = resource_filename("gdctools","lib/GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
-                              opts.timestamp,           # Specified from cli
+                              timestamp,           # Specified from cli
                               self.report_dir,          # From config
                               reference_dir,            # From config
                               blacklist_file           # From config
@@ -245,7 +252,7 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
         heatmap_high_dice = os.path.abspath(heatmap_high_dice)
         heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
         heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
-        if os.path.isfile(heatmap_high_dice):
+        if os.path.isfile(heatmap_high_dice) and not os.path.isfile(heatmap_high_rpt):
             os.symlink(heatmap_high_dice, heatmap_high_rpt)
 
         heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
@@ -253,7 +260,7 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
         heatmap_low_dice = os.path.abspath(heatmap_low_dice)
         heatmap_low_rpt = heatmap_low.replace(latest_tstamp, timestamp)
         heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
-        if os.path.isfile(heatmap_low_dice):
+        if os.path.isfile(heatmap_low_dice) and not os.path.isfile(heatmap_low_rpt):
             os.symlink(heatmap_low_dice, heatmap_low_rpt)
 
         #Link project-level sample counts
@@ -262,7 +269,7 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
         samp_counts_d = os.path.abspath(samp_counts_d)
         samp_counts_rpt = samp_counts.replace(latest_tstamp, timestamp)
         samp_counts_rpt = os.path.join(report_dir, samp_counts_rpt)
-        if os.path.isfile(samp_counts_d):
+        if os.path.isfile(samp_counts_d) and not os.path.isfile(samp_counts_rpt):
             os.symlink(samp_counts_d, samp_counts_rpt)
 
         # Link the diced metadata TSV
@@ -271,7 +278,7 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
         diced_meta_d = os.path.abspath(diced_meta_d)
         diced_meta_rpt = diced_meta.replace(latest_tstamp, timestamp)
         diced_meta_rpt = os.path.join(report_dir, diced_meta_rpt)
-        if os.path.isfile(diced_meta_d):
+        if os.path.isfile(diced_meta_d) and not os.path.isfile(diced_meta_rpt):
             os.symlink(diced_meta_d, diced_meta_rpt)
 
     return report_dir
@@ -293,7 +300,8 @@ def link_sample_loadfile(program, load_dir, report_dir, timestamp):
     lf = os.path.abspath(lf)
 
     # Symlink to report folder
-    os.symlink(lf, lf_report_path)
+    if not os.path.isfile(lf_report_path):
+        os.symlink(lf, lf_report_path)
     return lf_report_path
 
 
