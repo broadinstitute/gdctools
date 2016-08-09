@@ -67,15 +67,9 @@ class gdc_dicer(GDCtool):
         if opts.projects: self.dice_projects = opts.projects
         self.force_dice = opts.force_dice
 
-        # Figure out timestamp
         mirror_root = self.mirror_root_dir
-        #Sets timestamp for this run
-        self.timestamp = opts.timestamp
-        if self.timestamp is None:
-            self.timestamp = common.timetuple2stamp()
 
         # Discover which GDC programs & projects data will be diced
-        latest_tstamps = set()
         if not self.dice_programs:
             self.dice_programs = common.immediate_subdirs(mirror_root)
 
@@ -90,8 +84,6 @@ class gdc_dicer(GDCtool):
             self.dice_projects = [p for p in projects if p != 'metadata']
 
 
-        # TODO: Verify that each of these are valid programs and fail fast
-
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
@@ -99,9 +91,6 @@ class gdc_dicer(GDCtool):
         diced_root = self.dice_root_dir
         trans_dict = build_translation_dict(resource_filename("gdctools",
                                                 "config/annotations_table.tsv"))
-        # Set in init_logs()
-        timestamp = self.timestamp
-        logging.info("Timestamp: " + timestamp)
 
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
@@ -116,9 +105,20 @@ class gdc_dicer(GDCtool):
             diced_prog_root = os.path.join(diced_root, program)
             mirror_prog_root = os.path.join(mirror_root, program)
 
+
             # Ensure no simultaneous mirroring/dicing
             with common.lock_context(diced_prog_root, "dice"), \
                  common.lock_context(mirror_prog_root, "mirror"):
+
+                #Get the latest timestamp run on this program
+                self.timestamp = self.options.timestamp
+                if self.timestamp is None:
+                    # Inspect the mirror to find the latest timestamp
+                    self.timestamp = meta.latest_prog_timestamp(mirror_prog_root)
+
+                timestamp = self.timestamp
+                logging.info("Dicing " + program)
+                logging.info("Timestamp: " + self.timestamp)
                 projects = self.dice_projects
 
                 agg_case_data = dict()
@@ -222,7 +222,9 @@ class gdc_dicer(GDCtool):
         super(gdc_dicer, self).execute()
         opts = self.options
         self.parse_args()
-        common.init_logging(self.timestamp, self.dice_log_dir, "gdcDice")
+        # log to todays date, even if the mirror timestamp is slightly different
+        log_timestamp = common.timetuple2stamp()
+        common.init_logging(log_timestamp, self.dice_log_dir, "gdcDice")
         try:
             logging.info(self.aggregates)
             self.dice()

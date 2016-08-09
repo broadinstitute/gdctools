@@ -76,6 +76,19 @@ def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
         return None
     return sorted(timestamps)[-1]
 
+def latest_prog_timestamp(prog_dir, date_prefix=None, ignore=None):
+    project_dirs = [os.path.join(prog_dir, d) for d in os.listdir(prog_dir)
+                    if os.path.isdir(os.path.join(prog_dir, d))]
+    proj_timestamps = [latest_timestamp(proj_dir, date_prefix, ignore)
+                       for proj_dir in project_dirs]
+    # Filter out None's
+    proj_timestamps = [t for t in proj_timestamps if t is not None]
+
+    # No latest timestamp
+    if len(proj_timestamps) == 0:
+        return None
+    else:
+        return sorted(proj_timestamps)[-1]
 
 def md5_matches(file_dict, md5file):
     """Returns true if the one-line md5file matches the md5 data in file_dict"""
