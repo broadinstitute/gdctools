@@ -5,7 +5,8 @@ from lib.convert import util as converterUtils
 from lib.common import safeMakeDirs
 
 def process(infile, file_dict, hyb_id, tcga_id, outdir, dialect):
-    outfile = converterUtils.diced_file_path(outdir, file_dict)
+    # Should only produce one outfile
+    outfile = converterUtils.diced_file_paths(outdir, file_dict)[0]
 
     rawfile = open(infile, 'rb')
     csvfile = csv.DictReader(rawfile, dialect='excel-tab')

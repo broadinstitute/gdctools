@@ -6,16 +6,35 @@ import subprocess
 import tempfile
 
 from lib.common import safeMakeDirs, getTabFileHeader
-from lib.meta import tcga_id, dice_extension, file_id
+# FIXME: ugly import here, do a normal import...
+from lib.meta import tcga_id, dice_extension, file_id, has_multiple_samples, samples
 
-def diced_file_path(root, file_dict):
+def diced_file_paths(root, file_dict):
     '''Return the name of the diced file to be created'''
-    _tcga_id = tcga_id(file_dict)
     _ext = dice_extension(file_dict)
     _uuid = file_id(file_dict)
+    if has_multiple_samples(file_dict):
+        if file_dict['data_format'] == "MAF":
+            # For MAFs, we separate into one file per tumor sample.
+            # So iterate over cases -> samples, and filter to get the non-normal samples
+            samps = samples(file_dict)
+            tumor_samps = filter(lambda s: "Normal" not in s['sample_type'], samps)
+            diced_paths = []
+            for s in tumor_samps:
+                # TCGA ID is the aliquot ID
+                _tcga_id = s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
+                fname = '.'.join([_tcga_id, _uuid, _ext])
+                diced_paths.append(os.path.join(root, fname))
+            return diced_paths
 
-    fname = '.'.join([_tcga_id, _uuid, _ext])
-    return os.path.join(root, fname)
+        else:
+            # Don't know how to guess filenames
+            raise ValueError("Could not get diced file paths for " + json.dumps(file_dict, indent=2))
+    else:
+        _tcga_id = tcga_id(file_dict)
+
+        fname = '.'.join([_tcga_id, _uuid, _ext])
+        return [os.path.join(root, fname)]
 
 def writeCsvFile(filename, data):
     """

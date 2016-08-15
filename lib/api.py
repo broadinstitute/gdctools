@@ -19,7 +19,6 @@ import subprocess
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
-# TODO: integrate with lib/api
 class GDCQuery(object):
     # Class variables
     ENDPOINTS = ('cases', 'files', 'projects')

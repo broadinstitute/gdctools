@@ -346,25 +346,26 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
             # convert expected path to a relative path from the diced_root
-            expected_path = convert_util.diced_file_path(dice_path, file_dict)
-            expected_path = os.path.abspath(expected_path)
-            logging.info("Dicing file {0} to {1}".format(mirror_path,
-                                                         expected_path))
+            expected_paths = convert_util.diced_file_paths(dice_path, file_dict)
+            expected_paths = [os.path.abspath(p) for p in expected_paths]
+            logging.info("Dicing file " + mirror_path)
             if not dry_run:
-                # Dice if force_dice is enabled or the file doesn't exist
-                if force or not os.path.isfile(expected_path):
+                # Dice if force_dice is enabled or not all expected files exist
+                already_diced = all(os.path.isfile(p) for p in expected_paths)
+                if force or not already_diced:
                     convert(file_dict, mirror_path, dice_path)
 
-                append_diced_metadata(file_dict, expected_path,
+                append_diced_metadata(file_dict, expected_paths,
                                       annot, meta_file_writer)
         else:
-	    # To verbose to log the entire json, log just log data_type and file_id
-            warning_info = {'data_type' : file_dict["data_type"],
-	                    'data_category' : file_dict["data_category"],
-			    'file_id' : file_dict["file_id"],
-			    'file_name': file_dict['file_name']
-			    }
-	    logging.warn('Unrecognized data:\n%s' % json.dumps(warning_info,
+            # To verbose to log the entire json, log just log data_type and file_id
+            warning_info = {
+                'data_type' : file_dict["data_type"],
+                'data_category' : file_dict["data_category"],
+                'file_id' : file_dict["file_id"],
+                'file_name': file_dict['file_name']
+            }
+            logging.warn('Unrecognized data:\n%s' % json.dumps(warning_info,
                                                                indent=2))
 
 def get_annotation_converter(file_dict, translation_dict):
@@ -387,36 +388,72 @@ def metadata_to_key(file_dict):
     workflow_type = file_dict['analysis']['workflow_type'] if 'analysis' in file_dict else ''
 
     return frozenset({
-        "data_type" : data_type,
-        "data_category": data_category,
-        "experimental_strategy": experimental_strategy,
-        "platform": platform,
-        "tags": tags,
-        "center_namespace": center_namespace,
-        "workflow_type" : workflow_type
+        "data_type"             : data_type,
+        "data_category"         : data_category,
+        "experimental_strategy" : experimental_strategy,
+        "platform"              : platform,
+        "tags"                  : tags,
+        "center_namespace"      : center_namespace,
+        "workflow_type"         : workflow_type
     }.items())
 
-def append_diced_metadata(file_dict, diced_path, annot, meta_file_writer):
-    '''Write a row for the given file_dict using meta_file_writer.
+def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
+    '''Write one or more rows for the given file_dict using meta_file_writer.
+    The number of rows will be equal to the length of diced_paths.
+
 
     meta_file_writer must be a csv.DictWriter
     '''
-    sample_type = None
-    if meta.has_sample(file_dict):
-        sample_type = meta.sample_type(file_dict)
-
-    # Write row with csv.DictWriter.writerow()
-    meta_file_writer.writerow({
-        'case_id'      : meta.case_id(file_dict),
-        'tcga_barcode' : meta.tcga_id(file_dict),
-        'sample_type'  : sample_type,
+    # These fields will be shared regardless of the number of diced files
+    rowdict = {
         'annotation'   : annot,
-        'file_name'    : diced_path,
         'center'       : meta.center(file_dict),
         'platform'     : meta.platform(file_dict),
-        'report_type'  : ANNOT_TO_DATATYPE[annot],
-        'is_ffpe'      : meta.is_ffpe(file_dict)
-    })
+        'report_type'  : ANNOT_TO_DATATYPE[annot]
+    }
+
+    if len(diced_paths) == 1:
+        # Easy case, one file for this case or sample
+        diced_path = diced_paths[0]
+        sample_type = None
+        if meta.has_sample(file_dict):
+            sample_type = meta.sample_type(file_dict)
+
+        # Write row with csv.DictWriter.writerow()
+        rowdict.update({
+            'case_id'      : meta.case_id(file_dict),
+            'tcga_barcode' : meta.tcga_id(file_dict),
+            'sample_type'  : sample_type,
+            'file_name'    : diced_path,
+            'is_ffpe'      : meta.is_ffpe(file_dict)
+        })
+
+        meta_file_writer.writerow(rowdict)
+    else:
+        # Harder case, have to write a line for each unique file
+        # We need to match the diced filenames back to the original samples
+        # to get the sample type and whether the file is ffpe
+        samples = meta.samples(file_dict)
+        barcode_to_sample_type = dict()
+        for s in samples:
+            tcga_barcode = s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
+            barcode_to_sample_dict[tcga_barcode] = (s['sample_type'], s['is_ffpe'])
+
+        for diced_path in diced_paths:
+            tcga_barcode = os.path.basename(diced_path).split('.')[0]
+            # case_id is the first twelve digits of the TCGA barcode
+            case_id = tcga_barcode[:12]
+            sample_type, is_ffpe = barcode_to_sample_dict[tcga_barcode]
+
+            rowdict.update({
+                'case_id'      : case_id,
+                'tcga_barcode' : tcga_barcode,
+                'sample_type'  : sample_type,
+                'file_name'    : diced_path,
+                'is_ffpe'      : is_ffpe
+            })
+            meta_file_writer.writerow(rowdict)
+
 
 def _case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''

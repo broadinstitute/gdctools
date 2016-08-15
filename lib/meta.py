@@ -266,6 +266,16 @@ def has_sample(file_dict):
     except (KeyError, IndexError, AssertionError):
         return False
 
+def samples(file_dict, tumor_only=False):
+    '''Returns a list of samples in this file. Useful for file_dicts such as
+    MAFs which encompass multiple samples'''
+    samples = []
+    for case in file_dict['cases']:
+        samples.extend(case['samples'])
+    if tumor_only:
+        samples = filter(lambda s: "Normal" not in s['sample_type'], samples)
+    return samples
+
 def dice_extension(file_dict):
     '''Get the expected diced file extension for this file.'''
     ext = "txt"
@@ -277,6 +287,8 @@ def dice_extension(file_dict):
         ext = "seg.txt"
     elif dtype in ['Transcriptome Profiling']:
         ext = "data.txt"
+    elif dtype in ['Masked Somatic Mutation']:
+        ext = "maf.txt"
     return ext
 
 #TODO: Configurable?
