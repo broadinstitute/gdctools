@@ -477,6 +477,10 @@ def _case_data(diced_metadata_file):
             elif report_dtype == 'Clinical':
                 cases_with_biospecimen.add(case_id)
             else:
+                # FIXME: Temporary Hack due to GDC bug on a LUAD case
+                if row['sample_type'] == "FFPE Scrolls":
+                    logging.warning("SKIPPING BAD FFPE SCROLLS SAMPLE TYPE")
+                    continue
                 _, sample_type = meta.tumor_code(row['sample_type'])
                 # Filter out ffpe samples into a separate sample_type
                 if row['is_ffpe'] == 'True':
