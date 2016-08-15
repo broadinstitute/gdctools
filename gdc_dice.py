@@ -152,7 +152,7 @@ class gdc_dicer(GDCtool):
                     # generate a data structure in this form by iterating over
                     # the metadata before dicing.
 
-                    tcga_lookup = _tcgaid_file_lookup(metadata, trans_dict)
+                    tcga_lookup, multi_sample_files  = _tcgaid_file_lookup(metadata, trans_dict)
 
                     # Diced Metadata
                     diced_meta_dir = os.path.join(diced_project_root,
@@ -174,7 +174,15 @@ class gdc_dicer(GDCtool):
                         mfw.writeheader()
 
                         for tcga_id in tcga_lookup:
+                            # Dice single sample files first
                             for annot, file_d in tcga_lookup[tcga_id].iteritems():
+                                dice_one(file_d, trans_dict, raw_project_root,
+                                         diced_project_root, mfw,
+                                         dry_run=self.options.dry_run,
+                                         force=self.force_dice)
+
+                            #Then dice the multi_sample_files
+                            for file_d in multi_sample_files:
                                 dice_one(file_d, trans_dict, raw_project_root,
                                          diced_project_root, mfw,
                                          dry_run=self.options.dry_run,
@@ -270,17 +278,26 @@ class gdc_dicer(GDCtool):
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,
     stratified by annotation type. This enables the dicer to ensure one diced
-    file per sample or case'''
-    d = dict()
+    file per sample or case. However, certain files (MAFs, e.g.) have more
+    than one case per file, and must be treated separately.'''
+    single_barcode_lookup = dict()
+    multi_barcode_files = []
     for file_dict in metadata:
-        tcga_id = meta.tcga_id(file_dict)
-        annot, _ = get_annotation_converter(file_dict, translation_dict)
-        d[tcga_id] = d.get(tcga_id, dict())
-        # Note that this overwrites any previous value.
-        # FIXME: More sophisticated reasoning
-        d[tcga_id][annot] =  file_dict
+        if not meta.has_multiple_samples(file_dict):
+            # Normal file, one barcode per sample/annotation
+            tcga_id = meta.tcga_id(file_dict)
+            annot, _ = get_annotation_converter(file_dict, translation_dict)
+            single_barcode_lookup[tcga_id] = d.get(tcga_id, dict())
+            # Note that this overwrites any previous value.
+            # FIXME: More sophisticated reasoning
+            if annot in single_barcode_lookup[tcga_id]:
+                logging.warning("Multiple files found for " + tcga_id + " " + annot)
+            single_barcode_lookup[tcga_id][annot] =  file_dict
+        else:
+            # Multiple barcode file, return separately
+            multi_barcode_files.append(file_dict)
 
-    return d
+    return single_barcode_lookup, multi_barcode_files
 
 def build_translation_dict(translation_file):
     """Builds a translation dictionary from a translation table.

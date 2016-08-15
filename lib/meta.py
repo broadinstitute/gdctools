@@ -160,6 +160,15 @@ def mirror_path(proj_root, file_dict):
     return os.path.join(proj_root, category, data_type, name).replace(' ', '_')
 
 
+def has_multiple_samples(file_dict):
+    '''Return true if this file is associated with multiple samples.
+    Most file_dicts are not, but certain data types (like MAFs) are.
+    '''
+    cases = file_dict.get('cases',[])
+    samples = [s for s in c.get('samples', []) for c in cases]
+    return len(samples) > 1
+
+
 def aliquot_id(file_dict):
     '''Return the aliquot associated with the file. Raise an exception if more
     than one exists.'''
