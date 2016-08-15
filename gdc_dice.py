@@ -181,12 +181,12 @@ class gdc_dicer(GDCtool):
                                          dry_run=self.options.dry_run,
                                          force=self.force_dice)
 
-                            #Then dice the multi_sample_files
-                            for file_d in multi_sample_files:
-                                dice_one(file_d, trans_dict, raw_project_root,
-                                         diced_project_root, mfw,
-                                         dry_run=self.options.dry_run,
-                                         force=self.force_dice)
+                        #Then dice the multi_sample_files
+                        for file_d in multi_sample_files:
+                            dice_one(file_d, trans_dict, raw_project_root,
+                                     diced_project_root, mfw,
+                                     dry_run=self.options.dry_run,
+                                     force=self.force_dice)
 
                     # Bookkeeping code -- write some useful tables
                     # and figures needed for downstream sample reports.
