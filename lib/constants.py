@@ -33,7 +33,7 @@ _TIMESTAMP_PATTERN = "^\d{4}_[01]\d_[0-3]\d__[0-2]\d_[0-5]\d_[0-5]\d$"
 TIMESTAMP_REGEX = re.compile(_TIMESTAMP_PATTERN)
 
 #TODO: Configurable?
-REPORT_DATA_TYPES = ('BCR', 'Clinical', 'CN', 'mRNA', 'miR')
+REPORT_DATA_TYPES = ('BCR', 'Clinical', 'CN', 'mRNA', 'miR', 'MAF')
 
 # Used by the dicer and report generator to map to top-level data types
 # TODO: add this as a column in the annotations_table?
@@ -46,5 +46,6 @@ ANNOT_TO_DATATYPE = {
     'miR__isoformExp'           : 'miR',
     'mRNA__geneExp__FPKM'       : 'mRNA',
     'mRNA__geneExpNormed__FPKM' : 'mRNA',
-    'mRNA__counts__FPKM'        : 'mRNA'
+    'mRNA__counts__FPKM'        : 'mRNA',
+    'SNV__mutect'               : 'MAF'
 }

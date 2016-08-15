@@ -29,6 +29,7 @@ from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.convert import tsv2magetab as gdac_tsv2magetab
 from lib.report import draw_heatmaps
+from lib.convert import maf as mutect_maf
 from lib import common
 from lib import meta
 from lib.constants import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
@@ -434,7 +435,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         # We need to match the diced filenames back to the original samples
         # to get the sample type and whether the file is ffpe
         samples = meta.samples(file_dict)
-        barcode_to_sample_type = dict()
+        barcode_to_sample_dict = dict()
         for s in samples:
             tcga_barcode = s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
             barcode_to_sample_dict[tcga_barcode] = (s['sample_type'], s['is_ffpe'])
@@ -570,7 +571,8 @@ def converter(converter_name):
         'tsv2magetab': tsv2magetab,
         'unzip_tsv2magetab': unzip_tsv2magetab,
         'fpkm2magetab': fpkm2magetab,
-        'unzip_fpkm2magetab': unzip_fpkm2magetab
+        'unzip_fpkm2magetab': unzip_fpkm2magetab,
+        'maf' : maf,
     }
 
     return CONVERTERS[converter_name]
@@ -585,8 +587,8 @@ def clinical(file_dict, mirror_path, outdir):
     case_id = meta.case_id(file_dict)
     return {case_id: gdac_clin.process(mirror_path, file_dict, outdir)}
 
-def maf(file_dict, mirror_path, dice_path):
-    pass
+def maf(file_dict, mirror_path, outdir):
+    mutect_maf.process(mirror_path, file_dict, outdir)
 
 def magetab_data_matrix(file_dict, mirror_path, dice_path):
     pass
@@ -607,24 +609,19 @@ def seg_mskcc2(file_dict, mirror_path, dice_path):
     pass
 
 def tsv2idtsv(file_dict, mirror_path, dice_path):
-    case_id = meta.case_id(file_dict)
-    return {case_id : gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)}
+    gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)
 
 def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
-    return _unzip(file_dict, mirror_path, dice_path, tsv2idtsv)
+    _unzip(file_dict, mirror_path, dice_path, tsv2idtsv)
 
 def tsv2magetab(file_dict, mirror_path, dice_path):
-    case_id = meta.case_id(file_dict)
-    return {case_id : gdac_tsv2magetab.process(mirror_path, file_dict,
-                                               dice_path)}
+    gdac_tsv2magetab.process(mirror_path, file_dict, dice_path)
 
 def unzip_tsv2magetab(file_dict, mirror_path, dice_path):
     return _unzip(file_dict, mirror_path, dice_path, tsv2magetab)
 
 def fpkm2magetab(file_dict, mirror_path, dice_path):
-    case_id = meta.case_id(file_dict)
-    return {case_id : gdac_tsv2magetab.process(mirror_path, file_dict,
-                                               dice_path, fpkm=True)}
+    gdac_tsv2magetab.process(mirror_path, file_dict, dice_path, fpkm=True)
 
 def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
     return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
