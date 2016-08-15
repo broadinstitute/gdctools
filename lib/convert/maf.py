@@ -40,6 +40,7 @@ def process(mafFile, file_dict, outdir, is_compressed=True):
     for sample_id in tcgaSampleIdToMafLinesMap:
         # TODO: Insert maf center into filename?
         sample_maf_filename = ".".join([sample_id, maf_uuid, "maf.txt"])
+        logging.info("Writing sample MAF: " + sample_maf_filename)
         sample_maf_filename = os.path.join(outdir, sample_maf_filename)
         with open(sample_maf_filename, 'w') as smf:
             outwriter = csv.writer(smf, delimiter='\t')

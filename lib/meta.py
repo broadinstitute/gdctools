@@ -342,7 +342,7 @@ def tumor_code(tumor_type):
         "Recurrent Tumor" : ('02', 'TR'), # GDC had new name for this
         "Solid Tissue Normal" : ('11', 'NT'),
     }
-    return lookup.get(tumor_type, None)
+    return lookup[tumor_type]
 
 
 # def sample_counts(metadata):
