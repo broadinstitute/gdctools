@@ -287,7 +287,7 @@ def _tcgaid_file_lookup(metadata, translation_dict):
             # Normal file, one barcode per sample/annotation
             tcga_id = meta.tcga_id(file_dict)
             annot, _ = get_annotation_converter(file_dict, translation_dict)
-            single_barcode_lookup[tcga_id] = d.get(tcga_id, dict())
+            single_barcode_lookup[tcga_id] = single_barcode_lookup.get(tcga_id, dict())
             # Note that this overwrites any previous value.
             # FIXME: More sophisticated reasoning
             if annot in single_barcode_lookup[tcga_id]:
@@ -358,7 +358,13 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                 append_diced_metadata(file_dict, expected_path,
                                       annot, meta_file_writer)
         else:
-            logging.warn('Unrecognized data:\n%s' % json.dumps(file_dict,
+	    # To verbose to log the entire json, log just log data_type and file_id
+            warning_info = {'data_type' : file_dict["data_type"],
+	                    'data_category' : file_dict["data_category"],
+			    'file_id' : file_dict["file_id"],
+			    'file_name': file_dict['file_name']
+			    }
+	    logging.warn('Unrecognized data:\n%s' % json.dumps(warning_info,
                                                                indent=2))
 
 def get_annotation_converter(file_dict, translation_dict):

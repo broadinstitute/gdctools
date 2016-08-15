@@ -165,7 +165,7 @@ def has_multiple_samples(file_dict):
     Most file_dicts are not, but certain data types (like MAFs) are.
     '''
     cases = file_dict.get('cases',[])
-    samples = [s for s in c.get('samples', []) for c in cases]
+    samples = [s for c in cases for s in c.get('samples',[])]
     return len(samples) > 1
 
 
