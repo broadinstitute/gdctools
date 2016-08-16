@@ -21,7 +21,7 @@ import os
 import csv
 import ConfigParser
 from lib import common
-from lib.meta import latest_timestamp
+from lib.meta import latest_timestamp, tumor_code
 from lib.report import draw_heatmaps
 
 class create_loadfile(GDCtool):
@@ -335,7 +335,7 @@ def sample_id(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
+    sample_code, sample_type_abbr = tumor_code(sample_type)
 
     samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     return samp_id
@@ -349,7 +349,7 @@ def master_load_entry(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
+    sample_code, sample_type_abbr = tumor_code(sample_type)
 
     # FFPE samples get seggregated regardless of actual sample_type
     if row_dict['is_ffpe'] == 'True':
