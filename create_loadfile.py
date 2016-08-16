@@ -306,25 +306,25 @@ def get_diced_metadata(project, project_root, datestamp):
         return mpath
     raise ValueError("Could not find dicing metadata: "+mpath)
 
-def sample_type_lookup(etype):
-    '''Convert long form sample types into letter codes.'''
-    # FIXME: ideally this should come from a config file section, and
-    #        the config file parser could/should be updated to support
-    #        custom "program-specific" content
-    lookup = {
-        "Primary Tumor" : ("TP", "01"),
-        "Recurrent Tumor" : ("TR", "02"),
-        "Blood Derived Normal" : ("NB", "10"),
-        "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
-        "Additional - New Primary" : ("TAP", "05"),
-        "Metastatic" : ("TM", "06"),
-        "Additional Metastatic" : ("TAM", "07"),
-        "Solid Tissue Normal": ("NT", "11"),
-        "Buccal Cell Normal": ("NBC", "12"),
-        "Bone Marrow Normal" : ("NBM", "14"),
-    }
-
-    return lookup[etype]
+# def sample_type_lookup(etype):
+#     '''Convert long form sample types into letter codes.'''
+#     # FIXME: ideally this should come from a config file section, and
+#     #        the config file parser could/should be updated to support
+#     #        custom "program-specific" content
+#     lookup = {
+#         "Primary Tumor" : ("TP", "01"),
+#         "Recurrent Tumor" : ("TR", "02"),
+#         "Blood Derived Normal" : ("NB", "10"),
+#         "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
+#         "Additional - New Primary" : ("TAP", "05"),
+#         "Metastatic" : ("TM", "06"),
+#         "Additional Metastatic" : ("TAM", "07"),
+#         "Solid Tissue Normal": ("NT", "11"),
+#         "Buccal Cell Normal": ("NBC", "12"),
+#         "Bone Marrow Normal" : ("NBM", "14"),
+#     }
+#
+#     return lookup[etype]
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
@@ -335,7 +335,7 @@ def sample_id(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_type_abbr, sample_code = sample_type_lookup(sample_type)
+    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
 
     samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     return samp_id
@@ -349,7 +349,7 @@ def master_load_entry(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_type_abbr, sample_code = sample_type_lookup(sample_type)
+    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
 
     # FFPE samples get seggregated regardless of actual sample_type
     if row_dict['is_ffpe'] == 'True':

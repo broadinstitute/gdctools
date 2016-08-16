@@ -341,6 +341,9 @@ def tumor_code(tumor_type):
         "Recurrent Solid Tumor" : ('02', 'TR'),
         "Recurrent Tumor" : ('02', 'TR'), # GDC had new name for this
         "Solid Tissue Normal" : ('11', 'NT'),
+        # FIXME: Hack, GDC has labelled some FFPE's with a new tumor type, rather than
+        # using the correct primary.
+        "FFPE Scrolls" : ('01', 'TP')
     }
     return lookup[tumor_type]
 
