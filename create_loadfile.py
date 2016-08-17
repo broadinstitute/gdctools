@@ -27,7 +27,7 @@ from lib.report import draw_heatmaps
 class create_loadfile(GDCtool):
 
     def __init__(self):
-        super(create_loadfile, self).__init__(version="0.2.0")
+        super(create_loadfile, self).__init__(version="0.3.0")
         cli = self.cli
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
@@ -337,7 +337,11 @@ def sample_id(project, row_dict):
     sample_type = row_dict['sample_type']
     sample_code, sample_type_abbr = tumor_code(sample_type)
 
-    samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
+    # FFPE samples get seggregated regardless of actual sample_type
+    if row_dict['is_ffpe'] == 'True':
+        samp_id = "-".join([cohort + 'FFPE', indiv_base, sample_type_abbr])
+    else:
+        samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
     return samp_id
 
 def master_load_entry(project, row_dict):
