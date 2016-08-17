@@ -169,7 +169,15 @@ class create_loadfile(GDCtool):
                             project[samp_id] = master_load_entry(projname, row)
 
                         # Filenames in metadata begin with diced root
-                        project[samp_id][annot] = filepath
+                        if annot in project[samp_id]:
+                            # We already had a barcode for this sample, choose
+                            # better one
+                            # TODO: Is this the right place to filter replicates?
+                            # Replicates should also be logged somewhere, which suggests
+                            # They should be done at dice time, and we should not dice
+                            # barcodes that should not be loaded.
+                            existing_path = project[samp_id][annot]
+                            project[samp_id][annot] = choose_file(existing_path, filepath)
 
                 # Now that all samples are known, back-fill case-level files for each
                 for case_id in case_samples:
@@ -370,6 +378,42 @@ def master_load_entry(project, row_dict):
     d['tcga_sample_id'] = tcga_sample_id
 
     return d
+
+def choose_file(file1, file2):
+    """Choose which file to use based on our FAQ entry for replicate samples
+    https://confluence.broadinstitute.org/display/GDAC/FAQ
+    """
+    barcode1 = os.path.basename(file1).split('.')[0]
+    barcode2 = os.path.basename(file2).split('.')[0]
+
+    # Get the analytes
+    # TCGA-BL-A0C8-01A-11<Analyte>-<plate>-01
+    analyte1 = barcode1[19]
+    analyte2 = barcode2[19]
+    plate1 = barcode1[21:25]
+    plate2 = barcode2[21:25]
+
+
+    if analyte1 == analyte2:
+        # Prefer the aliquot with the highest lexicographical sort value
+        return file1 if barcode1 >= barcode2 else file2
+    elif analyte1 == "H":
+        # Prefer H over R and T
+        return file1
+    elif analyte1 == "R":
+        # Prefer R over T
+        return file1 if analyte2 == "T" else file2
+    elif analyte1 == "T":
+        # Prefer H and R over T
+        return file2
+    elif analyte1 == "D":
+        # Prefer D over G,W,X, unless plat enumber is higher
+        return file1 if plate2 < plate1 else file2
+    elif analyte2 == "D":
+        return file2 if plate1 < plate2 else file1
+    else:
+        # Default back to highest lexicographical sort value
+        return file1 if barcode1 >= barcode2 else file2
 
 def write_samples(fp, headers, samples):
     # FIXME: touch up comments here
