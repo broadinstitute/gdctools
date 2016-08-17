@@ -169,7 +169,10 @@ class create_loadfile(GDCtool):
                             project[samp_id] = master_load_entry(projname, row)
 
                         # Filenames in metadata begin with diced root
-                        if annot in project[samp_id]:
+                        if annot not in project[samp_id]:
+                            # No existing barcode, set the value here
+                            project[samp_id][annot] = filepath
+                        else:
                             # We already had a barcode for this sample, choose
                             # better one
                             # TODO: Is this the right place to filter replicates?
@@ -178,6 +181,7 @@ class create_loadfile(GDCtool):
                             # barcodes that should not be loaded.
                             existing_path = project[samp_id][annot]
                             project[samp_id][annot] = choose_file(existing_path, filepath)
+
 
                 # Now that all samples are known, back-fill case-level files for each
                 for case_id in case_samples:
