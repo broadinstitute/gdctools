@@ -20,6 +20,8 @@ import logging
 import os
 import csv
 import ConfigParser
+from functools import cmp_to_key
+
 from lib import common
 from lib.meta import latest_timestamp, tumor_code
 from lib.report import draw_heatmaps
@@ -168,20 +170,13 @@ class create_loadfile(GDCtool):
                         if samp_id not in project:
                             project[samp_id] = master_load_entry(projname, row)
 
-                        # Filenames in metadata begin with diced root
+                        # Note that here each annotation has a list of potential
+                        # diced files. When we generate the loadfile, we will
+                        # choose the correct file based on the barcode
                         if annot not in project[samp_id]:
-                            # No existing barcode, set the value here
-                            project[samp_id][annot] = filepath
+                            project[samp_id][annot] = [filepath]
                         else:
-                            # We already had a barcode for this sample, choose
-                            # better one
-                            # TODO: Is this the right place to filter replicates?
-                            # Replicates should also be logged somewhere, which suggests
-                            # They should be done at dice time, and we should not dice
-                            # barcodes that should not be loaded.
-                            existing_path = project[samp_id][annot]
-                            project[samp_id][annot] = choose_file(existing_path, filepath)
-
+                            project[samp_id][annot].append(filepath)
 
                 # Now that all samples are known, back-fill case-level files for each
                 for case_id in case_samples:
@@ -190,7 +185,9 @@ class create_loadfile(GDCtool):
                     samples = case_samples.get(case_id, [])
                     for s in samples:
                         for f, annot in files:
-                            project[s][annot] = f
+                            # Must be a list of files for congruity, although
+                            # there should always be exactly one here.
+                            project[s][annot] = [f]
 
                 # Finally, retain this project data for later loadfile generation
                 projects[projname] = project
@@ -219,14 +216,24 @@ class create_loadfile(GDCtool):
         logging.info("Writing samples loadfile to " + samples_loadfile)
         samples_lfp = open(samples_loadfile, 'w+')
 
-        # ... column headers
+        # and the filtered samples file
+        filtered_samples_file = projname + "." + datestamp + ".filtered_samples.txt"
+        filtered_samples_file = os.path.join(loadfile_root, filtered_samples_file)
+        filtered_lfp = open(filtered_samples_file, 'w+')
+
+        # ... column headers for each
         headers =  ["sample_id", "individual_id" ]
         headers += ["sample_type", "tcga_sample_id"] + annotations
         samples_lfp.write("\t".join(headers) + "\n")
 
+        filtered_headers = ["Participant Id", "Tumor Type", "Annotation",
+                            "Filter Reason", "Removed Samples","Chosen Sample"]
+        filtered_lfp.write('\t'.join(filtered_headers) + "\n")
+
         # ... then the rows (samples) for each cohort (project) in cohorts list
         for samples_in_this_cohort in cohorts:
-            write_samples(samples_lfp, headers, samples_in_this_cohort)
+            write_samples(samples_lfp, filtered_lfp,
+                          headers, samples_in_this_cohort)
 
         # Second: now the sample set loadfile, derived from the samples loadfile
         sset_loadfile = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
@@ -252,7 +259,12 @@ class create_loadfile(GDCtool):
         all_sset_loadfile = program + '.' + datestamp + ".Sample_Set.loadfile.txt"
         all_sset_loadfile = os.path.join(loadfile_root, all_sset_loadfile)
 
-        with open(all_samp_loadfile, 'w') as aslfp, open(all_sset_loadfile, 'w') as sslfp:
+        all_filter_file   = program + '.' + datestamp + ".filtered_samples.txt"
+        all_filter_file   = os.path.join(loadfile_root, all_filter_file)
+
+        with open(all_samp_loadfile, 'w') as aslfp, \
+             open(all_sset_loadfile, 'w') as sslfp, \
+             open(all_filter_file, 'w') as fflfp:
             #Write headers for samples loadfile
             headers =  ["sample_id", "individual_id" ]
             headers += ["sample_type", "tcga_sample_id"] + sorted(annotations)
@@ -260,6 +272,9 @@ class create_loadfile(GDCtool):
 
             # Write headers for sample set loadfile
             sslfp.write("sample_set_id\tsample_id\n")
+
+            # write headers for filtered samples
+
 
             # loop over each project, concatenating loadfile data from each
             for projname in sorted(projects.keys()):
@@ -279,6 +294,16 @@ class create_loadfile(GDCtool):
                     for line in psset:
                         sslfp.write(line)
 
+                # combine filtered samples, but don't do this for aggregates
+                # to avoid double counting
+                if projname not in self.aggregates:
+                    proj_filtered = projname + "." + datestamp + ".filtered_samples.txt"
+                    proj_filtered = os.path.join(loadfile_root, proj_filtered)
+                    with open(proj_filtered) as pf:
+                        # skip header, copy the rest
+                        pf.next()
+                        for line in pf:
+                            fflfp.write(line)
 
     def execute(self):
 
@@ -308,7 +333,6 @@ class create_loadfile(GDCtool):
         self.generate_master_loadfiles(projects, annotations)
 
 def get_diced_metadata(project, project_root, datestamp):
-
     # At this point the datestamp has been vetted to be the latest HH_MM_SS
     # dicing for the given YYYY_MM_DD date; and so there MUST be EXACTLY 1
     # 1 metadata file summarizing that given YYYY_MM_DD__HH_MM_SS dicing.
@@ -383,50 +407,95 @@ def master_load_entry(project, row_dict):
 
     return d
 
-def choose_file(file1, file2):
-    """Choose which file to use based on our FAQ entry for replicate samples
-    https://confluence.broadinstitute.org/display/GDAC/FAQ
-    """
-    barcode1 = os.path.basename(file1).split('.')[0]
-    barcode2 = os.path.basename(file2).split('.')[0]
+def diced_file_comparator(a, b):
+    '''Comparator function for barcodes, using the rules described in the GDAC
+    FAQ entry for replicate samples: https://confluence.broadinstitute.org/display/GDAC/FAQ
+    '''
+    # Convert files to barcodes by splitting
+    a = a.split('.')[0]
+    b = b.split('.')[0]
 
-    # Get the analytes
+
+    # Get the analytes and plates
     # TCGA-BL-A0C8-01A-11<Analyte>-<plate>-01
-    analyte1 = barcode1[19]
-    analyte2 = barcode2[19]
-    plate1 = barcode1[21:25]
-    plate2 = barcode2[21:25]
+    analyte1 = a[19]
+    analyte2 = b[19]
+    plate1   = a[21:25]
+    plate2   = b[21:25]
 
-
-    if analyte1 == analyte2:
+    # Equals case
+    if a == b:
+        return 0
+    elif analyte1 == analyte2:
         # Prefer the aliquot with the highest lexicographical sort value
-        return file1 if barcode1 >= barcode2 else file2
+        return -1 if a >= b else 1
     elif analyte1 == "H":
         # Prefer H over R and T
-        return file1
+        return 1
     elif analyte1 == "R":
         # Prefer R over T
-        return file1 if analyte2 == "T" else file2
+        return -1 if analyte2 == "T" else 1
     elif analyte1 == "T":
         # Prefer H and R over T
-        return file2
+        return 1
     elif analyte1 == "D":
         # Prefer D over G,W,X, unless plat enumber is higher
-        return file1 if plate2 < plate1 else file2
+        return -1 if plate2 <= plate1 else 1
     elif analyte2 == "D":
-        return file2 if plate1 < plate2 else file1
+        return 1 if plate1 <= plate2 else -1
     else:
         # Default back to highest lexicographical sort value
-        return file1 if barcode1 >= barcode2 else file2
+        return -1 if a >= b else 1
 
-def write_samples(fp, headers, samples):
+def choose_file(files):
+    preferred_order = sorted(files, key=cmp_to_key(diced_file_comparator))
+    selected, ignored = preferred_order[0], preferred_order[1:]
+    return selected, ignored
+
+def write_samples(samples_fp, filtered_fp, headers, samples):
     # FIXME: touch up comments here
     # Loop over sample ids, writing entries in outfile
     # FIXME: presently assumes/requires at least one annot is defined
     for sample_id in sorted(samples):
         sample = samples[sample_id]
-        row = "\t".join([sample.get(h, "__DELETE__") for h in headers]) + "\n"
-        fp.write(row)
+
+        # Each row for a sample must have sample_id, individual_id,
+        # sample_type, and  tcga_sample_id at minimum
+        required_columns = headers[:4]
+        chosen_row = "\t".join([sample[c] for c in required_columns])
+
+        annot_columns = []
+        filtered_rows = []
+        for annot in headers[4:]:
+            # Trickier here, there is a list of possible files, use choose_file
+            # to pick the write one, and log the ignored files into the replicates
+            files = sample.get(annot, None)
+            if files is None:
+                annot_columns.append("__DELETE__")
+            else:
+                chosen, ignored = choose_file(files)
+                annot_columns.append(chosen)
+
+                chosen_barcode = os.path.basename(chosen).split('.')[0]
+                ignored_barcodes = [os.path.basename(i).split('.')[0] for i in ignored]
+                # Create a row for each filtered barcode
+                for i in ignored_barcodes:
+                    participant_id = chosen_barcode[:12]
+                    tumor_type = sample_id.split('-')[0]
+                    filter_reason = "Analyte Replicate Filter"
+                    removed_sample = i
+                    filtered_rows.append([participant_id, tumor_type, annot,
+                                          filter_reason, removed_sample, chosen_barcode])
+
+        # write row of chosen annotations
+        if len(annot_columns) > 0:
+            chosen_row += "\t" + "\t".join(annot_columns)
+        samples_fp.write(chosen_row + "\n")
+
+        # write row(s) of filtered barcodes
+        for row in filtered_rows:
+            row = "\t".join(row)
+            filtered_fp.write(row + "\n")
 
 def write_sampleset(samples_lfp, sset_filename, sset_name):
 
