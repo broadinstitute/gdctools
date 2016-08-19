@@ -1064,7 +1064,7 @@ getFilterTable <- function (reportDir, timestamp, aggregateNameToTumorTypesMap=N
   filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   if (!is.null(tumor.type)){
     # Split
-    if (startsWith(tumor.type, "TCGA-")){
+    if (substr(tumor.type, 1, 5) == "TCGA-"){
        tumor.type <- substr(tumor.type, 6, nchar(tumor.type))
     }
     # Filter by tumor.type
