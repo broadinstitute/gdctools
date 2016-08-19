@@ -11,29 +11,6 @@
 # Note, do not use 'require', as it does not fail correctly
 library(Nozzle.R1)
 
-### DATA_TYPES = c("BCR", "Clinical", "CN", "LowP", "Methylation", "mRNA",
-###               "mRNASeq", "miR", "miRSeq", "RPPA", "MAF", "rawMAF")
-
-### LEVEL_3_DATA_TYPES = c("CN", "Methylation", "mRNASeq", "mRNA", "miR")
-
-### PLATFORM_TO_DATATYPE_MAP                             = list()
-### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_dnaseqc"]]  = "LowP"
-### PLATFORM_TO_DATATYPE_MAP[["humanmethylation27"]]     = "Methylation"
-### PLATFORM_TO_DATATYPE_MAP[["humanmethylation450"]]    = "Methylation"
-### PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15k"]]          = "miR"
-### PLATFORM_TO_DATATYPE_MAP[["h_mirna_8x15kv2"]]        = "miR"
-### PLATFORM_TO_DATATYPE_MAP[["illuminaga_mirnaseq"]]    = "miRSeq"
-### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_mirnaseq"]] = "miRSeq"
-### PLATFORM_TO_DATATYPE_MAP[["mda_rppa_core"]]          = "RPPA"
-### PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseq"]]      = "mRNASeq"
-### PLATFORM_TO_DATATYPE_MAP[["illuminaga_rnaseqv2"]]    = "mRNASeq"
-### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseq"]]   = "mRNASeq"
-### PLATFORM_TO_DATATYPE_MAP[["illuminahiseq_rnaseqv2"]] = "mRNASeq"
-### PLATFORM_TO_DATATYPE_MAP[["genome_wide_snp_6"]]      = "CN"
-### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_1"]]     = "mRNA"
-### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_2"]]     = "mRNA"
-### PLATFORM_TO_DATATYPE_MAP[["agilentg4502a_07_3"]]     = "mRNA"
-### PLATFORM_TO_DATATYPE_MAP[["ht_hg_u133a"]]            = "mRNA"
 
 SAMPLE_TYPES = c("TP", "TR", "TB", "TRBM", "TAP", "TM", "TAM", "THOC", "TBM",
                  "NB", "NT", "NBC", "NEBV", "NBM", "FFPE")
@@ -70,9 +47,10 @@ main <- function(...) {
 ###   diseaseStudyMap = maps[[3]]
 ###   sampleTypeMap   = maps[[4]]
 
-###   result = getAggregates(aggregatesPath)
-###   tumorTypeToAggregateNamesMap = result[[1]]
-###   aggregateNameToTumorTypesMap = result[[2]]
+  aggregatesPath = file.path(reportDir, "aggregates.txt")
+  result = getAggregates(aggregatesPath)
+  tumorTypeToAggregateNamesMap = result[[1]]
+  aggregateNameToTumorTypesMap = result[[2]]
 
   runDate = strsplit(timestamp, "__", TRUE)[[1]][1]
   runStmp = paste(runDate, "Data Snapshot")
@@ -91,14 +69,15 @@ main <- function(...) {
   # Summary
   ############################################################################
   #  FIXME: nrow() the raw data, not the Nozzle table?
-  redactionsTable  <- getRedactionsTable(reportDir)
+  redactionsTable  <- getRedactionsTable(reportDir, timestamp)
   redactionsCount  <- 0 # nrow(redactionsTable)
 
-  ffpeTable        <- getFFPETable(reportDir) 
+  ffpeTable        <- getFFPETable(reportDir, timestamp) 
   ffpeCount        <- 0 # nrow(ffpeTable)
 
-  filterTable      <- getFilterTable(reportDir)
-  filterCount      <- 0 # nrow(filterTable)
+  filterTableList  <- getFilterTable(reportDir, timestamp, aggregateNametoTumorTypesMap)
+  filterTable      <- filterTableList[[1]]
+  filterCount      <- filterTableList[[2]]
   
   blacklistTable   <- getBlacklistTable(blacklistPath)
   blacklistCount   <- 0 # nrow(blacklistTable)
@@ -133,7 +112,7 @@ main <- function(...) {
   sampleCountsTable <- generateSampleCountsTable(sampleCountsPath, 
                                      sampleCountsTableRaw,
                                      refDir, timestamp, reportDir, 
-                                     blacklistPath)
+                                     blacklistPath, aggregateNameToTumorTypesMap)
   report  <- addToSummary(report, sampleCountsTable$tbl)
 #    createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
 #                          timestamp)
@@ -571,7 +550,7 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
 ################################################################################
 generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
                                    refDir, timestamp, reportDir, 
-                                   blacklistPath) {
+                                   blacklistPath, aggregateNameToTumorTypesMap) {
   ### Create a list of sample types and their abbreviations
   sampleTypeMap <- getSampleTypeMap(refDir)
   sampleTypeDescription =
@@ -616,7 +595,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     url <-
       createTumorSamplesReport(tumorType, fullName, 
         reportDir, sampleCountsTable, sampleTypeDescription, 
-        sampleTypeList, heatmap, timestamp)
+        sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap)
 
     # Update row for this cohort  with link to cohort report
     # FIXME: TCGA-Hard coded here
@@ -729,7 +708,7 @@ html2png <- function(htmlFile, del = FALSE) {
 ################################################################################
 createTumorSamplesReport <- function(disease, fullName, 
   reportDir, sampleCountsTable, sampleTypeDescription, 
-  sampleTypeList, heatmap, timestamp) {
+  sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap) {
  
   reportStartTime <- Sys.time()
   print(sprintf("Generating sample report for %s...", disease))
@@ -750,8 +729,8 @@ createTumorSamplesReport <- function(disease, fullName,
 ### TODO: re-insert redactions, filtered samples, etc..
 ###     annotResults <- sapply(annotPaths, generateAnnotationsTable, disease,
 ###                            aggregateNameToTumorTypesMap)
-###     redactionsTable = NULL
-###     redactionsCount = NULL
+  redactionsTable <- NULL
+  redactionsCount <- 0
 ###     if (REDACTIONS.HEAD %in% colnames(annotResults)) {
 ###         redactionsTable = annotResults[[1, REDACTIONS.HEAD]]
 ###         redactionsCount = annotResults[[2, REDACTIONS.HEAD]]
@@ -760,8 +739,8 @@ createTumorSamplesReport <- function(disease, fullName,
 ###     #    redactionsCount = 0
 ###     #}
 ### 
-###     ffpeTable = NULL
-###     ffpeCount = NULL
+  ffpeTable <- NULL
+  ffpeCount <- 0
 ###     if (FFPES.HEAD %in% colnames(annotResults)) {
 ###         ffpeTable = annotResults[[1, FFPES.HEAD]]
 ###         ffpeCount = annotResults[[2, FFPES.HEAD]]
@@ -769,25 +748,26 @@ createTumorSamplesReport <- function(disease, fullName,
 ###     if (is.null(ffpeCount)) {
 ###         ffpeCount = 0
 ###     }
-### 
-###     result         = generateFilterTable(filteredSamplesPath, reportDir,
-###                                          disease, aggregateNameToTumorTypesMap)
-###     filterTable    = result[[1]]
-###     filterCount    = result[[2]]
+###
+  filterTableList         <- getFilterTable(reportDir, timestamp,
+                                            aggregateNameToTumorTypesMap, disease)
+  filterTable    <- filterTableList[[1]]
+  filterCount    <- filterTableList[[2]]
 ### 
 ###     result         = generateBlacklistTable(blacklistPath, reportDir, disease,
 ###                                              aggregateNameToTumorTypesMap)
 ###     blacklistTable = result[[1]]
 ###     blacklistCount = result[[2]]
+  blacklistTable <- NULL
+  blacklistCount <- 0
 
-###    summaryParagraph          = generateSummaryParagraph(redactionsCount,
-###                                                         filterCount,
-###                                                         blacklistCount,
-###                                                         ffpeCount)
-  summaryParagraph <- generateSummaryParagraph(0,0,0,0)
+  summaryParagraph          = generateSummaryParagraph(redactionsCount,
+                                                       filterCount,
+                                                       blacklistCount,
+                                                       ffpeCount)
     
-###   filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
-###           runStmp, redactionsTable, filterTable, blacklistTable, disease)
+  filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
+          runStmp, redactionsTable, filterTable, blacklistTable, disease)
 ###   ffpeSubSection            = generateFFPEsSubSection(reportDir, ffpeTable,
 ###                                                       runStmp, disease)
 ###   annotSubSection           = generateAnnotationsSubSection(reportDir,
@@ -806,7 +786,8 @@ createTumorSamplesReport <- function(disease, fullName,
 ###         diseaseReport = addToSummary(
 ###             diseaseReport, ignoredPlatformsDescription, ignoredPlatformsList)
 ###     }
-    diseaseReport = addToSummary(diseaseReport, heatmap)
+    diseaseReport <-  addToSummary(diseaseReport, heatmap)
+    diseaseReport <- addToResults(diseaseReport, filteredSamplesSubSection)
 ###     diseaseReport = addToResults(diseaseReport, filteredSamplesSubSection,
 ###                                  ffpeSubSection, annotSubSection)
 ###     diseaseReport = addToMethodsSection(diseaseReport)
@@ -834,7 +815,7 @@ generateFilteredSamplesSubSection <- function(reportDir, runStmp,
             "NOT YET IMPLEMENTED", disease)
     replicateFilterLink = writeSectionReport(reportDir, filterTable,
             "Replicate Samples", runStmp, getReplicateFilterDescriptions,
-            "NOT YET IMPLEMENTED", disease)
+            "There were no replicate samples.", disease)
     blacklistLink  = writeSectionReport(reportDir, blacklistTable,
             "Blacklisted Samples", runStmp, getBlacklistDescription,
             "NOT YET IMPLEMENTED", disease)
@@ -1071,14 +1052,39 @@ addToMethodsSection <- function(report) {
     return(report)
 }
 #TODO: Fully implement these functions
-getRedactionsTable <- function(reportDir){
+getRedactionsTable <- function(reportDir, timestamp){
   return(NULL)
 }
-getFFPETable <- function (reportDir){
+getFFPETable <- function (reportDir, timestamp){
   return(NULL)
 }
-getFilterTable <- function (reportDir){
-  return(NULL)
+getFilterTable <- function (reportDir, timestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
+  filtered.file <- paste("TCGA", timestamp, "filtered_samples.txt", sep=".")
+  filtered.file <- file.path(reportDir, filtered.file) 
+  filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+  if (!is.null(tumor.type)){
+    # Split
+    if (startsWith(tumor.type, "TCGA-")){
+       tumor.type <- substr(tumor.type, 6, nchar(tumor.type))
+    }
+    # Filter by tumor.type
+    if (tumor.type %in% names(aggregateNameToTumorTypesMap)){
+    # Aggregate, filter to members of the aggregate
+      filterTableRaw <- subset(filterTableRaw, 
+                               filterTableRaw$Tumor.Type %in% aggregateNameToTumorTypesMap[[tumor.type]])
+    } else {
+    # Singleton, filter to this tumor type
+      filterTableRaw <- subset(filterTableRaw, filterTableRaw$Tumor.Type == tumor.type)
+    }
+  }  
+
+  filterTable <- NULL
+  filterTableCount <- nrow(filterTableRaw)
+  if (filterTableCount != 0){
+    filterTable <- newTable(filterTableRaw, file=basename(filtered.file))
+  }
+  return(list(filterTable, filterTableCount))
+
 }
 getBlacklistTable <- function(blacklistPath){
   return(NULL)

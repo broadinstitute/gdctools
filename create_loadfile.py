@@ -274,7 +274,9 @@ class create_loadfile(GDCtool):
             sslfp.write("sample_set_id\tsample_id\n")
 
             # write headers for filtered samples
-
+            filtered_headers = ["Participant Id", "Tumor Type", "Annotation",
+                                "Filter Reason", "Removed Samples","Chosen Sample"]
+            fflfp.write('\t'.join(filtered_headers) + "\n")
 
             # loop over each project, concatenating loadfile data from each
             for projname in sorted(projects.keys()):

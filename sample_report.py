@@ -30,7 +30,7 @@ from GDCtool import GDCtool
 class sample_report(GDCtool):
 
     def __init__(self):
-        super(sample_report, self).__init__(version="0.2.0")
+        super(sample_report, self).__init__(version="0.3.0")
         cli = self.cli
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
@@ -105,7 +105,7 @@ class sample_report(GDCtool):
         link_diced_metadata(diced_prog_root, self.report_dir,
                             timestamp)
         #FIXME: only works for TCGA
-        sample_loadfile = link_sample_loadfile("TCGA", self.load_dir,
+        sample_loadfile = link_loadfile_metadata(self.load_dir, "TCGA",
                                                self.report_dir, timestamp)
         logging.info("Writing aggregates.txt to report dir...")
         aggregates_file = self.aggregates_file()
@@ -233,76 +233,40 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
     that directory'''
     root, dirs, files = os.walk(diced_prog_root).next()
     for project in dirs:
-        meta_dir = os.path.join(root, project, 'metadata')
-        # Uses the latest available timestamp to get the latest counts
-        #TODO: This logic is repeated several places
-        meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
-        if len(meta_dirs) < 1:
-            _warning =  "No metadata found for " + project
-            _warning += " earlier than " + timestamp
-            logging.warning(_warning)
-            continue
-        latest_tstamp = sorted(meta_dirs)[-1]
-        meta_dir = os.path.join(meta_dir, latest_tstamp)
-
+        meta_dir = os.path.join(root, project, 'metadata', timestamp)
 
         # Link high and low res heatmaps to the report dir
-        heatmap_high = '.'.join([project, latest_tstamp, 'high_res.heatmap.png'])
-        heatmap_high_dice = os.path.join(meta_dir, heatmap_high)
-        heatmap_high_dice = os.path.abspath(heatmap_high_dice)
-        heatmap_high_rpt = heatmap_high.replace(latest_tstamp, timestamp)
-        heatmap_high_rpt = os.path.join(report_dir, heatmap_high_rpt)
-        if os.path.isfile(heatmap_high_dice) and not os.path.isfile(heatmap_high_rpt):
-            os.symlink(heatmap_high_dice, heatmap_high_rpt)
-
-        heatmap_low = '.'.join([project, latest_tstamp, 'low_res.heatmap.png'])
-        heatmap_low_dice = os.path.join(meta_dir, heatmap_low)
-        heatmap_low_dice = os.path.abspath(heatmap_low_dice)
-        heatmap_low_rpt = heatmap_low.replace(latest_tstamp, timestamp)
-        heatmap_low_rpt = os.path.join(report_dir, heatmap_low_rpt)
-        if os.path.isfile(heatmap_low_dice) and not os.path.isfile(heatmap_low_rpt):
-            os.symlink(heatmap_low_dice, heatmap_low_rpt)
+        heatmap_high = '.'.join([project, timestamp, 'high_res.heatmap.png'])
+        heatmap_low = '.'.join([project, timestamp, 'low_res.heatmap.png'])
+        link_metadata_file(meta_dir, report_dir, heatmap_high)
+        link_metadata_file(meta_dir, report_dir, heatmap_low)
 
         #Link project-level sample counts
-        samp_counts = '.'.join([project, latest_tstamp, 'sample_counts', 'tsv'])
-        samp_counts_d = os.path.join(meta_dir, samp_counts)
-        samp_counts_d = os.path.abspath(samp_counts_d)
-        samp_counts_rpt = samp_counts.replace(latest_tstamp, timestamp)
-        samp_counts_rpt = os.path.join(report_dir, samp_counts_rpt)
-        if os.path.isfile(samp_counts_d) and not os.path.isfile(samp_counts_rpt):
-            os.symlink(samp_counts_d, samp_counts_rpt)
+        samp_counts = '.'.join([project, timestamp, 'sample_counts', 'tsv'])
+        link_metadata_file(meta_dir, report_dir, samp_counts)
 
         # Link the diced metadata TSV
-        diced_meta = '.'.join([project, latest_tstamp, 'diced_metadata', 'tsv'])
-        diced_meta_d = os.path.join(meta_dir, diced_meta)
-        diced_meta_d = os.path.abspath(diced_meta_d)
-        diced_meta_rpt = diced_meta.replace(latest_tstamp, timestamp)
-        diced_meta_rpt = os.path.join(report_dir, diced_meta_rpt)
-        if os.path.isfile(diced_meta_d) and not os.path.isfile(diced_meta_rpt):
-            os.symlink(diced_meta_d, diced_meta_rpt)
+        diced_meta = '.'.join([project, timestamp, 'diced_metadata', 'tsv'])
+        link_metadata_file(meta_dir, report_dir, diced_meta)
 
     return report_dir
 
+def link_metadata_file(from_dir, report_dir, filename):
+    """ Ensures symlink report_dir/filename -> from_dir/filename exists"""
+    from_path = os.path.join(from_dir, filename)
+    from_path = os.path.abspath(from_path)
+    rpt_path = os.path.join(report_dir, filename)
+    rpt_path = os.path.abspath(rpt_path)
+    if os.path.isfile(from_path) and not os.path.isfile(rpt_path):
+        os.symlink(from_path, rpt_path)
 
-def link_sample_loadfile(program, load_dir, report_dir, timestamp):
-    prog_dir = os.path.join(load_dir, program)
-    load_dirs = [d for d in os.listdir(prog_dir) if d <= timestamp]
-    if len(load_dirs) < 1:
-        _err =  "No loadfile found for " + program
-        _err += " earlier than " + timestamp
-        logging.error(_err)
-
-    latest_tstamp = sorted(load_dirs)[-1]
-
-    lf = program + '.' + latest_tstamp + ".Sample.loadfile.txt"
-    lf_report_path = os.path.join(report_dir, lf.replace(latest_tstamp, timestamp))
-    lf = os.path.join(load_dir, program, latest_tstamp, lf)
-    lf = os.path.abspath(lf)
-
-    # Symlink to report folder
-    if not os.path.isfile(lf_report_path):
-        os.symlink(lf, lf_report_path)
-    return lf_report_path
+def link_loadfile_metadata(load_dir, program, report_dir, timestamp):
+    """Symlink loadfile and filtered samples into report directory"""
+    from_dir = os.path.join(load_dir, program, timestamp)
+    loadfile = program + '.' + timestamp + ".Sample.loadfile.txt"
+    link_metadata_file(from_dir, report_dir, loadfile)
+    filtered = program + '.' + timestamp + ".filtered_samples.txt"
+    link_metadata_file(from_dir, report_dir, filtered)
 
 
 if __name__ == "__main__":
