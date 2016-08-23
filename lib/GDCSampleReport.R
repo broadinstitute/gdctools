@@ -72,13 +72,13 @@ main <- function(...) {
   redactionsTable  <- getRedactionsTable(reportDir, timestamp)
   redactionsCount  <- 0 # nrow(redactionsTable)
 
-  ffpeTable        <- getFFPETable(reportDir, timestamp) 
+  ffpeTable        <- getFFPETable(reportDir, timestamp)
   ffpeCount        <- 0 # nrow(ffpeTable)
 
   filterTableList  <- getFilterTable(reportDir, timestamp, aggregateNametoTumorTypesMap)
   filterTable      <- filterTableList[[1]]
   filterCount      <- filterTableList[[2]]
-  
+
   blacklistTable   <- getBlacklistTable(blacklistPath)
   blacklistCount   <- 0 # nrow(blacklistTable)
 
@@ -87,7 +87,7 @@ main <- function(...) {
   report           <- addToSummary(report, summaryParagraph)
 
   ############################################################################
-  # Heatmaps SubSection 
+  # Heatmaps SubSection
   ############################################################################
   heatmapsStart   <- Sys.time()
   heatmaps        <- generateHeatmapsSubSection(timestamp, reportDir)
@@ -100,7 +100,7 @@ main <- function(...) {
   # Ingested Samples
   ############################################################################
   ingestSamplesStartTime <- Sys.time()
-  sampleCountsPath <- paste("sample_counts", timestamp, "tsv", sep=".") 
+  sampleCountsPath <- paste("sample_counts", timestamp, "tsv", sep=".")
   sampleCountsPath <- file.path(reportDir, sampleCountsPath)
   sampleCountsTableRaw <- read.table(sampleCountsPath, header = TRUE,
                                     sep = "\t", stringsAsFactors=FALSE)
@@ -108,10 +108,10 @@ main <- function(...) {
   # Remove sample type rows (i.e. SKCM-TP, SKCM-NT, SKCM-FFPE, etc.)
   sampleCountsTableRaw <- subset(sampleCountsTableRaw, !(grepl("-", sampleCountsTableRaw$Cohort)))
   rownames(sampleCountsTableRaw) <- sampleCountsTableRaw$Cohort
-  
-  sampleCountsTable <- generateSampleCountsTable(sampleCountsPath, 
+
+  sampleCountsTable <- generateSampleCountsTable(sampleCountsPath,
                                      sampleCountsTableRaw,
-                                     refDir, timestamp, reportDir, 
+                                     refDir, timestamp, reportDir,
                                      blacklistPath, aggregateNameToTumorTypesMap)
   report  <- addToSummary(report, sampleCountsTable$tbl)
 #    createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
@@ -213,8 +213,8 @@ addTable <- function(container, table, nullMsg) {
 }
 
 ### Return a map of sample type codes to full names.
-### e.g. "TP" -> "Tumor Primary" 
-getSampleTypeMap <- function(refDir) { 
+### e.g. "TP" -> "Tumor Primary"
+getSampleTypeMap <- function(refDir) {
   sampleTypePath <- file.path(refDir, "sampleType.txt")
   sampleTypeMap <- list()
   if (file.exists(sampleTypePath)) {
@@ -278,7 +278,7 @@ getAggregates <- function(aggregatesPath) {
 generateSamplesSubsection <- function(tumorType, sampleType, dataType,
                                      tumorMeta.df) {
 
-    # Filter matching report type    
+    # Filter matching report type
     dataType.df <- tumorMeta.df[tumorMeta.df$report_type == dataType, ]
     # Filter by correct sample type
     # TODO: sample_types are slightly different between GDC and TCGA
@@ -304,6 +304,7 @@ generateSamplesSubsection <- function(tumorType, sampleType, dataType,
     columns <- c("tcga_barcode", "platform", "center", "annotation")
     dataType.df <- dataType.df[,columns]
     names(dataType.df) <- c("TCGA Barcode", "Platform", "Center", "Annotation")
+    dataType.df <- dataType.df[order(dataType.df[,1]), ]
     table <- newTable(dataType.df)
 
     subsection <-
@@ -549,7 +550,7 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
 # Generate Sample Counts Table
 ################################################################################
 generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
-                                   refDir, timestamp, reportDir, 
+                                   refDir, timestamp, reportDir,
                                    blacklistPath, aggregateNameToTumorTypesMap) {
   ### Create a list of sample types and their abbreviations
   sampleTypeMap <- getSampleTypeMap(refDir)
@@ -570,7 +571,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
   })
   ### Get full names of cohorts
   diseaseStudyMap <- getDiseaseStudyMap(refDir)
- 
+
   ### TODO: Vectorize w/lapply
   for (tumorType in cohorts){
     # Create the tumor specific heatmap and sample counts table
@@ -580,7 +581,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     tumorDicedMetaPath <- paste0(tumorType, ".", timestamp, ".diced_metadata.tsv")
     tumorDicedMetaPath <- file.path(reportDir, tumorDicedMetaPath)
     sampleCountsTable <-
-        generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath, 
+        generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath,
                                            tumorDicedMetaPath, sampleTypeMap)
     heatmap <-
         generateHeatmapFigure(reportDir, tumorType, timestamp)
@@ -593,8 +594,8 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
 
     ### Create the tumor specific report
     url <-
-      createTumorSamplesReport(tumorType, fullName, 
-        reportDir, sampleCountsTable, sampleTypeDescription, 
+      createTumorSamplesReport(tumorType, fullName,
+        reportDir, sampleCountsTable, sampleTypeDescription,
         sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap)
 
     # Update row for this cohort  with link to cohort report
@@ -602,11 +603,11 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     tcga.cohort <- unlist(strsplit(tumorType, split='-'))[2]
     row = which(sampleCountsTableRaw$Cohort == tcga.cohort)
     sampleCountsTableRaw[row,1] = asLink(url, tcga.cohort)
-    
+
   }
 
 ###    # Add links to sample counts summary table
-  
+
   sampleCountsTable <-
             newTable(sampleCountsTableRaw, file=basename(sampleCountsPath),
                      paste("Summary of TCGA Tumor Data. Click on a tumor type to",
@@ -706,10 +707,10 @@ html2png <- function(htmlFile, del = FALSE) {
 ################################################################################
 # Generate Tumor Specific Samples Report
 ################################################################################
-createTumorSamplesReport <- function(disease, fullName, 
-  reportDir, sampleCountsTable, sampleTypeDescription, 
+createTumorSamplesReport <- function(disease, fullName,
+  reportDir, sampleCountsTable, sampleTypeDescription,
   sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap) {
- 
+
   reportStartTime <- Sys.time()
   print(sprintf("Generating sample report for %s...", disease))
 
@@ -738,7 +739,7 @@ createTumorSamplesReport <- function(disease, fullName,
 ###     #if (is.null(redactionsCount)) {
 ###     #    redactionsCount = 0
 ###     #}
-### 
+###
   ffpeTable <- NULL
   ffpeCount <- 0
 ###     if (FFPES.HEAD %in% colnames(annotResults)) {
@@ -753,7 +754,7 @@ createTumorSamplesReport <- function(disease, fullName,
                                             aggregateNameToTumorTypesMap, disease)
   filterTable    <- filterTableList[[1]]
   filterCount    <- filterTableList[[2]]
-### 
+###
 ###     result         = generateBlacklistTable(blacklistPath, reportDir, disease,
 ###                                              aggregateNameToTumorTypesMap)
 ###     blacklistTable = result[[1]]
@@ -765,7 +766,7 @@ createTumorSamplesReport <- function(disease, fullName,
                                                        filterCount,
                                                        blacklistCount,
                                                        ffpeCount)
-    
+
   filteredSamplesSubSection = generateFilteredSamplesSubSection(reportDir,
           runStmp, redactionsTable, filterTable, blacklistTable, disease)
 ###   ffpeSubSection            = generateFFPEsSubSection(reportDir, ffpeTable,
@@ -774,7 +775,7 @@ createTumorSamplesReport <- function(disease, fullName,
 ###                                                             annotResults[1,],
 ###                                                             runStmp,
 ###                                                             disease)
-### 
+###
     diseaseReport = addToIntroduction(diseaseReport, generateIntroduction())
     diseaseReport = addToSummary(
         diseaseReport, summaryParagraph, sampleCountsTable$tbl)
@@ -797,7 +798,7 @@ createTumorSamplesReport <- function(disease, fullName,
 ###     createStandaloneTable(sampleCountsTable$df,
 ###                           paste(disease, "sample_counts", sep = "."), reportDir,
 ###                           timestamp, del = TRUE)
-     
+
     writeReport(diseaseReport, filename=reportPath)
     print(sprintf("Finished generating sample report for %s in %s minutes",
                   disease,  difftime(Sys.time(), reportStartTime, units="min")))
@@ -1060,7 +1061,7 @@ getFFPETable <- function (reportDir, timestamp){
 }
 getFilterTable <- function (reportDir, timestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
   filtered.file <- paste("TCGA", timestamp, "filtered_samples.txt", sep=".")
-  filtered.file <- file.path(reportDir, filtered.file) 
+  filtered.file <- file.path(reportDir, filtered.file)
   filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   if (!is.null(tumor.type)){
     # Split
@@ -1070,13 +1071,13 @@ getFilterTable <- function (reportDir, timestamp, aggregateNameToTumorTypesMap=N
     # Filter by tumor.type
     if (tumor.type %in% names(aggregateNameToTumorTypesMap)){
     # Aggregate, filter to members of the aggregate
-      filterTableRaw <- subset(filterTableRaw, 
+      filterTableRaw <- subset(filterTableRaw,
                                filterTableRaw$Tumor.Type %in% aggregateNameToTumorTypesMap[[tumor.type]])
     } else {
     # Singleton, filter to this tumor type
       filterTableRaw <- subset(filterTableRaw, filterTableRaw$Tumor.Type == tumor.type)
     }
-  }  
+  }
 
   filterTable <- NULL
   filterTableCount <- nrow(filterTableRaw)
