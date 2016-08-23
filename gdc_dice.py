@@ -464,6 +464,8 @@ def _case_data(diced_metadata_file):
     cases_with_clinical = set()
     cases_with_biospecimen = set()
 
+    projname = diced_metadata_file.split('.')[0]
+
     with open(diced_metadata_file, 'r') as dmf:
         reader = csv.DictReader(dmf, delimiter='\t')
         # Loop through counting non-case-level annotations
@@ -491,7 +493,16 @@ def _case_data(diced_metadata_file):
                 cases[case_id] = case_dict
 
 
-    # Now go back through and add BCR & Clinical to all sample_types
+    # Now go back through and add BCR & Clinical to all sample_types, but first,
+    # we must insert cases in for samples who only have clinical data
+    possible_cases = cases_with_clinical | cases_with_biospecimen
+    for c in possible_cases:
+        if c not in cases:
+            # Have to create a new entry with the default sample type
+            main_type = meta.main_tumor_sample_type(projname)
+            _, main_type = meta.tumor_code(main_type)
+            cases[c] = {main_type : set()}
+
     for c in cases:
         case_dict = cases[c]
         for st in case_dict:

@@ -183,6 +183,24 @@ class create_loadfile(GDCtool):
                     # Insert each file into each sample in master_load_dict
                     files = case_files.get(case_id, [])
                     samples = case_samples.get(case_id, [])
+
+                    # Here we have a problem, there is no data on this case besides
+                    # clinical or biospecimen. We therefore cannot assign the BCR/clin
+                    # data to any row in the master load table. Instead, we must create
+                    # a new master load entry with a default sample type
+                    # (whatever the default analysis type is)
+                    if len(samples) == 0:
+                        pseudo_row = dict()
+                        pseudo_row['case_id'] = case_id
+                        default_type = meta.main_tumor_sample_type(projname)
+                        pseudo_row['sample_type'] = default_type
+                        # Is this dangerous??
+                        pseudo_row['is_ffpe'] = False
+
+                        samp_id = sample_id(projname, pseudo_row)
+                        project[samp_id] = master_load_entry(projname, pseudo_row)
+                        samples = [samp_id]
+
                     for s in samples:
                         for f, annot in files:
                             # Must be a list of files for congruity, although
