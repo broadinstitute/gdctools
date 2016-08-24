@@ -464,7 +464,7 @@ def _case_data(diced_metadata_file):
     cases_with_clinical = set()
     cases_with_biospecimen = set()
 
-    projname = diced_metadata_file.split('.')[0]
+    projname = os.path.basename(diced_metadata_file).split('.')[0]
 
     with open(diced_metadata_file, 'r') as dmf:
         reader = csv.DictReader(dmf, delimiter='\t')
@@ -492,25 +492,25 @@ def _case_data(diced_metadata_file):
                 case_dict[sample_type].add(report_dtype)
                 cases[case_id] = case_dict
 
-
     # Now go back through and add BCR & Clinical to all sample_types, but first,
     # we must insert cases in for samples who only have clinical data
     possible_cases = cases_with_clinical | cases_with_biospecimen
+    main_type = meta.main_tumor_sample_type(projname)
+    _, main_type = meta.tumor_code(main_type)
     for c in possible_cases:
         if c not in cases:
             # Have to create a new entry with the default sample type
-            main_type = meta.main_tumor_sample_type(projname)
-            _, main_type = meta.tumor_code(main_type)
             cases[c] = {main_type : set()}
+        elif main_type not in cases[c]:
+            # Each sample must have an entry for the main tumor type
+            cases[c][main_type] = set()
 
     for c in cases:
-        case_dict = cases[c]
-        for st in case_dict:
+        for st in cases[c]:
             if c in cases_with_clinical:
-                case_dict[st].add('Clinical')
+                cases[c][st].add('Clinical')
             if c in cases_with_biospecimen:
-                case_dict[st].add('BCR')
-
+                cases[c][st].add('BCR')
     return cases
 
 def _write_counts(case_data, proj_name, f):
