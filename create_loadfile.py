@@ -23,7 +23,7 @@ import ConfigParser
 from functools import cmp_to_key
 
 from lib import common
-from lib.meta import latest_timestamp, tumor_code
+from lib import meta
 from lib.report import draw_heatmaps
 
 class create_loadfile(GDCtool):
@@ -124,7 +124,7 @@ class create_loadfile(GDCtool):
                 # dictionaries for the columns in a loadfile
                 project = dict()
                 projpath = os.path.join(program_dir, projname)
-                projdate = latest_timestamp(projpath, self.options.datestamp)
+                projdate = meta.latest_timestamp(projpath, self.options.datestamp)
 
                 # Auto-generated loadfiles should not mix data across >1 datestamp
                 if self.datestamp:
@@ -394,7 +394,7 @@ def sample_id(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = tumor_code(sample_type)
+    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
 
     # FFPE samples get seggregated regardless of actual sample_type
     if row_dict['is_ffpe'] == 'True':
@@ -412,7 +412,7 @@ def master_load_entry(project, row_dict):
     case_id = row_dict['case_id']
     indiv_base = case_id.replace("TCGA-", "")
     sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = tumor_code(sample_type)
+    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
 
     # FFPE samples get seggregated regardless of actual sample_type
     if row_dict['is_ffpe'] == 'True':
