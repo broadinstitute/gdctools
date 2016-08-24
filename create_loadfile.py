@@ -151,6 +151,10 @@ class create_loadfile(GDCtool):
                         filepath = row['file_name']
                         annotations.add(annot)
 
+                        # Make sure there is always an entry for this case in
+                        # case samples, even if no samples will be added
+                        case_samples[case_id] = case_samples.get(case_id, [])
+
                         if row['sample_type'] == '':
                             # This file exists only at the case-level (e.g.
                             # clinical data) and so does not have a tissue
@@ -164,7 +168,6 @@ class create_loadfile(GDCtool):
                             continue
 
                         samp_id = sample_id(projname, row)
-                        case_samples[case_id] = case_samples.get(case_id, [])
                         case_samples[case_id].append(samp_id)
 
                         if samp_id not in project:
