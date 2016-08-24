@@ -475,9 +475,9 @@ def _case_data(diced_metadata_file):
             report_dtype = ANNOT_TO_DATATYPE[annot]
 
             if report_dtype == 'BCR':
-                cases_with_clinical.add(case_id)
-            elif report_dtype == 'Clinical':
                 cases_with_biospecimen.add(case_id)
+            elif report_dtype == 'Clinical':
+                cases_with_clinical.add(case_id)
             else:
                 # FIXME: Temporary Hack due to GDC bug on a LUAD case
                 if row['sample_type'] == "FFPE Scrolls":
