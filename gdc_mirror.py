@@ -136,7 +136,8 @@ class gdc_mirror(GDCtool):
         md5path = savepath + ".md5"
 
         # Download if force is enabled or if the file is not on disk
-        if self.force_download or not meta.md5_matches(file_d, md5path):
+        if (self.force_download or not meta.md5_matches(file_d, md5path)
+                or not os.path.isfile(savepath)):
 
             # New file, mirror to this folder
             while retries > 0:

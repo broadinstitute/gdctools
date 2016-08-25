@@ -340,7 +340,9 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
     dicing operation.
     """
     mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
-    if os.path.isfile(mirror_path):
+    if not os.path.isfile(mirror_path):
+        logging.warning("expected mirror file missing: " + mirror_path)
+    else:
         ## Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
         # FIXME: Handle this better
