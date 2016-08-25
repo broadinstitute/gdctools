@@ -186,6 +186,18 @@ def aliquot_id(file_dict):
 
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
 
+def aliquot_ids(sample_dicts):
+    '''Return all aliquot ids from the given list of sample dicts,
+    such as those returned by meta.samples()'''
+    aliquots = []
+    for s in sample_dicts:
+        for p in s['portions']:
+            for an in p['analytes']:
+                for aliquot in an['aliquots']:
+                    #TCGA ID is the aliquot ID
+                    aliquots.append(aliquot['submitter_id'])
+    return aliquots
+
 
 def case_id(file_dict):
     '''Return the case_id associated with the file. Raise an exception if

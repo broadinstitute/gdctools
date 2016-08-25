@@ -5,33 +5,32 @@ import csv
 import subprocess
 import tempfile
 
+from lib import meta
 from lib.common import safeMakeDirs, getTabFileHeader
 # FIXME: ugly import here, do a normal import...
-from lib.meta import tcga_id, dice_extension, file_id, has_multiple_samples, samples
 
 def diced_file_paths(root, file_dict):
     '''Return the name of the diced file to be created'''
-    _ext = dice_extension(file_dict)
-    _uuid = file_id(file_dict)
-    if has_multiple_samples(file_dict):
+    _ext = meta.dice_extension(file_dict)
+    _uuid = meta.file_id(file_dict)
+    if meta.has_multiple_samples(file_dict):
         if file_dict['data_format'] == "MAF":
             # For MAFs, we separate into one file per tumor sample.
             # So iterate over cases -> samples, and filter to get the non-normal samples
-            samps = samples(file_dict)
-            tumor_samps = filter(lambda s: "Normal" not in s['sample_type'], samps)
+            tumor_samples = meta.samples(file_dict, tumor_only=True)
             diced_paths = []
-            for s in tumor_samps:
-                # TCGA ID is the aliquot ID
-                _tcga_id = s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
+            aliquot_ids = meta.aliquot_ids(tumor_samples)
+            for _tcga_id in aliquot_ids:
                 fname = '.'.join([_tcga_id, _uuid, _ext])
                 diced_paths.append(os.path.join(root, fname))
+
             return diced_paths
 
         else:
             # Don't know how to guess filenames
             raise ValueError("Could not get diced file paths for " + json.dumps(file_dict, indent=2))
     else:
-        _tcga_id = tcga_id(file_dict)
+        _tcga_id = meta.tcga_id(file_dict)
 
         fname = '.'.join([_tcga_id, _uuid, _ext])
         return [os.path.join(root, fname)]

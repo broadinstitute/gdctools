@@ -439,8 +439,8 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         samples = meta.samples(file_dict)
         barcode_to_sample_dict = dict()
         for s in samples:
-            tcga_barcode = s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
-            barcode_to_sample_dict[tcga_barcode] = (s['sample_type'], s['is_ffpe'])
+            for tcga_barcode in meta.aliquot_ids([s]):
+                barcode_to_sample_dict[tcga_barcode] = (s['sample_type'], s['is_ffpe'])
 
         for diced_path in diced_paths:
             tcga_barcode = os.path.basename(diced_path).split('.')[0]

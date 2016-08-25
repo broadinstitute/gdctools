@@ -31,7 +31,9 @@ def process(mafFile, file_dict, outdir, is_compressed=True):
             mafout.write(cmaf.read())
         mafFile = tmpMAF
     tumor_samples = meta.samples(file_dict, tumor_only=True)
-    sample_ids = [s['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id'] for s in tumor_samples]
+
+    # Get all aliquot ids
+    sample_ids = meta.aliquot_ids(tumor_samples)
 
     tcgaSampleIdToMafLinesMap = map_sample_ids_to_MAF_lines(mafFile, sample_ids)
 
