@@ -147,6 +147,19 @@ test: default
 	@echo
 	$(PYTHON) GDCtool.py
 
+test_mirror: default
+	$(PYTHON) gdc_mirror.py -c tests/testGDC.cfg
+
+test_dice: default
+	$(PYTHON) gdc_dice.py -c tests/testGDC.cfg
+	
+test_load: default
+	$(PYTHON) create_loadfile.py -c tests/testGDC.cfg
+
+test_report: default
+	$(PYTHON) sample_report.py -c tests/testGDC.cfg
+	
+
 USE=/broad/tools/scripts/useuse
 test3: default
 	@# Python 3 compatibility
