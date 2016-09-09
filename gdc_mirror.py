@@ -21,15 +21,12 @@ import logging
 import time
 import ConfigParser
 import json
-import csv
-import subprocess
 
 from GDCtool import GDCtool
 import lib.api as api
 import lib.meta as meta
 import lib.common as common
 from lib.constants import LOGGING_FMT
-
 
 class gdc_mirror(GDCtool):
 
@@ -42,7 +39,7 @@ class gdc_mirror(GDCtool):
         cli.description = desc
 
         #Optional overrides of config file
-        cli.add_argument('-r', '--root-dir', help='Root of mirrored data folder tree')
+        cli.add_argument('-m', '--mirror-dir', help='Root of mirrored data folder tree')
 
         cli.add_argument('-d', '--data-categories', nargs='+', metavar='category',
                          help='Mirror only these data categories. Many data categories have spaces, use quotes to delimit')
@@ -64,7 +61,7 @@ class gdc_mirror(GDCtool):
         # Config options that can be overridden by cli args
         opts = self.options
         if opts.log_dir is not None: self.mirror_log_dir = opts.log_dir
-        if opts.root_dir is not None: self.mirror_root_dir = opts.root_dir
+        if opts.mirror_dir is not None: self.mirror_dir = opts.mirror_dir
         if opts.projects is not None: self.mirror_projects = opts.projects
         if opts.programs is not None: self.mirror_programs = opts.programs
         self.force_download = opts.force_download
@@ -77,12 +74,11 @@ class gdc_mirror(GDCtool):
             logging.info("Configuration File: %s",
                          os.path.abspath(self.options.config))
 
-        root_dir = self.mirror_root_dir
         projects = self.mirror_projects
         programs = self.mirror_programs
 
-        if not os.path.isdir(root_dir):
-            os.makedirs(root_dir)
+        if not os.path.isdir(self.mirror_dir):
+            os.makedirs(self.mirror_dir)
 
         if projects is None:
             if programs is None:
@@ -111,7 +107,7 @@ class gdc_mirror(GDCtool):
         # Now loop over each program, acquiring lock
         for prgm in program_projects:
             projects = program_projects[prgm]
-            prgm_root = os.path.abspath(os.path.join(root_dir, prgm))
+            prgm_root = os.path.abspath(os.path.join(self.mirror_dir, prgm))
 
             with common.lock_context(prgm_root, "mirror"):
                 for project in sorted(projects):
@@ -163,7 +159,6 @@ class gdc_mirror(GDCtool):
                 with open(md5path, 'w') as mf:
                     mf.write(md5sum + "  " + basename)
 
-
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
         tstamp = self.timestamp
@@ -178,7 +173,7 @@ class gdc_mirror(GDCtool):
         logging.info("Found " + str(len(data_categories)) + " data categories: "
                      + ",".join(data_categories))
 
-        proj_dir = os.path.join(self.mirror_root_dir, program, project)
+        proj_dir = os.path.join(self.mirror_dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
         # Read the previous metadata, if present
@@ -223,7 +218,7 @@ class gdc_mirror(GDCtool):
         Return the mirrored file metadata.
         '''
         tstamp = self.timestamp
-        proj_dir = os.path.join(self.mirror_root_dir, program, project)
+        proj_dir = os.path.join(self.mirror_dir, program, project)
         cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
 
         #Create data folder
@@ -247,7 +242,6 @@ class gdc_mirror(GDCtool):
 
         return file_metadata
 
-
     def execute(self):
         super(gdc_mirror, self).execute()
         self.parse_args()
@@ -257,8 +251,6 @@ class gdc_mirror(GDCtool):
             self.mirror()
         except Exception as e:
             logging.exception("Mirroring FAILED:")
-
-
 
 if __name__ == "__main__":
     gdc_mirror().execute()
