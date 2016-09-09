@@ -24,7 +24,6 @@ from functools import cmp_to_key
 
 from lib import common
 from lib import meta
-from lib.report import draw_heatmaps
 
 class create_loadfile(GDCtool):
 
