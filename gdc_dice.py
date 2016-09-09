@@ -63,7 +63,7 @@ class gdc_dicer(GDCtool):
 
         if opts.log_dir: self.dice_log_dir = opts.log_dir
         if opts.mirror_dir: self.mirror_root_dir = opts.mirror_dir
-        if opts.dice_dir: self.dice_root_dir = opts.dice_dir
+        if opts.dice_dir: self.dice_dir = opts.dice_dir
         if opts.programs: self.dice_programs = opts.programs
         if opts.projects: self.dice_projects = opts.projects
         self.force_dice = opts.force_dice
@@ -89,7 +89,7 @@ class gdc_dicer(GDCtool):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
         mirror_root = self.mirror_root_dir
-        diced_root = self.dice_root_dir
+        diced_root = self.dice_dir
         trans_dict = build_translation_dict(resource_filename("gdctools",
                                                 "config/annotations_table.tsv"))
 
