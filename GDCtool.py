@@ -72,7 +72,7 @@ class GDCtool(object):
         config_file = self.options.config
         cfg = None
         if config_file is not None:
-            cfg = ConfigParser.ConfigParser()
+            cfg = ConfigParser.SafeConfigParser()
             cfg.read(config_file)
 
         CONFIG_ITEMS = [ 'mirror_root_dir', 'mirror_log_dir',
@@ -86,9 +86,14 @@ class GDCtool(object):
         for conf in CONFIG_LISTS:
             self.__configure(conf, cfg, True)
 
+        # DEFAULT section defines interpolation vars for substitution in other
+        # sections; these vars behave as if they were defined in every section
+        DEFAULT_VARS = set([ item[0] for item in cfg.items('DEFAULT')])
+
         self.aggregates = dict()
         if cfg.has_section('aggregates'):
-            for aggr in cfg.options('aggregates'):
+            # Avoid treating default/interpolation vars as aggregate definitions
+            for aggr in (set(cfg.options('aggregates')) - DEFAULT_VARS):
                 aggr = aggr.upper()
                 self.aggregates[aggr] = cfg.get('aggregates', aggr)
 
