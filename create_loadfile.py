@@ -28,7 +28,7 @@ from lib import meta
 class create_loadfile(GDCtool):
 
     def __init__(self):
-        super(create_loadfile, self).__init__(version="0.3.0")
+        super(create_loadfile, self).__init__(version="0.3.1")
         cli = self.cli
 
         desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
@@ -56,21 +56,11 @@ class create_loadfile(GDCtool):
             cfg = ConfigParser.ConfigParser()
             cfg.read(opts.config)
 
-            # FIXME: this implicitly uses default lowercase behavior of config
-            #        parser ... which I believe we consider a bit more
-            #        For case sensitivity we can use the str() function as in:
-            #           cfg.optionxform = str
-
+            # This implicitly uses default lowercase behavior of config parser
             if cfg.has_option('loadfiles', 'load_dir'):
                 self.load_dir = cfg.get('loadfiles', 'load_dir')
             if cfg.has_option('loadfiles', 'heatmaps_dir'):
                 self.heatmaps_dir = cfg.get('loadfiles', 'heatmaps_dir')
-
-            self.aggregates = dict()
-            if cfg.has_section('aggregates'):
-                for aggr in cfg.options('aggregates'):
-                    aggr = aggr.upper()
-                    self.aggregates[aggr] = cfg.get('aggregates', aggr)
 
         if opts.dice_dir: self.dice_root_dir = opts.dice_dir
         if opts.load_dir: self.load_dir = opts.load_dir
@@ -95,14 +85,13 @@ class create_loadfile(GDCtool):
         # derived from that tissue sample (e.g. copy number, gene expression,
         # miR expression, etc).
         #
-        # FIXME: I'm intentionally trying to describe this in a Firehose-agnostic
-        #        way, because I'm now leaning heavily in the direction that loadfile
-        #        generation may indeed be something of value to others outside the
-        #        Broad; because they are equivalent to sample freeze lists as used
-        #        in TCGA, for example.
+        # Loadfiles are intentionally described in a Firehose-agnostic way, b/c
+        # loadfile generation may indeed be something of value to others outside
+        # of Broad/Firehose context; because they are essentially equivalent to
+        # sample freezelists as used in TCGA AWGs, for example.
 
+        projects = dict()
         diced_root = os.path.abspath(self.dice_root_dir)
-        projects = dict()                       # dict of dicts, one per project
 
         for program in common.immediate_subdirs(diced_root):
 
@@ -117,7 +106,6 @@ class create_loadfile(GDCtool):
             annotations = set()
 
             for projname in sorted(common.immediate_subdirs(program_dir)):
-
                 # Each project dict contains all the loadfile rows for the
                 # given project/cohort.  Keys are the entity_ids, values are
                 # dictionaries for the columns in a loadfile
@@ -363,26 +351,6 @@ def get_diced_metadata(project, project_root, datestamp):
     if os.path.exists(mpath):
         return mpath
     raise ValueError("Could not find dicing metadata: "+mpath)
-
-# def sample_type_lookup(etype):
-#     '''Convert long form sample types into letter codes.'''
-#     # FIXME: ideally this should come from a config file section, and
-#     #        the config file parser could/should be updated to support
-#     #        custom "program-specific" content
-#     lookup = {
-#         "Primary Tumor" : ("TP", "01"),
-#         "Recurrent Tumor" : ("TR", "02"),
-#         "Blood Derived Normal" : ("NB", "10"),
-#         "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
-#         "Additional - New Primary" : ("TAP", "05"),
-#         "Metastatic" : ("TM", "06"),
-#         "Additional Metastatic" : ("TAM", "07"),
-#         "Solid Tissue Normal": ("NT", "11"),
-#         "Buccal Cell Normal": ("NBC", "12"),
-#         "Bone Marrow Normal" : ("NBM", "14"),
-#     }
-#
-#     return lookup[etype]
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
