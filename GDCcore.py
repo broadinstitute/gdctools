@@ -71,12 +71,13 @@ class attrdict(dict):
         if srcdict is None:
             srcdict = {}
         dict.__init__(self, srcdict)
+        self.__dict__["default"] = default
 
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
         except KeyError:
-            return None
+            return self.__dict__["default"]
 
     def __setattr__(self, item, value):
         if self.__dict__.has_key(item):
