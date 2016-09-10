@@ -48,7 +48,8 @@ class GDCcli(argparse.ArgumentParser):
                 help='set verbosity level [%(default)s]')
         self.add_argument('--version',action='version',version=version)
         self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
-        self.add_argument('-c','--config', help='GDCtools configuration file')
+        self.add_argument('-c','--config', nargs='+',
+                            help='one or more configuration files')
         self.add_argument('-g', '--programs', nargs='+', metavar='program',
                          help='Limit to data from these cancer programs')
         self.add_argument('-p', '--projects', nargs='+', metavar='project',
