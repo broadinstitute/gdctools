@@ -6,12 +6,15 @@ from pprint import pprint
 
 core.set_codec(core.CODEC_DJSON)
 Endpoints=["projects", "cases", "files", "annotations"]
-Endpoints=["files"]
+#Endpoints = ["files"]
 
 fields = {}
 
 for ep in Endpoints:
-    mapping = core.get(ep + "/_mapping")
+    mapping = ep + "/_mapping"
+    core.set_debug(True)
+    mapping = core.get(mapping)
+    continue
     print("\n\n%s/_mapping contains: %s" % (ep, str(mapping.keys())))
     print(ep + " endpoint supports the query fields: ")
     for field in mapping["fields"]:

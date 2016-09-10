@@ -43,8 +43,10 @@ class GDCtool(object):
         '''
 
         # FIXME: before pushing to main repo, ensure mirror/dice tools enforce
-        # CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
-        #                   'dice_programs', 'dice_projects']
+        #       CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
+        #                        'dice_programs', 'dice_projects']
+        #
+        # ... AND ... that sample_report is ported to new config file scheme
 
         self.config = attrdict(default=attrdict())      # initially empty
         if not self.options.config:                     # config file list
