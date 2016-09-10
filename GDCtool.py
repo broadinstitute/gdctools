@@ -23,7 +23,7 @@ from GDCcli import GDCcli
 from GDCcore import *
 
 class GDCtool(object):
-    ''' Base class for each tool '''
+    ''' Base class for each tool in the GDCtools suite '''
 
     def __init__(self, version=None):
 
@@ -35,75 +35,57 @@ class GDCtool(object):
         self.options = self.cli.parse_args()
         self.parse_config()
 
-    def __configure(self, option, cfg_parser, multi=False):
-        '''Gets the value of "option" from the cfg_parser or it's default
-        If multi is True, the option is split by ',' and returned as list
-        '''
-        today = time.strftime('%Y_%m_%d')
-        CONFIG_DEFAULTS = {
-            'mirror' : {
-                'root_dir': 'gdc_mirror__' + today,
-                'log_dir' : 'gdc_mirror_log__' + today,
-                'programs': ['TCGA'],
-                'projects': None
-            },
-            'dice' : {
-                'root_dir': 'gdc_mirror__' + today,
-                'log_dir' : 'gdc_mirror_log__' + today,
-                'programs': 'TCGA',
-                'projects': None
-            }
-        }
-        # All options are namespaced
-        sect, opt = option.split('_', 1)
-        value = CONFIG_DEFAULTS[sect].get(opt, None)
-        if cfg_parser is not None and cfg_parser.has_option(sect, opt):
-            value = cfg_parser.get(sect, opt)
-            if multi: value = value.strip().split(',')
-
-        # If value was set by cli flag, overwrite it
-        value = getattr(self.options, option, value)
-        # Store the option in self
-        setattr(self, option, value)
-        return value
-
     def parse_config(self):
-        """Read options from config, and optionally override them with args"""
-        config_file = self.options.config
-        cfg = None
-        if config_file is not None:
-            cfg = ConfigParser.SafeConfigParser()
-            cfg.read(config_file)
+        '''
+        Read initial configuration state from one or more config files; store
+        this state within .config member, a nested dict whose keys may also be
+        referenced as attributes (safely, with a default value of None if unset)
+        '''
 
-        CONFIG_ITEMS = [ 'mirror_root_dir', 'mirror_log_dir',
-                          'dice_root_dir', 'dice_log_dir']
-        CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
-                         'dice_programs', 'dice_projects']
+        # FIXME: before pushing to main repo, ensure mirror/dice tools enforce
+        # CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
+        #                   'dice_programs', 'dice_projects']
 
-        for conf in CONFIG_ITEMS:
-            self.__configure(conf, cfg)
+        self.config = attrdict(default=attrdict())      # initially empty
+        if not self.options.config:                     # config file list
+            return
 
-        for conf in CONFIG_LISTS:
-            self.__configure(conf, cfg, True)
+        cfgparser = ConfigParser.SafeConfigParser()
+        cfgparser.read( self.options.config )
 
-        # DEFAULT section defines interpolation vars for substitution in other
-        # sections; these vars behave as if they were defined in every section
-        DEFAULT_VARS = set([ item[0] for item in cfg.items('DEFAULT')])
+        # [DEFAULT] defines vars for interpolation/substitution in other sections
+        default_vars = [ item[0] for item in cfgparser.items('DEFAULT') ]
 
-        self.aggregates = dict()
-        if cfg.has_section('aggregates'):
-            # Avoid treating default/interpolation vars as aggregate definitions
-            for aggr in (set(cfg.options('aggregates')) - DEFAULT_VARS):
-                aggr = aggr.upper()
-                self.aggregates[aggr] = cfg.get('aggregates', aggr)
+        config = self.config
+        for section in cfgparser.sections():
+            config[section] = attrdict()
+            for option in cfgparser.options(section):
+                # DEFAULT vars ALSO behave as though they were defined in every
+                # section, but we purposely skip them here so that each section
+                # reflects only the options explicitly defined in that section
+                if option not in default_vars:
+                    config[section][option] = cfgparser.get(section, option)
+
+    def validate_config(self, vars_to_examine):
+        '''
+        Ensure that sufficient configuration state has been defined for tool to
+        initiate its work; should only be called after CLI flags are parsed,
+        because CLI has the highest precedence in setting configuration state
+        '''
+        for v in vars_to_examine:
+            result = eval("self.config." + v)
+            if result is None:
+                gabort(100, "Required configuration variable is unset: %s" % v)
 
     def status(self):
         # Emit system info (as header comments suitable for TSV, etc) ...
         gprint('#')  # @UndefinedVariable
         gprint('# %-22s = %s' % (self.__class__.__name__ + ' version ',  # @UndefinedVariable
                                  self.cli.version))
+        gprint('#')  # @UndefinedVariable
 
 if __name__ == "__main__":
     tool = GDCtool()
     tool.execute()
     tool.status()
+
