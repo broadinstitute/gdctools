@@ -59,6 +59,7 @@ class gdc_dicer(GDCtool):
                          action='store_true', help=fd_help)
 
     def parse_args(self):
+        '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
         config = self.config
         if opts.log_dir: config.dice.log_dir = opts.log_dir
@@ -71,9 +72,6 @@ class gdc_dicer(GDCtool):
         # If undefined, discover which GDC program(s) data to dice
         if not config.programs:
             config.programs = common.immediate_subdirs(config.mirror.dir)
-        elif isinstance(config.programs, basestring):
-            # Otherwise ensure GDC programs config state is a list, not string
-            config.programs = config.programs.split(',')
 
         # FIXME: Dicer will only work correctly with one program, since
         # projects are not linked to which program they are from
@@ -84,9 +82,6 @@ class gdc_dicer(GDCtool):
                 projects.extend(common.immediate_subdirs(mirror_prog_root))
             # Filter the metadata folders out
             config.projects = [p for p in projects if p != 'metadata']
-        elif isinstance(config.projects, basestring):
-            # Otherwise ensure GDC projects config state is a list, not string
-            config.projects = config.projects.split(',')
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
