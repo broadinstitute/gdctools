@@ -44,6 +44,7 @@ class GDCcli(argparse.ArgumentParser):
         super(GDCcli,self).__init__(description=descrip,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
 
+        # Note that args with nargs=+ will be instantiated as lists
         self.add_argument('--verbose', dest='verbose', action='count',
                 help='set verbosity level [%(default)s]')
         self.add_argument('--version',action='version',version=version)
