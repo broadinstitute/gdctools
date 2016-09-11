@@ -46,7 +46,7 @@ class create_loadfile(GDCtool):
         if opts.dice_dir: config.dice.dir = opts.dice_dir
         if opts.load_dir: config.loadfiles.dir = opts.load_dir
         if opts.file_prefix: config.loadfiles.file_prefix = opts.file_prefix
-        if opts.projects: config.loadfiles.projects = opts.projects
+        if opts.projects: config.projects = opts.projects
         if config.aggregates:
             # Enforce constraint that project (cohort) names be in uppercase
             # This is necesssary because ConfigParser lowercases option names
@@ -85,8 +85,6 @@ class create_loadfile(GDCtool):
         file_prefix = self.config.loadfiles.file_prefix
 
         # FIXME: this should respect PROGRAM setting(s) from config file or CLI
-        # FIXME: PROGRAM and PROJECTS belong in [DEFAULT] section of config file,
-        #        as they are global/common across mirror/dice/loadfiles sections
         for program in common.immediate_subdirs(dice_dir):
 
             # Auto-generated loadfiles should not mix data across >1 program
@@ -99,7 +97,7 @@ class create_loadfile(GDCtool):
             program_dir = os.path.join(dice_dir, program)
             annotations = set()
 
-            projnames = self.config.loadfiles.projects
+            projnames = self.config.projects
             if not projnames:
                 projnames = common.immediate_subdirs(program_dir)
 
@@ -347,7 +345,7 @@ class create_loadfile(GDCtool):
             # Also guard against extreme version of above edge case, where NONE
             # of the projects/cohorts in this aggregate definition were loaded
             if aggregate:
-                print("Aggregate: {0} = {1}".format(aggr_name, aggregate.keys()))
+                print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
                 self.generate_loadfiles(aggr_name, annotations, aggregate)
 
         # ... finally, assemble a compositle loadfile for all available samples
