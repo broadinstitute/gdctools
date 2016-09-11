@@ -40,19 +40,13 @@ class create_loadfile(GDCtool):
         self.program = None
 
     def parse_args(self):
+        '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
         config = self.config
-        # Give chance for config file settings to be overriden by CLI flags
         if opts.dice_dir: config.dice.dir = opts.dice_dir
         if opts.load_dir: config.loadfiles.dir = opts.load_dir
         if opts.file_prefix: config.loadfiles.file_prefix = opts.file_prefix
         if opts.projects: config.projects = opts.projects
-        if config.aggregates:
-            # Enforce constraint that project (cohort) names be in uppercase
-            # This is necesssary because ConfigParser lowercases option names
-            for key, val in config.aggregates.items():
-                config.aggregates[key.upper()] = config.aggregates.pop(key)
-
         self.validate_config(["dice.dir","loadfiles.dir"])
 
     def inspect_data(self):
