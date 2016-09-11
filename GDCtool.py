@@ -42,11 +42,12 @@ class GDCtool(object):
         referenced as attributes (safely, with a default value of None if unset)
         '''
 
-        # FIXME: before pushing to main repo, ensure mirror/dice tools enforce
-        #       CONFIG_LISTS = [ 'mirror_programs', 'mirror_projects',
-        #                        'dice_programs', 'dice_projects']
+        # FIXME: b4 pushing to main repo, ensure mirror/dice tools enforce these config state vars as lists:
+        #      gdc_mirror 'mirror_programs', 'mirror_project
+        #      gdc_dice   'dice_programs', 'dice_projects'       *** STATUS == DONE ***
         #
-        # ... AND ... that sample_report is ported to new config file scheme
+        # ... AND that sample_report is completely ported to new config file scheme
+        #     ... INCLUDINGlistification of program/projects config vars as done for gdc_dice & gdc_mirror
 
         self.config = attrdict(default=attrdict())      # initially empty
         if not self.options.config:                     # config file list
@@ -54,18 +55,20 @@ class GDCtool(object):
 
         cfgparser = ConfigParser.SafeConfigParser()
         cfgparser.read( self.options.config )
-
-        # [DEFAULT] defines vars for interpolation/substitution in other sections
-        default_vars = [ item[0] for item in cfgparser.items('DEFAULT') ]
-
         config = self.config
+
+        # [DEFAULT] defines common variables for interpolation/substitution in
+        # other sections, and are stored at the root level of the config object
+        for keyval in cfgparser.items('DEFAULT'):
+            config[keyval[0]] = keyval[1]
+
         for section in cfgparser.sections():
             config[section] = attrdict()
             for option in cfgparser.options(section):
                 # DEFAULT vars ALSO behave as though they were defined in every
                 # section, but we purposely skip them here so that each section
                 # reflects only the options explicitly defined in that section
-                if option not in default_vars:
+                if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
 
     def validate_config(self, vars_to_examine):
