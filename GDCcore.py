@@ -64,20 +64,25 @@ def gabort(errCode=1, *args, **kwargs):
     sys.exit(errCode)
 
 class attrdict(dict):
-    """ dict where members can be accessed as attributes, and default value
-    returned for non-existent attributes is None.
+    """ dict whose members can be accessed as attributes, and default value is
+    transparently returned for undefined keys; this yields more natural syntax
+    dict[key]/dict.key for all use cases, instead of dict.get(key, <default>)
     """
+
     def __init__(self, srcdict=None, default=None):
         if srcdict is None:
             srcdict = {}
         dict.__init__(self, srcdict)
-        self.__dict__["default"] = default
+        self.__dict__["__default__"] = default
+
+    def __getitem__(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            return self.__dict__["__default__"]
 
     def __getattr__(self, item):
-        try:
-            return self.__getitem__(item)
-        except KeyError:
-            return self.__dict__["default"]
+        return self.__getitem__(item)
 
     def __setattr__(self, item, value):
         if self.__dict__.has_key(item):
