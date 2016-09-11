@@ -42,15 +42,8 @@ class GDCtool(object):
         referenced as attributes (safely, with a default value of None if unset)
         '''
 
-        # FIXME: b4 pushing to main repo, ensure mirror/dice tools enforce these config state vars as lists:
-        #      gdc_mirror 'mirror_programs', 'mirror_project
-        #      gdc_dice   'dice_programs', 'dice_projects'       *** STATUS == DONE ***
-        #
-        # ... AND that sample_report is completely ported to new config file scheme
-        #     ... INCLUDINGlistification of program/projects config vars as done for gdc_dice & gdc_mirror
-
         self.config = attrdict(default=attrdict())      # initially empty
-        if not self.options.config:                     # config file list
+        if not self.options.config:                     # list of config files
             return
 
         cfgparser = ConfigParser.SafeConfigParser()
@@ -70,6 +63,18 @@ class GDCtool(object):
                 # reflects only the options explicitly defined in that section
                 if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
+
+        # Ensure programs & projects config state (if present) are lists
+        if config.programs:
+            config.programs = config.programs.split(',')
+        if config.projects:
+            config.projects = config.projects.split(',')
+
+        # Ensure that aggregate cohort names (if present) are in uppercase
+        # (necessary because ConfigParser returns option names in lowercase)
+        if config.aggregates:
+            for key, val in config.aggregates.items():
+                config.aggregates[key.upper()] = config.aggregates.pop(key)
 
     def validate_config(self, vars_to_examine):
         '''
