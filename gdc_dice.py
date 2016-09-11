@@ -60,51 +60,52 @@ class gdc_dicer(GDCtool):
 
     def parse_args(self):
         opts = self.options
-
-        if opts.log_dir: self.dice_log_dir = opts.log_dir
-        if opts.mirror_dir: self.mirror_root_dir = opts.mirror_dir
-        if opts.dice_dir: self.dice_dir = opts.dice_dir
-        if opts.programs: self.dice_programs = opts.programs
-        if opts.projects: self.dice_projects = opts.projects
+        config = self.config
+        if opts.log_dir: config.dice.log_dir = opts.log_dir
+        if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
+        if opts.dice_dir: config.dice.dir = opts.dice_dir
+        if opts.programs: config.programs = opts.programs
+        if opts.projects: config.projects = opts.projects
         self.force_dice = opts.force_dice
 
-        mirror_root = self.mirror_root_dir
-
-        # Discover which GDC programs & projects data will be diced
-        if not self.dice_programs:
-            self.dice_programs = common.immediate_subdirs(mirror_root)
+        # If undefined, discover which GDC program(s) data to dice
+        if not config.programs:
+            config.programs = common.immediate_subdirs(config.mirror.dir)
+        elif isinstance(config.programs, basestring):
+            # Otherwise ensure GDC programs config state is a list, not string
+            config.programs = config.programs.split(',')
 
         # FIXME: Dicer will only work correctly with one program, since
         # projects are not linked to which program they are from
-        if not self.dice_projects:
+        if not config.projects:
             projects = []
-            for program in self.dice_programs:
-                mirror_prog_root = os.path.join(mirror_root, program)
+            for program in config.programs:
+                mirror_prog_root = os.path.join(config.mirror.dir, program)
                 projects.extend(common.immediate_subdirs(mirror_prog_root))
             # Filter the metadata folders out
-            self.dice_projects = [p for p in projects if p != 'metadata']
-
+            config.projects = [p for p in projects if p != 'metadata']
+        elif isinstance(config.projects, basestring):
+            # Otherwise ensure GDC projects config state is a list, not string
+            config.projects = config.projects.split(',')
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        mirror_root = self.mirror_root_dir
-        diced_root = self.dice_dir
         trans_dict = build_translation_dict(resource_filename("gdctools",
                                                 "config/annotations_table.tsv"))
-
+        config = self.config
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
 
-        # Iterable of programs, either user specified or discovered from folder names in the diced root
-        if self.dice_programs:
-            programs = self.dice_programs
+        # Loop over programs, either from user or discovered from folder names in diced root
+        if config.programs:
+            programs = config.programs
         else:
-            programs = common.immediate_subdirs(mirror_root)
+            programs = common.immediate_subdirs(config.mirror.dir)
 
         for program in programs:
-            diced_prog_root = os.path.join(diced_root, program)
-            mirror_prog_root = os.path.join(mirror_root, program)
+            diced_prog_root = os.path.join(config.dice.dir, program)
+            mirror_prog_root = os.path.join(config.mirror.dir, program)
 
 
             # Ensure no simultaneous mirroring/dicing
@@ -120,11 +121,9 @@ class gdc_dicer(GDCtool):
                 timestamp = self.timestamp
                 logging.info("Dicing " + program)
                 logging.info("Timestamp: " + self.timestamp)
-                projects = self.dice_projects
 
                 agg_case_data = dict()
-
-                for project in sorted(projects):
+                for project in sorted(config.projects):
                     # Load metadata from mirror, getting the latest metadata
                     # earlier than the given timestamp
                     raw_project_root = os.path.join(mirror_prog_root, project)
@@ -138,7 +137,6 @@ class gdc_dicer(GDCtool):
                         _warning += " earlier than " + timestamp
                         logging.warning(_warning)
                         continue
-
 
                     latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
                     metadata = meta.latest_metadata(latest_meta)
@@ -229,11 +227,10 @@ class gdc_dicer(GDCtool):
 
     def execute(self):
         super(gdc_dicer, self).execute()
-        opts = self.options
         self.parse_args()
-        # log to todays date, even if the mirror timestamp is slightly different
+        # Log to todays date, even if the mirror timestamp is different
         log_timestamp = common.timetuple2stamp()
-        common.init_logging(log_timestamp, self.dice_log_dir, "gdcDice")
+        common.init_logging(log_timestamp, self.config.dice.log_dir, "gdcDice")
         try:
             logging.info(self.aggregates)
             self.dice()
@@ -457,7 +454,6 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
             })
             meta_file_writer.writerow(rowdict)
 
-
 def _case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''
     # Use a case-based dictionary to count each data type on a case/sample basis
@@ -573,7 +569,7 @@ def _build_heatmap_matrix(case_data):
 
 ## Converter mappings
 def converter(converter_name):
-    """Returns the converter function by name using a dictionary lookup."""
+    '''Returns the file conversion function by name, using dictionary lookup'''
     CONVERTERS = {
         'clinical' : clinical,
         'copy' : copy,
@@ -594,8 +590,7 @@ def converter(converter_name):
 
     return CONVERTERS[converter_name]
 
-# Converters
-# Each must return a dictionary mapping case_ids to the diced file paths
+# File converter implementations: each must return a dict mapping case_ids to the diced file paths
 def copy(file_dict, mirror_path, dice_path):
     print("Dicing with 'copy'")
     pass
@@ -620,8 +615,10 @@ def seg_broad(file_dict, mirror_path, dice_path):
 
 def seg_harvard(file_dict, mirror_path, dice_path):
     pass
+
 def seg_harvardlowpass(file_dict, mirror_path, dice_path):
     pass
+
 def seg_mskcc2(file_dict, mirror_path, dice_path):
     pass
 
