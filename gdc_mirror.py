@@ -19,7 +19,6 @@ import sys
 import os
 import logging
 import time
-import ConfigParser
 import json
 
 from GDCtool import GDCtool
@@ -31,25 +30,21 @@ from lib.constants import LOGGING_FMT
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.8.0")
+        super(gdc_mirror, self).__init__(version="0.8.1")
         cli = self.cli
-
-        desc =  'Create local mirror of the data from arbitrary programs '\
-                'and projects warehoused at the Genomic Data Commons (GDC)\n'
-        cli.description = desc
-
-        #Optional overrides of config file
-        cli.add_argument('-m', '--mirror-dir', help='Root of mirrored data folder tree')
-
-        cli.add_argument('-d', '--data-categories', nargs='+', metavar='category',
-                         help='Mirror only these data categories. Many data categories have spaces, use quotes to delimit')
-
+        cli.description = 'Create local mirror of the data from arbitrary '\
+                        'programs and projects\nwarehoused at the Genomic Data'\
+                        ' Commons (GDC)\n'
+        cli.add_argument('-m', '--mirror-dir',
+                        help='Root of mirrored data folder tree')
+        cli.add_argument('-d', '--data-categories',nargs='+',metavar='category',
+                        help='Mirror only these data categories. Many data '+
+                        'categories have spaces, use quotes to delimit')
         cli.add_argument('-w', '--workflow-type',
-                         help='Mirror only data of thisworkflow type')
-        fdl_help = "Skip download-avoidance of files already on disk."
-        fdl_help += " Avoid doing this for incremental mirrors."
-        cli.add_argument('-f', '--force-download',
-                         action='store_true', help=fdl_help)
+                        help='Mirror only data of thisworkflow type')
+        cli.add_argument('-f', '--force-download', action='store_true',
+                        help='Download files even if already mirrored locally.'+
+                             ' (DO NOT use during incremental mirroring)')
 
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
@@ -57,13 +52,13 @@ class gdc_mirror(GDCtool):
         return self.timestamp
 
     def parse_args(self):
-        """Read options from config, and optionally override them with args"""
-        # Config options that can be overridden by cli args
+        '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
-        if opts.log_dir is not None: self.mirror_log_dir = opts.log_dir
-        if opts.mirror_dir is not None: self.mirror_dir = opts.mirror_dir
-        if opts.projects is not None: self.mirror_projects = opts.projects
-        if opts.programs is not None: self.mirror_programs = opts.programs
+        config = self.config
+        if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
+        if opts.log_dir: config.mirror.log_dir = opts.log_dir
+        if opts.projects: config.projects = opts.projects
+        if opts.programs: config.programs = opts.programs
         self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
 
@@ -74,11 +69,12 @@ class gdc_mirror(GDCtool):
             logging.info("Configuration File: %s",
                          os.path.abspath(self.options.config))
 
-        projects = self.mirror_projects
-        programs = self.mirror_programs
+        config = self.config
+        projects = config.projects
+        programs = config.programs
 
-        if not os.path.isdir(self.mirror_dir):
-            os.makedirs(self.mirror_dir)
+        if not os.path.isdir(config.mirror.dir):
+            os.makedirs(config.mirror.dir)
 
         if projects is None:
             if programs is None:
@@ -107,12 +103,11 @@ class gdc_mirror(GDCtool):
         # Now loop over each program, acquiring lock
         for prgm in program_projects:
             projects = program_projects[prgm]
-            prgm_root = os.path.abspath(os.path.join(self.mirror_dir, prgm))
+            prgm_root = os.path.abspath(os.path.join(config.mirror.dir, prgm))
 
             with common.lock_context(prgm_root, "mirror"):
                 for project in sorted(projects):
                     self.mirror_project(prgm, project)
-
 
         logging.info("Mirror completed successfully.")
 
@@ -173,7 +168,7 @@ class gdc_mirror(GDCtool):
         logging.info("Found " + str(len(data_categories)) + " data categories: "
                      + ",".join(data_categories))
 
-        proj_dir = os.path.join(self.mirror_dir, program, project)
+        proj_dir = os.path.join(self.config.mirror.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
         # Read the previous metadata, if present
@@ -205,20 +200,13 @@ class gdc_mirror(GDCtool):
         with open(meta_json, 'w') as jf:
             json.dump(file_metadata, jf, indent=2)
 
-        # Write sample counts
-        # countsfile = ".".join([project, "sample_counts", tstamp, "tsv"])
-        # countspath = os.path.join(meta_folder, countsfile)
-        #
-        # proj_counts = self._sample_counts(program, project, data_categories)
-        # _write_counts(proj_counts, project, sorted(data_categories), countspath)
-
     def mirror_category(self, program, project, category,
                         workflow_type, prev_metadata):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
         tstamp = self.timestamp
-        proj_dir = os.path.join(self.mirror_dir, program, project)
+        proj_dir = os.path.join(self.config.mirror.dir, program, project)
         cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
 
         #Create data folder
@@ -246,7 +234,7 @@ class gdc_mirror(GDCtool):
         super(gdc_mirror, self).execute()
         self.parse_args()
         self.set_timestamp()
-        common.init_logging(self.timestamp, self.mirror_log_dir, "gdcMirror")
+        common.init_logging(self.timestamp, self.config.mirror.log_dir, "gdcMirror")
         try:
             self.mirror()
         except Exception as e:
