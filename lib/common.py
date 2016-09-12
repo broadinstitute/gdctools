@@ -145,13 +145,33 @@ def safe_make_hardlink(input_file_path,output_file_path):
             raise Exception(msg)
 
 def getTabFileHeader(filepath):
-    '''Return the column names of a tsv as a list''' 
+    '''Return the column names of a tsv as a list'''
     with open(filepath) as f:
         header = f.readline()
         if header:
             header = header.strip().split('\t')
     return header
 
+def map_blank_to_na(csvfile):
+    """
+    Convert all blank csv fields to 'NA'.
+
+    Yield the csv header,
+    and then yield each csv row with
+    all blank fields replaced by NAs.
+    """
+    yield csvfile.next()
+    for row in csvfile:
+        yield map(lambda f: f if f != '' else 'NA', row)
+
+def writeCsvFile(filename, data):
+    """
+    Write a row iterator's data to a csv file.
+    """
+    rawfile = open(filename, 'wb')
+    csvfile = csv.writer(rawfile, dialect='excel-tab', lineterminator='\n')
+    csvfile.writerows(data)
+    rawfile.close()
 
 #===========================================================================
 # The same as argparse.ArgumentDefaultsHelpFormatter, except using

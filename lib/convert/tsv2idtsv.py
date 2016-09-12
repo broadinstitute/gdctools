@@ -2,21 +2,21 @@
 
 import csv
 from lib.convert import util as convert_util
-from lib.common import safeMakeDirs
-from lib.meta import tcga_id
+from lib.common import safeMakeDirs, map_blank_to_na, writeCsvFile
+from lib.meta import tcga_id, diced_file_paths
 
 def process(file_dict, infile, outdir):
     # Should only produce one file
-    filepath = convert_util.diced_file_paths(outdir, file_dict)[0]
+    filepath = diced_file_paths(outdir, file_dict)[0]
     _tcga_id = tcga_id(file_dict)
     rawfile = open(infile, 'rb')
     csvfile = csv.reader(rawfile, dialect='excel-tab')
 
     csvfile_with_ids = tsv2idtsv(csvfile, _tcga_id)
-    csvfile_with_NAs = convert_util.map_blank_to_na(csvfile_with_ids)
+    csvfile_with_NAs = map_blank_to_na(csvfile_with_ids)
 
     safeMakeDirs(outdir)
-    convert_util.writeCsvFile(filepath, csvfile_with_NAs)
+    writeCsvFile(filepath, csvfile_with_NAs)
 
     rawfile.close()
 

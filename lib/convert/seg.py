@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import csv
-from lib.convert import util as converterUtils
-from lib.common import safeMakeDirs
+
+from lib.common import safeMakeDirs, writeCsvFile
 from lib import meta
 
 
 def process(file_dict, infile, outdir, dialect='seg_broad'):
     # Should only produce one outfile
-    outfile = converterUtils.diced_file_paths(outdir, file_dict)[0]
+    outfile = meta.diced_file_paths(outdir, file_dict)[0]
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
 
@@ -19,7 +19,7 @@ def process(file_dict, infile, outdir, dialect='seg_broad'):
     seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
 
     safeMakeDirs(outdir)
-    converterUtils.writeCsvFile(outfile, seg_file_data)
+    writeCsvFile(outfile, seg_file_data)
 
     rawfile.close()
     return outfile

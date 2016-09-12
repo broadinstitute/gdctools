@@ -338,7 +338,7 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
         if annot != 'UNRECOGNIZED':
             dice_path = os.path.join(diced_root, annot)
             # convert expected path to a relative path from the diced_root
-            expected_paths = convert_util.diced_file_paths(dice_path, file_dict)
+            expected_paths = meta.diced_file_paths(dice_path, file_dict)
             expected_paths = [os.path.abspath(p) for p in expected_paths]
             logging.info("Dicing file " + mirror_path)
             if not dry_run:

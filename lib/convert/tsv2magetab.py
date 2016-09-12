@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import csv
-from lib.convert import util as convert_util
-from lib.common import safeMakeDirs, getTabFileHeader
-from lib.meta import tcga_id
+
+from lib.common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile
+from lib.meta import tcga_id, diced_file_paths
 from os.path import basename
 
 def process(file_dict, infile, outdir, fpkm=False):
-    filepath = convert_util.diced_file_paths(outdir, file_dict)[0]
+    filepath = diced_file_paths(outdir, file_dict)[0]
     safeMakeDirs(outdir)
     _tcga_id = tcga_id(file_dict)
 
@@ -17,12 +17,11 @@ def process(file_dict, infile, outdir, fpkm=False):
     csvfile = csv.reader(fpkm_reader(rawfile) if fpkm else rawfile,
                          dialect='excel-tab')
 
-    csvfile_with_hdr = convert_util.change_header__generator(csvfile, hdr1,
-                                                             hdr2)
-    csvfile_with_NAs = convert_util.map_blank_to_na(csvfile_with_hdr)
+    csvfile_with_hdr = change_header__generator(csvfile, hdr1, hdr2)
+    csvfile_with_NAs = map_blank_to_na(csvfile_with_hdr)
 
     safeMakeDirs(outdir)
-    convert_util.writeCsvFile(filepath, csvfile_with_NAs)
+    writeCsvFile(filepath, csvfile_with_NAs)
 
     rawfile.close()
 
@@ -41,3 +40,19 @@ def fpkm_reader(rawfile):
     yield fpkm_header(rawfile.name)
     for line in rawfile:
         yield line
+
+def change_header__generator(csvfile, header1, header2=None):
+    """
+    Replace a csv header row with a new one (or two).
+
+    Skip the first row of the input csv file;
+    in its place, yield one (or two) new header(s),
+    and then yield the remainder of the input file.
+    """
+    yield header1
+    if header2:
+        yield header2
+
+    csvfile.next()
+    for row in csvfile:
+        yield row
