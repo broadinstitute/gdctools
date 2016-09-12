@@ -227,7 +227,6 @@ class gdc_dicer(GDCtool):
         log_timestamp = common.timetuple2stamp()
         common.init_logging(log_timestamp, self.config.dice.log_dir, "gdcDice")
         try:
-            logging.info(self.aggregates)
             self.dice()
         except Exception as e:
             logging.exception("Dicing FAILED:")
@@ -236,16 +235,15 @@ class gdc_dicer(GDCtool):
         '''Invert the Aggregate->Cohort dictionary to list all aggregates for
         a cohort.'''
         cohort_agg = dict()
-        for k, v in self.aggregates.iteritems():
+        for k, v in self.config.aggregates.iteritems():
             cohorts = v.split(',')
             for c in cohorts:
                 cohort_agg[c] = cohort_agg.get(c, []) + [k]
-        self.c_aggregates = cohort_agg
         return cohort_agg
 
     def aggregate_diced_metadata(self, prog_dir, timestamp):
         '''Aggregates the diced metadata files for aggregates'''
-        aggregates = self.aggregates
+        aggregates = self.config.aggregates
         for agg, cohorts in aggregates.iteritems():
             cohorts = sorted(cohorts.split(','))
             agg_meta_folder = os.path.join(prog_dir, agg, "metadata", timestamp)
