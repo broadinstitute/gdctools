@@ -27,7 +27,7 @@ from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.convert import tsv2magetab as gdac_tsv2magetab
-from lib.report import draw_heatmaps
+from lib.heatmap import draw_heatmaps
 from lib.convert import maf as mutect_maf
 from lib import common
 from lib import meta
@@ -192,7 +192,7 @@ class gdc_dicer(GDCtool):
 
                     # Heatmaps per sample
                     logging.info("Generating heatmaps for " + project)
-                    create_heatmaps(case_data, project, timestamp, diced_meta_dir)
+                    draw_heatmaps(case_data, project, timestamp, diced_meta_dir)
 
                     # keep track of aggregate case data
                     project_aggregates = cohort_agg_dict.get(project, [])
@@ -215,7 +215,7 @@ class gdc_dicer(GDCtool):
                     _write_counts(ac_data, agg, counts_file)
 
                     logging.info("Generating aggregate heatmaps for " + agg)
-                    create_heatmaps(ac_data, agg, timestamp, meta_dir)
+                    draw_heatmaps(ac_data, agg, timestamp, meta_dir)
 
         logging.info("Dicing completed successfuly")
 
@@ -533,31 +533,6 @@ def _write_counts(case_data, proj_name, f):
         main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
         tots = [str(counts.get(main_code,{}).get(t, 0)) for t in rdt]
         out.write('Totals\t' + '\t'.join(tots) + "\n")
-
-def create_heatmaps(case_data, project, timestamp, diced_meta_dir):
-    rownames, matrix = _build_heatmap_matrix(case_data)
-    draw_heatmaps(rownames, matrix, project, timestamp, diced_meta_dir)
-
-def _build_heatmap_matrix(case_data):
-    '''Build a 2d matrix and rownames from annotations and load dict'''
-    rownames = REPORT_DATA_TYPES
-    annot_sample_data = dict()
-    for case in case_data:
-        c_dict = case_data[case]
-        # Flatten case_data[case_id][sample_type] = set(Data types)
-        # into annot_sample_data[case_id] = set(Data types)
-        # for simpler heatmap
-        data_types = {dt for st in c_dict for dt in c_dict[st]}
-        annot_sample_data[case] = data_types
-
-    matrix = [[] for row in rownames]
-    # Now iterate over samples, inserting a 1 if data is presente
-    for r in range(len(rownames)):
-        for cid in sorted(annot_sample_data.keys()):
-            # append 1 if data is present, else 0
-            matrix[r].append( 1 if rownames[r] in annot_sample_data[cid] else 0)
-
-    return rownames, matrix
 
 ## Converter mappings
 def converter(converter_name):
