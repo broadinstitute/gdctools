@@ -15,65 +15,39 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 # }}}
 
 from __future__ import print_function
-from GDCtool import GDCtool
 import logging
 import os
 import csv
-import ConfigParser
 from functools import cmp_to_key
 
 from lib import common
 from lib import meta
+from GDCtool import GDCtool
 
 class create_loadfile(GDCtool):
 
     def __init__(self):
-        super(create_loadfile, self).__init__(version="0.3.0")
+        super(create_loadfile, self).__init__(version="0.3.1")
         cli = self.cli
-
-        desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
-        cli.description = desc
-
-        cli.add_argument('-d', '--dice-dir',
-                         help='Root of diced data directory')
-        cli.add_argument('-o', '--load-dir',
-                         help='Where generated loadfiles will be placed')
-        cli.add_argument('datestamp', nargs='?',
-                         help='Dice using metadata from a particular date.'\
+        cli.description = 'Create a Firehose-style loadfile from diced GDC data'
+        cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
+                        ' referenced in loadfile [defaults to value of dice_dir]')
+        cli.add_argument('-d', '--dice-dir', help='Dir from which diced data will be read')
+        cli.add_argument('-o', '--load-dir', help='Where generated loadfiles will be placed')
+        cli.add_argument('datestamp', nargs='?', help='Dice using metadata from a particular date.'\
                          'If omitted, the latest version will be used')
-
-        self.datestamp = None   # FIXME: rationalize this with datestamp optional arg
+        self.datestamp = None
         self.program = None
 
     def parse_args(self):
+        '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
-
-        # Parse custom [loadfiles] section from configuration file.
-        # This logic is intentionally omitted from GDCtool:parse_config, since
-        # loadfiles are only useful to FireHose, and this tool is not distributed
-
-        if opts.config:
-            cfg = ConfigParser.ConfigParser()
-            cfg.read(opts.config)
-
-            # FIXME: this implicitly uses default lowercase behavior of config
-            #        parser ... which I believe we consider a bit more
-            #        For case sensitivity we can use the str() function as in:
-            #           cfg.optionxform = str
-
-            if cfg.has_option('loadfiles', 'load_dir'):
-                self.load_dir = cfg.get('loadfiles', 'load_dir')
-            if cfg.has_option('loadfiles', 'heatmaps_dir'):
-                self.heatmaps_dir = cfg.get('loadfiles', 'heatmaps_dir')
-
-            self.aggregates = dict()
-            if cfg.has_section('aggregates'):
-                for aggr in cfg.options('aggregates'):
-                    aggr = aggr.upper()
-                    self.aggregates[aggr] = cfg.get('aggregates', aggr)
-
-        if opts.dice_dir: self.dice_root_dir = opts.dice_dir
-        if opts.load_dir: self.load_dir = opts.load_dir
+        config = self.config
+        if opts.dice_dir: config.dice.dir = opts.dice_dir
+        if opts.load_dir: config.loadfiles.dir = opts.load_dir
+        if opts.file_prefix: config.loadfiles.file_prefix = opts.file_prefix
+        if opts.projects: config.projects = opts.projects
+        self.validate_config(["dice.dir","loadfiles.dir"])
 
     def inspect_data(self):
 
@@ -95,16 +69,17 @@ class create_loadfile(GDCtool):
         # derived from that tissue sample (e.g. copy number, gene expression,
         # miR expression, etc).
         #
-        # FIXME: I'm intentionally trying to describe this in a Firehose-agnostic
-        #        way, because I'm now leaning heavily in the direction that loadfile
-        #        generation may indeed be something of value to others outside the
-        #        Broad; because they are equivalent to sample freeze lists as used
-        #        in TCGA, for example.
+        # Loadfiles are intentionally described in a Firehose-agnostic way, b/c
+        # loadfile generation may indeed be something of value to others outside
+        # of Broad/Firehose context; because they are essentially equivalent to
+        # sample freezelists as used in TCGA AWGs, for example.
 
-        diced_root = os.path.abspath(self.dice_root_dir)
-        projects = dict()                       # dict of dicts, one per project
+        projects = dict()
+        dice_dir = self.config.dice.dir
+        file_prefix = self.config.loadfiles.file_prefix
 
-        for program in common.immediate_subdirs(diced_root):
+        # FIXME: this should respect PROGRAM setting(s) from config file or CLI
+        for program in common.immediate_subdirs(dice_dir):
 
             # Auto-generated loadfiles should not mix data across >1 program
             if self.program:
@@ -113,11 +88,14 @@ class create_loadfile(GDCtool):
             else:
                 self.program = program
 
-            program_dir = os.path.join(diced_root, program)
+            program_dir = os.path.join(dice_dir, program)
             annotations = set()
 
-            for projname in sorted(common.immediate_subdirs(program_dir)):
+            projnames = self.config.projects
+            if not projnames:
+                projnames = common.immediate_subdirs(program_dir)
 
+            for projname in sorted(projnames):
                 # Each project dict contains all the loadfile rows for the
                 # given project/cohort.  Keys are the entity_ids, values are
                 # dictionaries for the columns in a loadfile
@@ -134,6 +112,10 @@ class create_loadfile(GDCtool):
                 else:
                     self.datestamp = projdate
 
+                if not self.datestamp:
+                    logging.info("No data found for %s, ignoring" % projname)
+                    continue
+
                 logging.info("Inspecting data for {0} version {1}"\
                                 .format(projname, self.datestamp))
 
@@ -147,8 +129,11 @@ class create_loadfile(GDCtool):
                     for row in reader:
                         case_id = row['case_id']
                         annot = row['annotation']
-                        filepath = row['file_name']
                         annotations.add(annot)
+
+                        filepath = row['file_name']
+                        if file_prefix:
+                            filepath = filepath.replace(dice_dir,file_prefix,1)
 
                         # Make sure there is always an entry for this case in
                         # case samples, even if no samples will be added
@@ -225,7 +210,7 @@ class create_loadfile(GDCtool):
         datestamp = self.datestamp
 
         logging.info("Generating loadfile for {0}".format(projname))
-        loadfile_root = os.path.abspath(self.load_dir)
+        loadfile_root = os.path.abspath(self.config.loadfiles.dir)
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
@@ -259,7 +244,7 @@ class create_loadfile(GDCtool):
         sset_loadfile = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
         sset_loadfile = os.path.join(loadfile_root, sset_loadfile)
         logging.info("Writing sample set loadfile to " + sset_loadfile)
-        write_sampleset(samples_lfp, sset_loadfile, projname)
+        write_sset(samples_lfp, sset_loadfile, projname)
 
     def generate_master_loadfiles(self, projects, annotations):
         # Generate master loadfiles for all samples & sample sets
@@ -268,7 +253,7 @@ class create_loadfile(GDCtool):
         datestamp = self.datestamp
 
         logging.info("Generating master loadfiles for {0}".format(program))
-        loadfile_root = os.path.abspath(self.load_dir)
+        loadfile_root = os.path.abspath(self.config.loadfiles.dir)
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
@@ -318,7 +303,7 @@ class create_loadfile(GDCtool):
 
                 # combine filtered samples, but don't do this for aggregates
                 # to avoid double counting
-                if projname not in self.aggregates:
+                if projname not in self.config.aggregates:
                     proj_filtered = projname + "." + datestamp + ".filtered_samples.txt"
                     proj_filtered = os.path.join(loadfile_root, proj_filtered)
                     with open(proj_filtered) as pf:
@@ -343,12 +328,19 @@ class create_loadfile(GDCtool):
             self.generate_loadfiles(project, annotations, [projects[project]])
 
         # ... then, generate any aggregate loadfiles (>1 project/cohort)
-        for aggr_name, aggr_definition in self.aggregates.items():
-            print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
+        for aggr_name, aggr_definition in self.config.aggregates.items():
             aggregate = []
             for project in aggr_definition.split(","):
-                aggregate.append(projects[project])
-            self.generate_loadfiles(aggr_name, annotations, aggregate)
+                # Guard against case where project/cohort was not inspected due
+                # to omission from --projects flag, but is STILL in aggregates
+                project = projects.get(project, None)
+                if project:
+                    aggregate.append(project)
+            # Also guard against extreme version of above edge case, where NONE
+            # of the projects/cohorts in this aggregate definition were loaded
+            if aggregate:
+                print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
+                self.generate_loadfiles(aggr_name, annotations, aggregate)
 
         # ... finally, assemble a compositle loadfile for all available samples
         # and sample sets
@@ -363,26 +355,6 @@ def get_diced_metadata(project, project_root, datestamp):
     if os.path.exists(mpath):
         return mpath
     raise ValueError("Could not find dicing metadata: "+mpath)
-
-# def sample_type_lookup(etype):
-#     '''Convert long form sample types into letter codes.'''
-#     # FIXME: ideally this should come from a config file section, and
-#     #        the config file parser could/should be updated to support
-#     #        custom "program-specific" content
-#     lookup = {
-#         "Primary Tumor" : ("TP", "01"),
-#         "Recurrent Tumor" : ("TR", "02"),
-#         "Blood Derived Normal" : ("NB", "10"),
-#         "Primary Blood Derived Cancer - Peripheral Blood" : ("TB", "03"),
-#         "Additional - New Primary" : ("TAP", "05"),
-#         "Metastatic" : ("TM", "06"),
-#         "Additional Metastatic" : ("TAM", "07"),
-#         "Solid Tissue Normal": ("NT", "11"),
-#         "Buccal Cell Normal": ("NBC", "12"),
-#         "Bone Marrow Normal" : ("NBM", "14"),
-#     }
-#
-#     return lookup[etype]
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
@@ -433,10 +405,10 @@ def diced_file_comparator(a, b):
     '''Comparator function for barcodes, using the rules described in the GDAC
     FAQ entry for replicate samples: https://confluence.broadinstitute.org/display/GDAC/FAQ
     '''
+
     # Convert files to barcodes by splitting
     a = a.split('.')[0]
     b = b.split('.')[0]
-
 
     # Get the analytes and plates
     # TCGA-BL-A0C8-01A-11<Analyte>-<plate>-01
@@ -461,7 +433,7 @@ def diced_file_comparator(a, b):
         # Prefer H and R over T
         return 1
     elif analyte1 == "D":
-        # Prefer D over G,W,X, unless plat enumber is higher
+        # Prefer D over G,W,X, unless plate number is higher
         return -1 if plate2 <= plate1 else 1
     elif analyte2 == "D":
         return 1 if plate1 <= plate2 else -1
@@ -475,29 +447,27 @@ def choose_file(files):
     return selected, ignored
 
 def write_samples(samples_fp, filtered_fp, headers, samples):
-    # FIXME: touch up comments here
-    # Loop over sample ids, writing entries in outfile
-    # FIXME: presently assumes/requires at least one annot is defined
+    '''Loop over sample ids, filling in annotation columns for each'''
     for sample_id in sorted(samples):
         sample = samples[sample_id]
 
-        # Each row for a sample must have sample_id, individual_id,
-        # sample_type, and  tcga_sample_id at minimum
+        # Each row must at minimum have sample_id, individual_id,
+        # sample_type, and tcga_sample_id
         required_columns = headers[:4]
         chosen_row = "\t".join([sample[c] for c in required_columns])
 
         annot_columns = []
         filtered_rows = []
         for annot in headers[4:]:
-            # Trickier here, there is a list of possible files, use choose_file
-            # to pick the write one, and log the ignored files into the replicates
             files = sample.get(annot, None)
             if files is None:
                 annot_columns.append("__DELETE__")
             else:
+                # If >1 file is a candidate for this annotation (column),
+                # pick the most appropriate and record the remainder of
+                # the unselected files into the replicates pile
                 chosen, ignored = choose_file(files)
                 annot_columns.append(chosen)
-
                 chosen_barcode = os.path.basename(chosen).split('.')[0]
                 ignored_barcodes = [os.path.basename(i).split('.')[0] for i in ignored]
                 # Create a row for each filtered barcode
@@ -509,22 +479,30 @@ def write_samples(samples_fp, filtered_fp, headers, samples):
                     filtered_rows.append([participant_id, tumor_type, annot,
                                           filter_reason, removed_sample, chosen_barcode])
 
-        # write row of chosen annotations
+        # Write row of chosen annotations
         if len(annot_columns) > 0:
             chosen_row += "\t" + "\t".join(annot_columns)
         samples_fp.write(chosen_row + "\n")
 
-        # write row(s) of filtered barcodes
+        # Write row(s) of filtered barcodes
         for row in filtered_rows:
             row = "\t".join(row)
             filtered_fp.write(row + "\n")
 
-def write_sampleset(samples_lfp, sset_filename, sset_name):
+def write_sset(samples_lfp, sset_filename, sset_name):
+    '''
+    Emit a sample set file, which is just a 2-column table where each row
+    contains the ID of a sample and the name of a sample set in which that
+    sample will be a member.  Note that it is valid for a sample to be listed
+    in more than 1 sample set; e.g. consider the sample sets colon and rectal
+    sample sets COAD and READ, then imagine combining them into an aggregate
+    colorectal sample set COADREAD.  Each of the samples listed in COAD and
+    READ sample sets will also be listed in the aggregate COADREAD sample set.
+    '''
 
     # Rewind samples loadfile to beginning
     samples_lfp.seek(0)
 
-    # Create new sample set file
     outfile = open(sset_filename, "w")
     outfile.write("sample_set_id\tsample_id\n")
 
@@ -551,7 +529,6 @@ def write_sampleset(samples_lfp, sset_filename, sset_name):
 
 
         outfile.write(sset_data)
-
 
 if __name__ == "__main__":
     create_loadfile().execute()

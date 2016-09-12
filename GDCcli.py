@@ -31,9 +31,12 @@ class GDCcli(argparse.ArgumentParser):
     def __init__(self, descrip=None, version=None):
 
         if not descrip:
-            descrip =  'GDCtools: a suite of CLI tools to simplify interaction\n'
-            descrip += 'with MongoDB, directly from the *NIX command line and\n'
-            descrip += 'little to no JavaScript coding required.\n'
+            descrip =  'GDCtools: a suite of CLI tools plus Python bindings\n'
+            descrip += 'to simplify interaction with the Genomic Data Commons\n'
+            descrip += 'and perform useful data processing operations.  The\n'
+            descrip += 'GDCtools suite was inspired by the data processing\n'
+            descrip += 'done by Firehose & FireBrowse in the Broad Institute\n'
+            descrip += 'GDAC, as part of the The Cancer Genome Atlast.\n'
 
         if not version:
             version = GDCT_VERSION
@@ -41,23 +44,22 @@ class GDCcli(argparse.ArgumentParser):
         super(GDCcli,self).__init__(description=descrip,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
 
+        # Note that args with nargs=+ will be instantiated as lists
         self.add_argument('--verbose', dest='verbose', action='count',
                 help='set verbosity level [%(default)s]')
         self.add_argument('--version',action='version',version=version)
         self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
-        self.add_argument('-c','--config',
-                          help='GDCTool configuration file')
+        self.add_argument('-c','--config', nargs='+',
+                            help='One or more configuration files')
         self.add_argument('-g', '--programs', nargs='+', metavar='program',
-                         help='Limit to data from these cancer programs')
+                         help='Process data ONLY from these GDC programs')
         self.add_argument('-p', '--projects', nargs='+', metavar='project',
-                         help='Limit to data from these projects')
+                         help='Process data ONLY from these GDC projects')
 
         self.version = version
 
     def parse_args(self):
-
-        args = super(GDCcli,self).parse_args()
-        return args
+        return super(GDCcli,self).parse_args()
 
     def ok_to_continue(self, message=None):
 
