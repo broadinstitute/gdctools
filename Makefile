@@ -25,8 +25,8 @@ PIP=$(DEST)/bin/pip
 TOOLS= \
 	gdc_mirror \
 	gdc_dice \
-	create_legacy \
-	create_loadfile
+	create_loadfile \
+	sample_report
 
 CORE_SRC_FILES=\
 	GDCcli.py \
