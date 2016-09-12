@@ -50,11 +50,11 @@ class GDCcli(argparse.ArgumentParser):
         self.add_argument('--version',action='version',version=version)
         self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
         self.add_argument('-c','--config', nargs='+',
-                            help='one or more configuration files')
+                            help='One or more configuration files')
         self.add_argument('-g', '--programs', nargs='+', metavar='program',
-                         help='Limit to data from these cancer programs')
+                         help='Process data ONLY from these GDC programs')
         self.add_argument('-p', '--projects', nargs='+', metavar='project',
-                         help='Limit to data from these projects')
+                         help='Process data ONLY from these GDC projects')
 
         self.version = version
 
