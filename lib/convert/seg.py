@@ -3,10 +3,14 @@
 import csv
 from lib.convert import util as converterUtils
 from lib.common import safeMakeDirs
+from lib import meta
 
-def process(infile, file_dict, hyb_id, tcga_id, outdir, dialect):
+
+def process(file_dict, infile, outdir, dialect='seg_broad'):
     # Should only produce one outfile
     outfile = converterUtils.diced_file_paths(outdir, file_dict)[0]
+    hyb_id = file_dict['file_name'].split('.',1)[0]
+    tcga_id = meta.aliquot_id(file_dict)
 
     rawfile = open(infile, 'rb')
     csvfile = csv.DictReader(rawfile, dialect='excel-tab')

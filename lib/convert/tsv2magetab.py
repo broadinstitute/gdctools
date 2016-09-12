@@ -6,7 +6,7 @@ from lib.common import safeMakeDirs, getTabFileHeader
 from lib.meta import tcga_id
 from os.path import basename
 
-def process(infile, file_dict, outdir, fpkm=False):
+def process(file_dict, infile, outdir, fpkm=False):
     filepath = convert_util.diced_file_paths(outdir, file_dict)[0]
     safeMakeDirs(outdir)
     _tcga_id = tcga_id(file_dict)

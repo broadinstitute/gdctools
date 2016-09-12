@@ -14,7 +14,6 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 # }}}
 
-from __future__ import print_function
 import logging
 import json
 import csv
@@ -563,89 +562,48 @@ def _build_heatmap_matrix(case_data):
 ## Converter mappings
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''
+
+    # Needed when the source files are compressed
+    def _unzip(file_dict, mirror_path, dice_path, _converter):
+        # First unzip the mirror_path, which is a .gz
+        if not mirror_path.endswith('.gz'):
+            raise ValueError('Unexpected gzip filename: ' +
+                             os.path.basename(mirror_path))
+        uncompressed = mirror_path.rstrip('.gz')
+        with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
+            out.write(mf.read())
+        # Now dice extracted file
+        diced = _converter(file_dict, uncompressed, dice_path)
+        # Remove extracted file to save disk space
+        os.remove(uncompressed)
+        return diced
+
+    # Specialized converters when we need to supply additional arugemnts
+    def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
+        _unzip(file_dict, mirror_path, dice_path, gdac_tsv2idtsv.process)
+
+    def unzip_tsv2magetab(file_dict, mirror_path, dice_path):
+        return _unzip(file_dict, mirror_path, dice_path, gdac_tsv2magetab.process)
+
+    def fpkm2magetab(file_dict, mirror_path, dice_path):
+        gdac_tsv2magetab.process(file_dict, mirror_path, dice_path, fpkm=True)
+
+    def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
+        return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
+
     CONVERTERS = {
-        'clinical' : clinical,
-        'copy' : copy,
-        'magetab_data_matrix': magetab_data_matrix,
-        'maf': maf,
-        'seg_broad': seg_broad,
-        'seg_harvard': seg_harvard,
-        'seg_harvardlowpass': seg_harvardlowpass,
-        'seg_mskcc2' : seg_mskcc2,
-        'tsv2idtsv' : tsv2idtsv,
+        'clinical' : gdac_clin.process,
+        'maf': mutect_maf.process,
+        'seg_broad': gdac_seg.process,
+        'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,
-        'tsv2magetab': tsv2magetab,
+        'tsv2magetab': gdac_tsv2magetab.process,
         'unzip_tsv2magetab': unzip_tsv2magetab,
-        'fpkm2magetab': fpkm2magetab,
+        'fpkm2magetab': gdac_tsv2magetab.process,
         'unzip_fpkm2magetab': unzip_fpkm2magetab,
-        'maf' : maf,
     }
 
     return CONVERTERS[converter_name]
-
-# File converter implementations: each must return a dict mapping case_ids to the diced file paths
-def copy(file_dict, mirror_path, dice_path):
-    print("Dicing with 'copy'")
-    pass
-
-def clinical(file_dict, mirror_path, outdir):
-    case_id = meta.case_id(file_dict)
-    return {case_id: gdac_clin.process(mirror_path, file_dict, outdir)}
-
-def maf(file_dict, mirror_path, outdir):
-    mutect_maf.process(mirror_path, file_dict, outdir)
-
-def magetab_data_matrix(file_dict, mirror_path, dice_path):
-    pass
-
-def seg_broad(file_dict, mirror_path, dice_path):
-    infile = mirror_path
-    hyb_id = file_dict['file_name'].split('.',1)[0]
-    tcga_id = meta.aliquot_id(file_dict)
-    case_id = meta.case_id(file_dict)
-    return {case_id: gdac_seg.process(infile, file_dict, hyb_id,
-                                      tcga_id, dice_path, 'seg_broad')}
-
-def seg_harvard(file_dict, mirror_path, dice_path):
-    pass
-
-def seg_harvardlowpass(file_dict, mirror_path, dice_path):
-    pass
-
-def seg_mskcc2(file_dict, mirror_path, dice_path):
-    pass
-
-def tsv2idtsv(file_dict, mirror_path, dice_path):
-    gdac_tsv2idtsv.process(mirror_path, file_dict, dice_path)
-
-def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
-    _unzip(file_dict, mirror_path, dice_path, tsv2idtsv)
-
-def tsv2magetab(file_dict, mirror_path, dice_path):
-    gdac_tsv2magetab.process(mirror_path, file_dict, dice_path)
-
-def unzip_tsv2magetab(file_dict, mirror_path, dice_path):
-    return _unzip(file_dict, mirror_path, dice_path, tsv2magetab)
-
-def fpkm2magetab(file_dict, mirror_path, dice_path):
-    gdac_tsv2magetab.process(mirror_path, file_dict, dice_path, fpkm=True)
-
-def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
-    return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
-
-def _unzip(file_dict, mirror_path, dice_path, _converter):
-    # First unzip the mirror_path, which is a .gz
-    if not mirror_path.endswith('.gz'):
-        raise ValueError('Unexpected gzip filename: ' +
-                         os.path.basename(mirror_path))
-    uncompressed = mirror_path.rstrip('.gz')
-    with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
-        out.write(mf.read())
-    # Now dice extracted file
-    diced = _converter(file_dict, uncompressed, dice_path)
-    # Remove extracted file to save disk space
-    os.remove(uncompressed)
-    return diced
 
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)

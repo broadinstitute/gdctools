@@ -20,7 +20,7 @@ _DEFAULT_SAMPLE_INDEX       = 15
 # Remove these columns from the MAF if found
 # _COLUMNS_TO_REMOVE = ['patient_name', 'patient']
 
-def process(mafFile, file_dict, outdir, is_compressed=True):
+def process(file_dict, mafFile, outdir, is_compressed=True):
     safeMakeDirs(outdir)
     logging.info("Processing MAF %s...", mafFile)
     # First unzip the maf File to the outdir

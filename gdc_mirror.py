@@ -13,7 +13,6 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 '''
 
 # }}}
-from __future__ import print_function
 
 import sys
 import os
@@ -25,7 +24,6 @@ from GDCtool import GDCtool
 import lib.api as api
 import lib.meta as meta
 import lib.common as common
-from lib.constants import LOGGING_FMT
 
 class gdc_mirror(GDCtool):
 
@@ -78,8 +76,8 @@ class gdc_mirror(GDCtool):
                 logging.info("No programs or projects specified, using GDC API"\
                              "to discover available programs")
                 programs = api.get_programs()
-                logging.info(str(len(programs)) +
-                                 " program(s) found: " + ",".join(programs))
+                logging.info(str(len(programs))
+                             + " program(s) found: " + ",".join(programs))
 
             logging.info("No projects specified, using GDC API to discover"\
                          "available projects")
@@ -182,7 +180,6 @@ class gdc_mirror(GDCtool):
                                             self.workflow_type,
                                             prev_metadata)
             file_metadata.extend(cat_data)
-
 
         # Record project-level metadata
         # file dicts, counts, redactions, blacklist, etc.

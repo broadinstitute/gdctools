@@ -7,7 +7,6 @@ import tempfile
 
 from lib import meta
 from lib.common import safeMakeDirs, getTabFileHeader
-# FIXME: ugly import here, do a normal import...
 
 def diced_file_paths(root, file_dict):
     '''Return the name of the diced file to be created'''

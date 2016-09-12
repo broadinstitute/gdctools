@@ -144,17 +144,12 @@ def safe_make_hardlink(input_file_path,output_file_path):
             msg += 'Output file: %s\n' % output_file_path
             raise Exception(msg)
 
-
-#===============================================================================
-# Retrieve the first line of the provided tab-delimited file. If the file is
-# empty, return None.
-#===============================================================================
 def getTabFileHeader(filepath):
-    header = None
-    if os.path.getsize(filepath) != 0:
-        with open(filepath) as f:
-            reader = csv.reader(f, dialect='excel-tab')
-            header = reader.next()
+    '''Return the column names of a tsv as a list''' 
+    with open(filepath) as f:
+        header = f.readline()
+        if header:
+            header = header.strip().split('\t')
     return header
 
 
