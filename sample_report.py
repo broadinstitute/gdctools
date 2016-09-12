@@ -8,8 +8,8 @@ Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 sample_report: wrapper around SampleSummaryReport.R for GDC-derived data
 See the <root>/COPYRIGHT file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
-@author: Timothy DeFreitas
-@date:  2016_06_28
+@author: Timothy DeFreitas, Michael S. Noble
+@date:  2016_09_11
 '''
 
 # }}}
@@ -19,13 +19,10 @@ import subprocess
 import logging
 import os
 import csv
-import ConfigParser
 from pkg_resources import resource_filename
-
 from lib import common
 from lib import meta
 from GDCtool import GDCtool
-
 
 class sample_report(GDCtool):
 
@@ -33,98 +30,60 @@ class sample_report(GDCtool):
         super(sample_report, self).__init__(version="0.3.0")
         cli = self.cli
 
-        desc =  'Create a Firehose loadfile from diced Genomic Data Commons (GDC) data'
-        cli.description = desc
-
-        tstmp_help = 'Use the available data as of this date. Default is the'
-        tstmp_help += ' current time.'
-        cli.add_argument('timestamp', nargs='?', help=tstmp_help)
+        cli.description = 'Generate a sample report for a snapshot of data '\
+                        'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
+        cli.add_argument('timestamp', nargs='?', help='Use data available '+
+                        'as of this date. Default is the current time.')
+        # FIXME: add options for each config setting
 
     def parse_args(self):
-        opts = self.options
+        config = self.config
 
-        # Parse custom [loadfiles] section from configuration file.
-        # This logic is intentionally omitted from GDCtool:parse_config, since
-        # loadfiles are only useful to FireHose, and this tool is not distributed
-        if opts.config:
-            cfg = ConfigParser.ConfigParser()
-            cfg.read(opts.config)
-
-            # FIXME: this implicitly uses default lowercase behavior of config
-            #        parser ... which I believe we consider a bit more
-            #        For case sensitivity we can use the str() function as in:
-            #           cfg.optionxform = str
-
-            #FIXME: Surround the required config options in try/catch
-
-            #Filtered samples file, required
-            filtered_samples_file = cfg.get('loadfiles', 'filtered_samples')
-            # Where redactions are stored
-            redactions_dir = cfg.get('loadfiles', 'redactions_dir')
-            # Blacklisted samples or aliquots
-            blacklist_file = cfg.get('loadfiles', 'blacklist')
-            # Reference data
-            reference_dir = cfg.get('loadfiles', 'ref_dir')
-            # Where the sample reports are stored
-            reports_dir = cfg.get('loadfiles', 'reports_dir')
-            self.reports_dir = reports_dir
-
-            if cfg.has_option('loadfiles', 'load_dir'):
-                self.load_dir = cfg.get('loadfiles', 'load_dir')
-            if cfg.has_option('loadfiles', 'heatmaps_dir'):
-                self.heatmaps_dir = cfg.get('loadfiles', 'heatmaps_dir')
-
-            self.aggregates = dict()
-            if cfg.has_section('aggregates'):
-                for aggr in cfg.options('aggregates'):
-                    aggr = aggr.upper()
-                    self.aggregates[aggr] = cfg.get('aggregates', aggr)
-
-        else:
-            raise ValueError('Config file required for sample report generation')
+        # Ensure tool has sufficient configuration info to run
+        mandatory_config  =  ["dice.dir", "loadfiles.dir", "reference_dir"]
+        mandatory_config +=  ["reports.dir", "reports.blacklist"]
+        self.validate_config(mandatory_config)
 
         #FIXME: Hardcoded to just TCGA for now...
-        diced_prog_root = os.path.join(self.dice_root_dir, 'TCGA')
+        diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
 
-        # Get the latest timestamp as the sample report date, otherwise use
-        # timestamp
-        timestamp = opts.timestamp
+        # Use latest timestamp as default sample report date, else use from CLI
+        timestamp = self.options.timestamp
         if timestamp is None:
             timestamp = meta.latest_prog_timestamp(diced_prog_root)
 
-        self.report_dir = os.path.join(self.reports_dir, 'report_' + timestamp)
-        if not os.path.isdir(self.report_dir):
-            os.makedirs(self.report_dir)
+        config.reports.dir = os.path.join(config.reports.dir, 'report_'+timestamp)
+        if not os.path.isdir(config.reports.dir):
+            os.makedirs(config.reports.dir)
 
-        logging.info("Creating aggregate counts file...")
         # Now infer certain values from the diced data directory
-        sample_counts_file = self.create_agg_counts_file(diced_prog_root,
-                                                         timestamp)
-        heatmaps_dir = self.report_dir
         logging.info("Linking diced metadata...")
-        link_diced_metadata(diced_prog_root, self.report_dir,
-                            timestamp)
+        link_diced_metadata(diced_prog_root, config.reports.dir, timestamp)
+
         #FIXME: only works for TCGA
-        sample_loadfile = link_loadfile_metadata(self.load_dir, "TCGA",
-                                               self.report_dir, timestamp)
-        logging.info("Writing aggregates.txt to report dir...")
-        aggregates_file = self.aggregates_file()
+        sample_loadfile = link_loadfile_metadata(config.loadfiles.dir, "TCGA",
+                                            config.reports.dir, timestamp)
+
+        if config.aggregates:
+            logging.info("Writing aggregate cohort definitions to report dir...")
+            self.write_aggregate_definitions()
+            logging.info("Writing aggregate counts ...")
+            self.write_aggregate_counts(diced_prog_root,timestamp)
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
         gdc_sample_report = resource_filename("gdctools","lib/GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
-                              timestamp,           # Specified from cli
-                              self.report_dir,          # From config
-                              reference_dir,            # From config
-                              blacklist_file           # From config
+                              timestamp,                # Specified from cli
+                              config.reports.dir,
+                              config.reference_dir,
+                              config.reports.blacklist
                             ])
 
     def execute(self):
         super(sample_report, self).execute()
         common.init_logging()
         self.parse_args()
-        opts = self.options
         # TODO: better error handling
         logging.info("Running GDCSampleReport.R, ")
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
@@ -132,15 +91,14 @@ class sample_report(GDCtool):
         for line in iter(p.stdout.readline, ''):
             logging.info(line.rstrip())
 
-
-    def create_agg_counts_file(self, diced_prog_root, timestamp):
+    def write_aggregate_counts(self, diced_prog_root, timestamp):
         '''Create a program-wide counts file combining all cohorts, including aggregates'''
         # FIXME: TCGA hardcoded here
-        aggregate_cohorts = self.aggregates.keys()
+        aggregate_cohorts = self.config.aggregates.keys()
         aggregate_cohorts = [ag.replace('TCGA-', '') for ag in aggregate_cohorts]
 
         agg_counts_file = '.'.join(['sample_counts', timestamp, 'tsv'])
-        agg_counts_file = os.path.join(self.report_dir, agg_counts_file)
+        agg_counts_file = os.path.join(self.config.reports.dir, agg_counts_file)
 
         agg_annots = set()
         agg_counts = dict()
@@ -189,19 +147,16 @@ class sample_report(GDCtool):
 
         return agg_counts_file
 
-    def aggregates_file(self):
+    def write_aggregate_definitions(self):
         '''Creates an aggregates.txt file in the reports directory. aggregates
         information is read from the [aggregates] section of the config file.
         '''
-        agg_file = os.path.join(self.report_dir, 'aggregates.txt')
-
-        with open(agg_file, 'w') as f:
+        aggregates = self.config.aggregates
+        file = os.path.join(self.config.reports.dir, 'aggregates.txt')
+        with open(file, 'w') as f:
             f.write('Aggregate Name\tTumor Types\n')
-            for agg in sorted(self.aggregates.keys()):
-                f.write(agg + '\t' + self.aggregates[agg] + '\n')
-
-        return agg_file
-
+            for agg in sorted(aggregates.keys()):
+                f.write(agg + '\t' + aggregates[agg] + '\n')
 
 def _counts_files(diced_prog_root, timestamp):
     '''Generate the counts files for each project in a program'''
@@ -227,7 +182,6 @@ def _counts_files(diced_prog_root, timestamp):
             if os.path.isfile(count_f):
                 yield count_f
 
-
 def link_diced_metadata(diced_prog_root, report_dir, timestamp):
     '''Symlink all heatmaps into <reports_dir>/report_<timestamp> and return
     that directory'''
@@ -249,8 +203,6 @@ def link_diced_metadata(diced_prog_root, report_dir, timestamp):
         diced_meta = '.'.join([project, timestamp, 'diced_metadata', 'tsv'])
         link_metadata_file(meta_dir, report_dir, diced_meta)
 
-    return report_dir
-
 def link_metadata_file(from_dir, report_dir, filename):
     """ Ensures symlink report_dir/filename -> from_dir/filename exists"""
     from_path = os.path.join(from_dir, filename)
@@ -260,14 +212,13 @@ def link_metadata_file(from_dir, report_dir, filename):
     if os.path.isfile(from_path) and not os.path.isfile(rpt_path):
         os.symlink(from_path, rpt_path)
 
-def link_loadfile_metadata(load_dir, program, report_dir, timestamp):
+def link_loadfile_metadata(loadfiles_dir, program, report_dir, timestamp):
     """Symlink loadfile and filtered samples into report directory"""
-    from_dir = os.path.join(load_dir, program, timestamp)
+    from_dir = os.path.join(loadfiles_dir, program, timestamp)
     loadfile = program + '.' + timestamp + ".Sample.loadfile.txt"
     link_metadata_file(from_dir, report_dir, loadfile)
     filtered = program + '.' + timestamp + ".filtered_samples.txt"
     link_metadata_file(from_dir, report_dir, filtered)
-
 
 if __name__ == "__main__":
     sample_report().execute()
