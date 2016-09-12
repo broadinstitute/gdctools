@@ -65,9 +65,6 @@ class gdc_mirror(GDCtool):
     def mirror(self):
         logging.info("GDC Mirror Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        if self.options.config is not None:
-            logging.info("Configuration File: %s",
-                         os.path.abspath(self.options.config))
 
         config = self.config
         projects = config.projects

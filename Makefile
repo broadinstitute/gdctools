@@ -148,16 +148,16 @@ test: default
 	$(PYTHON) GDCtool.py
 
 test_mirror: default
-	$(PYTHON) gdc_mirror.py -c tests/testGDC.cfg
+	$(PYTHON) gdc_mirror.py -c tests/tcgaSmoketest.cfg
 
 test_dice: default
-	$(PYTHON) gdc_dice.py -c tests/testGDC.cfg
+	$(PYTHON) gdc_dice.py -c tests/tcgaSmoketest.cfg
 	
 test_load: default
-	$(PYTHON) create_loadfile.py -c tests/testGDC.cfg
+	$(PYTHON) create_loadfile.py -c tests/tcgaSmoketest.cfg
 
 test_report: default
-	$(PYTHON) sample_report.py -c tests/testGDC.cfg
+	$(PYTHON) sample_report.py -c tests/tcgaSmoketest.cfg
 	
 
 USE=/broad/tools/scripts/useuse
