@@ -138,27 +138,30 @@ README: README.md
 # -------------------------------------------------------------------------
 #								Testing
 # -------------------------------------------------------------------------
-#
-# Tests are currently very simple, at the level of a smoketest
 
-test: default
-	@# Basic test in local directory
+TEST_CONFIG=--config tests/tcgaSmoketest.cfg
+
+test: test_all
+
+test_all: test_smoke test_mirror test_dice test_loadfile test_report
+
+test_smoke: default
+	@# Basic smoketest in local directory
 	@ $(PYTHON) GDCcli.py
 	@echo
 	$(PYTHON) GDCtool.py
 
 test_mirror: default
-	$(PYTHON) gdc_mirror.py -c tests/tcgaSmoketest.cfg
+	$(PYTHON) gdc_mirror.py $(TEST_CONFIG) #> $@.log
 
 test_dice: default
-	$(PYTHON) gdc_dice.py -c tests/tcgaSmoketest.cfg
+	$(PYTHON) gdc_dice.py $(TEST_CONFIG)
 	
-test_load: default
-	$(PYTHON) create_loadfile.py -c tests/tcgaSmoketest.cfg
+test_loadfile: default
+	$(PYTHON) create_loadfile.py $(TEST_CONFIG)
 
 test_report: default
-	$(PYTHON) sample_report.py -c tests/tcgaSmoketest.cfg
-	
+	$(PYTHON) sample_report.py $(TEST_CONFIG)
 
 USE=/broad/tools/scripts/useuse
 test3: default
