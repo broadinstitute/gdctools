@@ -285,13 +285,15 @@ class create_loadfile(GDCtool):
 
             # loop over each project, concatenating loadfile data from each
             for projname in sorted(projects.keys()):
-                proj_samples = projname + "." + datestamp + ".Sample.loadfile.txt"
-                proj_samples = os.path.join(loadfile_root, proj_samples)
-                with open(proj_samples) as ps:
-                     # Skip header, and copy the rest of the file
-                    ps.next()
-                    for line in ps:
-                        aslfp.write(line)
+                # Write to sample file, but avoid duplicates if its an aggregate
+                if projname not in self.config.aggregates:
+                    proj_samples = projname + "." + datestamp + ".Sample.loadfile.txt"
+                    proj_samples = os.path.join(loadfile_root, proj_samples)
+                    with open(proj_samples) as ps:
+                         # Skip header, and copy the rest of the file
+                        ps.next()
+                        for line in ps:
+                            aslfp.write(line)
 
                 proj_sset = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
                 proj_sset = os.path.join(loadfile_root, proj_sset)
