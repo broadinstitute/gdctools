@@ -23,7 +23,7 @@ from GDCcli import GDCcli
 from GDCcore import *
 
 class GDCtool(object):
-    ''' Base class for each tool in the GDCtools suite '''
+   ''' Base class for each tool in the GDCtools suite '''
 
     def __init__(self, version=None):
 
@@ -72,9 +72,13 @@ class GDCtool(object):
 
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
+        # If no aggregates are defined, change None obj to empty dict, for
+        # cleaner "if X in config.aggregates:" queries that will always work
         if config.aggregates:
             for key, val in config.aggregates.items():
                 config.aggregates[key.upper()] = config.aggregates.pop(key)
+        else:
+            config.aggregates = {}
 
     def validate_config(self, vars_to_examine):
         '''
