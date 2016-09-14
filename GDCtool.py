@@ -23,8 +23,7 @@ from GDCcli import GDCcli
 from GDCcore import *
 
 class GDCtool(object):
-   ''' Base class for each tool in the GDCtools suite '''
-
+    ''' Base class for each tool in the GDCtools suite '''
     def __init__(self, version=None):
 
         self.cli = GDCcli(version=version)
