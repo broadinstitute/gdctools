@@ -71,7 +71,7 @@ class gdc_mirror(GDCtool):
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
-        if projects is None:
+        if not projects:
             if programs is None:
                 logging.info("No programs or projects specified, using GDC API"\
                              "to discover available programs")
