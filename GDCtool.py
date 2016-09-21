@@ -63,12 +63,15 @@ class GDCtool(object):
                 if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
 
-        # Ensure programs & projects config state (if present) are lists
+        # Ensure programs & projects config state are lists
         if config.programs:
             config.programs = config.programs.split(',')
+        else:
+            config.programs = []
         if config.projects:
             config.projects = config.projects.split(',')
-
+        else:
+            config.projects = []
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
         # If no aggregates are defined, change None obj to empty dict, for
@@ -101,4 +104,3 @@ if __name__ == "__main__":
     tool = GDCtool()
     tool.execute()
     tool.status()
-
