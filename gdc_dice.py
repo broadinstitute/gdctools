@@ -72,15 +72,14 @@ class gdc_dicer(GDCtool):
         if not config.programs:
             config.programs = common.immediate_subdirs(config.mirror.dir)
 
-        # FIXME: Dicer will only work correctly with one program, since
-        # projects are not linked to which program they are from
+        # Even though program is a list, only check the first one, since
+        # providing more than one will be caught as an error
         if not config.projects:
-            projects = []
-            for program in config.programs:
-                mirror_prog_root = os.path.join(config.mirror.dir, program)
-                projects.extend(common.immediate_subdirs(mirror_prog_root))
-            # Filter the metadata folders out
-            config.projects = [p for p in projects if p != 'metadata']
+            program = config.programs[0]
+            mirror_prog_root = os.path.join(config.mirror.dir, program)
+            config.projects = common.immediate_subdirs(mirror_prog_root)
+
+
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
@@ -94,125 +93,122 @@ class gdc_dicer(GDCtool):
         # validate early and fail if any errors exist
         self.validate_config()
 
-        programs = config.programs
-        for program in programs:
-            diced_prog_root = os.path.join(config.dice.dir, program)
-            mirror_prog_root = os.path.join(config.mirror.dir, program)
+        # Programs is a list, but with only one element
+        program = config.programs[0]
+        diced_prog_root = os.path.join(config.dice.dir, program)
+        mirror_prog_root = os.path.join(config.mirror.dir, program)
 
-            # Ensure no simultaneous mirroring/dicing
-            with common.lock_context(diced_prog_root, "dice"), \
-                 common.lock_context(mirror_prog_root, "mirror"):
+        # Ensure no simultaneous mirroring/dicing
+        with common.lock_context(diced_prog_root, "dice"), \
+             common.lock_context(mirror_prog_root, "mirror"):
 
-                #Get the latest timestamp run on this program
-                self.timestamp = self.options.timestamp
-                if self.timestamp is None:
-                    # Inspect the mirror to find the latest timestamp
-                    self.timestamp = meta.latest_prog_timestamp(mirror_prog_root)
+            logging.info("Dicing " + program)
 
-                timestamp = self.timestamp
-                logging.info("Dicing " + program)
-                logging.info("Timestamp: " + self.timestamp)
+            # Use timestamp provided, or inspect the mirror to find the latest
+            timestamp = self.options.timestamp
+            if timestamp is None:
+                timestamp = meta.latest_prog_timestamp(mirror_prog_root)
+            logging.info("Timestamp: " + timestamp)
 
-                agg_case_data = dict()
-                for project in sorted(config.projects):
-                    # Load metadata from mirror, getting the latest metadata
-                    # earlier than the given timestamp
-                    raw_project_root = os.path.join(mirror_prog_root, project)
-                    meta_dir = os.path.join(raw_project_root, "metadata")
-                    meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
+            agg_case_data = dict()
+            for project in sorted(config.projects):
+                # Load metadata from mirror, getting the latest metadata
+                # earlier than the given timestamp
+                raw_project_root = os.path.join(mirror_prog_root, project)
+                meta_dir = os.path.join(raw_project_root, "metadata")
+                meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
 
-                    # Check to see if there is actually metadata available,
-                    # and skip with a warning if not
-                    if len(meta_dirs) < 1:
-                        _warning =  "No metadata found for " + project
-                        _warning += " earlier than " + timestamp
-                        logging.warning(_warning)
-                        continue
+                # Check to see if there is actually metadata available,
+                # and skip with a warning if not
+                if len(meta_dirs) < 1:
+                    _warning =  "No metadata found for " + project
+                    _warning += " earlier than " + timestamp
+                    logging.warning(_warning)
+                    continue
 
-                    latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
-                    metadata = meta.latest_metadata(latest_meta)
+                latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
+                metadata = meta.latest_metadata(latest_meta)
 
-                    diced_project_root = os.path.join(diced_prog_root, project)
-                    logging.info("Dicing " + project + " to " + diced_project_root)
+                diced_project_root = os.path.join(diced_prog_root, project)
+                logging.info("Dicing " + project + " to " + diced_project_root)
 
-                    # The natural form of the metadata is a list of file dicts,
-                    # which makes it easy to mirror on a project by project
-                    # basis. However, the dicer should insist that only one
-                    # file per case per annotation exists, and therefore we must
-                    # generate a data structure in this form by iterating over
-                    # the metadata before dicing.
+                # The natural form of the metadata is a list of file dicts,
+                # which makes it easy to mirror on a project by project
+                # basis. However, the dicer should insist that only one
+                # file per case per annotation exists, and therefore we must
+                # generate a data structure in this form by iterating over
+                # the metadata before dicing.
+                tcga_lookup, multi_sample_files  = _tcgaid_file_lookup(metadata, trans_dict)
 
-                    tcga_lookup, multi_sample_files  = _tcgaid_file_lookup(metadata, trans_dict)
+                # Diced Metadata
+                diced_meta_dir = os.path.join(diced_project_root,
+                                              "metadata", timestamp)
+                diced_meta_fname = ".".join([project, timestamp,
+                                            'diced_metadata', 'tsv'])
+                if not os.path.isdir(diced_meta_dir):
+                    os.makedirs(diced_meta_dir)
+                meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
-                    # Diced Metadata
-                    diced_meta_dir = os.path.join(diced_project_root,
-                                                  "metadata", timestamp)
-                    diced_meta_fname = ".".join([project, timestamp,
-                                                'diced_metadata', 'tsv'])
-                    if not os.path.isdir(diced_meta_dir):
-                        os.makedirs(diced_meta_dir)
-                    meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
+                # Count project annotations
+                with open(meta_file, 'w') as mf:
+                    # Header
+                    META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
+                                    'annotation', 'file_name', 'center',
+                                    'platform', 'report_type', 'is_ffpe']
+                    mfw = csv.DictWriter(mf, fieldnames=META_HEADERS,
+                                         delimiter='\t')
+                    mfw.writeheader()
 
-                    # Count project annotations
-                    with open(meta_file, 'w') as mf:
-                        # Header
-                        META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
-                                        'annotation', 'file_name', 'center',
-                                        'platform', 'report_type', 'is_ffpe']
-                        mfw = csv.DictWriter(mf, fieldnames=META_HEADERS,
-                                             delimiter='\t')
-                        mfw.writeheader()
-
-                        for tcga_id in tcga_lookup:
-                            # Dice single sample files first
-                            for annot, file_d in tcga_lookup[tcga_id].iteritems():
-                                dice_one(file_d, trans_dict, raw_project_root,
-                                         diced_project_root, mfw,
-                                         dry_run=self.options.dry_run,
-                                         force=self.force_dice)
-
-                        #Then dice the multi_sample_files
-                        for file_d in multi_sample_files:
+                    for tcga_id in tcga_lookup:
+                        # Dice single sample files first
+                        for annot, file_d in tcga_lookup[tcga_id].iteritems():
                             dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
                                      force=self.force_dice)
 
-                    # Bookkeeping code -- write some useful tables
-                    # and figures needed for downstream sample reports.
-                    # Count available data per sample
-                    logging.info("Generating counts for " + project)
-                    case_data = _case_data(meta_file)
-                    counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
-                    counts_file = os.path.join(diced_meta_dir, counts_file)
-                    _write_counts(case_data, project, counts_file)
+                    #Then dice the multi_sample_files
+                    for file_d in multi_sample_files:
+                        dice_one(file_d, trans_dict, raw_project_root,
+                                 diced_project_root, mfw,
+                                 dry_run=self.options.dry_run,
+                                 force=self.force_dice)
 
-                    # Heatmaps per sample
-                    logging.info("Generating heatmaps for " + project)
-                    draw_heatmaps(case_data, project, timestamp, diced_meta_dir)
+                # Bookkeeping code -- write some useful tables
+                # and figures needed for downstream sample reports.
+                # Count available data per sample
+                logging.info("Generating counts for " + project)
+                case_data = _case_data(meta_file)
+                counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
+                counts_file = os.path.join(diced_meta_dir, counts_file)
+                _write_counts(case_data, project, counts_file)
 
-                    # keep track of aggregate case data
-                    project_aggregates = cohort_agg_dict.get(project, [])
-                    for agg in project_aggregates:
-                        agg_case_data[agg] = agg_case_data.get(agg, {})
-                        agg_case_data[agg].update(case_data)
+                # Heatmaps per sample
+                logging.info("Generating heatmaps for " + project)
+                draw_heatmaps(case_data, project, timestamp, diced_meta_dir)
 
-                # Create aggregate diced_metadata.tsvs
-                self.aggregate_diced_metadata(diced_prog_root, timestamp)
+                # keep track of aggregate case data
+                project_aggregates = cohort_agg_dict.get(project, [])
+                for agg in project_aggregates:
+                    agg_case_data[agg] = agg_case_data.get(agg, {})
+                    agg_case_data[agg].update(case_data)
 
-                # As well as aggregate counts and heatmaps
-                for agg in agg_case_data:
-                    ac_data = agg_case_data[agg]
-                    meta_dir = os.path.join(diced_prog_root, agg,
-                                              "metadata", timestamp)
+            # Create aggregate diced_metadata.tsvs
+            self.aggregate_diced_metadata(diced_prog_root, timestamp)
 
-                    logging.info("Generating aggregate counts for " + agg)
-                    counts_file = ".".join([agg, timestamp, "sample_counts.tsv"])
-                    counts_file = os.path.join(meta_dir, counts_file)
-                    _write_counts(ac_data, agg, counts_file)
+            # As well as aggregate counts and heatmaps
+            for agg in agg_case_data:
+                ac_data = agg_case_data[agg]
+                meta_dir = os.path.join(diced_prog_root, agg,
+                                          "metadata", timestamp)
 
-                    logging.info("Generating aggregate heatmaps for " + agg)
-                    draw_heatmaps(ac_data, agg, timestamp, meta_dir)
+                logging.info("Generating aggregate counts for " + agg)
+                counts_file = ".".join([agg, timestamp, "sample_counts.tsv"])
+                counts_file = os.path.join(meta_dir, counts_file)
+                _write_counts(ac_data, agg, counts_file)
+
+                logging.info("Generating aggregate heatmaps for " + agg)
+                draw_heatmaps(ac_data, agg, timestamp, meta_dir)
 
         logging.info("Dicing completed successfuly")
 
@@ -238,7 +234,7 @@ class gdc_dicer(GDCtool):
         return cohort_agg
 
     def aggregate_diced_metadata(self, prog_dir, timestamp):
-        '''Aggregates the diced metadata files for aggregates'''
+        '''Aggregates the diced metadata files for aggregate cohorts'''
         aggregates = self.config.aggregates
         for agg, cohorts in aggregates.iteritems():
             cohorts = sorted(cohorts.split(','))
@@ -267,17 +263,20 @@ class gdc_dicer(GDCtool):
         properly mirrored.'''
         # Validate programs and and projects by ensuring a folder exists for each
         config = self.config
-        possible_programs = common.immediate_subdirs(config.mirror.dir)
-        prog_dirs = [os.path.join(config.mirror.dir, prog) for prog in possible_programs]
-        possible_projects = []
-        for pdir in prog_dirs:
-            possible_projects.extend(common.immediate_subdirs(pdir))
 
-        programs = config.programs
-        for prog in programs:
-            if prog not in possible_programs:
-                logging.error("Program " + prog + " not found in mirror")
-                sys.exit(1)
+        if len(config.programs) != 1:
+            logging.error("Dicer only supports dicing a single program but "
+                          + str(len(config.programs)) + " were provided.")
+            sys.exit(1)
+
+        possible_programs = common.immediate_subdirs(config.mirror.dir)
+        program = config.programs[0]
+        if program not in possible_programs:
+            logging.error("Program " + program + " not found in mirror")
+            sys.exit(1)
+
+        prog_dir = os.path.join(config.mirror.dir, program)
+        possible_projects = common.immediate_subdirs(prog_dir)
 
         projects = config.projects
         for proj in projects:
