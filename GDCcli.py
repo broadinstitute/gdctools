@@ -55,6 +55,8 @@ class GDCcli(argparse.ArgumentParser):
                          help='Process data ONLY from these GDC programs')
         self.add_argument('-p', '--projects', nargs='+', metavar='project',
                          help='Process data ONLY from these GDC projects')
+        self.add_argument('--cases', nargs='+', metavar='case_id',
+                         help='Process data ONLY from these GDC cases')
 
         self.version = version
 

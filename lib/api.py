@@ -37,9 +37,12 @@ class GDCQuery(object):
         self._legacy   = legacy
         self._filters  = filters if filters else []
 
-    def add_filter(self, field, value):
+    def add_eq_filter(self, field, value):
         self._filters.append(_eq_filter(field, value))
         return self
+
+    def add_in_filter(self, field, values):
+        self._filters.append(_in_filter(field,values))
 
     def filters(self):
         return self._filters
@@ -127,7 +130,7 @@ class GDCQuery(object):
 
 def get_projects(program, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
-    query.add_filter('program.name', program)
+    query.add_eq_filter('program.name', program)
     query.add_fields('project_id')
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
@@ -135,7 +138,7 @@ def get_projects(program, legacy=False):
 
 def get_data_categories(project, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
-    query.add_filter('project_id', project)
+    query.add_eq_filter('project_id', project)
     query.add_fields('summary.data_categories.data_category')
     projects = query.get()
 
@@ -150,14 +153,17 @@ def get_data_categories(project, legacy=False):
         return [] # Needed to protect against projects with no data
 
 
-def get_project_files(project_id, data_category, workflow_type=None,
+def get_project_files(project_id, data_category, workflow_type=None, cases=None,
                       page_size=500, legacy=False):
     query = GDCQuery('files', legacy=legacy)
-    query.add_filter("cases.project.project_id", project_id)
-    query.add_filter("files.data_category", data_category)
-    query.add_filter("access", "open")
+    query.add_eq_filter("cases.project.project_id", project_id)
+    query.add_eq_filter("files.data_category", data_category)
+    query.add_eq_filter("access", "open")
     if workflow_type:
-        query.add_filter('analysis.workflow_type', workflow_type)
+        query.add_eq_filter('analysis.workflow_type', workflow_type)
+
+    if cases:
+        query.add_in_filter('cases.submitter_id', cases)
 
     query.add_fields('file_id', 'file_name', 'cases.samples.sample_id',
                      'data_type', 'data_category', 'data_format',
@@ -203,7 +209,7 @@ def curl_download_file(uuid, file_name, legacy=False, max_time=180):
 def get_program(project, legacy=False):
     '''Return the program name of a project.'''
     query = GDCQuery('projects', legacy=legacy)
-    query.add_filter('project_id', project)
+    query.add_eq_filter('project_id', project)
     query.add_fields('program.name')
     projects = query.get()
 
@@ -237,6 +243,9 @@ def _eq_filter(field, value):
 
 def _and_filter(filters):
     return {"op" : "and", "content" : filters}
+
+def _in_filter(field, values):
+    return {"op" : "in", "content" : {"field": field, "value": values} }
 
 
 def _decode_json(request):

@@ -208,8 +208,13 @@ class gdc_mirror(GDCtool):
             logging.info("Creating folder: " + cat_dir)
             os.makedirs(cat_dir)
 
-        file_metadata = api.get_project_files(project, category, workflow_type)
+        # If cases is a list, only files from these cases will be returned,
+        # otherwise all files from the category will be
+        cases = self.options.cases
+        file_metadata = api.get_project_files(project, category,
+                                              workflow_type, cases=cases)
         new_metadata = file_metadata
+
         # If we aren't forcing a full mirror, check the existing metadata
         # to see what files are new
         if not self.force_download:
