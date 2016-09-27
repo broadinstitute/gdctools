@@ -38,7 +38,7 @@ from GDCtool import GDCtool
 class gdc_dicer(GDCtool):
 
     def __init__(self):
-        super(gdc_dicer, self).__init__(version="0.4.0")
+        super(gdc_dicer, self).__init__(version="0.5.0")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -68,7 +68,7 @@ class gdc_dicer(GDCtool):
         if opts.projects: config.projects = opts.projects
         self.force_dice = opts.force_dice
 
-        # If undefined, discover which GDC program(s) data to dice
+        # # If undefined, discover which GDC program(s) data to dice
         if not config.programs:
             config.programs = common.immediate_subdirs(config.mirror.dir)
 
@@ -91,16 +91,13 @@ class gdc_dicer(GDCtool):
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
 
-        # Loop over programs, either from user or discovered from folder names in diced root
-        if config.programs:
-            programs = config.programs
-        else:
-            programs = common.immediate_subdirs(config.mirror.dir)
+        # validate early and fail if any errors exist
+        self.validate_config()
 
+        programs = config.programs
         for program in programs:
             diced_prog_root = os.path.join(config.dice.dir, program)
             mirror_prog_root = os.path.join(config.mirror.dir, program)
-
 
             # Ensure no simultaneous mirroring/dicing
             with common.lock_context(diced_prog_root, "dice"), \
@@ -264,6 +261,29 @@ class gdc_dicer(GDCtool):
                         for line in f_in:
                             out.write(line)
                     skip_header = True
+
+    def validate_config(self):
+        '''Checks to see if the config options, like programs/projects are
+        properly mirrored.'''
+        # Validate programs and and projects by ensuring a folder exists for each
+        config = self.config
+        possible_programs = common.immediate_subdirs(config.mirror.dir)
+        prog_dirs = [os.path.join(config.mirror.dir, prog) for prog in possible_programs]
+        possible_projects = []
+        for pdir in prog_dirs:
+            possible_projects.extend(common.immediate_subdirs(pdir))
+
+        programs = config.programs
+        for prog in programs:
+            if prog not in possible_programs:
+                logging.error("Program " + prog + " not found in mirror")
+                sys.exit(1)
+
+        projects = config.projects
+        for proj in projects:
+            if proj not in possible_projects:
+                logging.error("Project " + proj + " not found in mirror")
+                sys.exit(1)
 
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,
