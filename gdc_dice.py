@@ -129,6 +129,9 @@ class gdc_dicer(GDCtool):
                 latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
                 metadata = meta.latest_metadata(latest_meta)
 
+                # If --cases option was used, filter out other file dicts
+                metadata = filter_by_case(metadata, self.options.cases)
+
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
 
@@ -464,6 +467,21 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
                 'is_ffpe'      : is_ffpe
             })
             meta_file_writer.writerow(rowdict)
+
+def filter_by_case(metadata, cases):
+    # if cases are provided, filter out file_dicts that aren't in cases
+    if cases:
+        cases = set(cases)
+        filt_meta = []
+        for fd in metadata:
+            fd_cases = {c['submitter_id'] for c in fd['cases']}
+            # If the intersection of the two sets has at least one value,
+            # then this file should be included, since one of it's cases was provided
+            if cases & fd_cases:
+                filt_meta.append(fd)
+        metadata = filt_meta
+    return metadata
+
 
 def _case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''
