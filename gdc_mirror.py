@@ -28,7 +28,7 @@ import lib.common as common
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.8.1")
+        super(gdc_mirror, self).__init__(version="0.9.0")
         cli = self.cli
         cli.description = 'Create local mirror of the data from arbitrary '\
                         'programs and projects\nwarehoused at the Genomic Data'\
@@ -71,11 +71,27 @@ class gdc_mirror(GDCtool):
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
+        # Get available programs and projects, so the mirror can fail fast when
+        # given bad --projects or  --programs
+        available_projects = api.get_projects()
+        available_programs = api.get_programs()
+
+        if projects:
+            for proj in projects:
+                if proj not in available_projects:
+                    logging.error("Project " + proj + " not found in GDC")
+                    sys.exit(1)
+        if programs:
+            for prog in programs:
+                if prog not in available_programs:
+                    logging.error("Program " + prog + " not found in GDC")
+                    sys.exit(1)
+
         if not projects:
             if programs is None:
                 logging.info("No programs or projects specified, using GDC API"\
                              "to discover available programs")
-                programs = api.get_programs()
+                programs = available_programs
                 logging.info(str(len(programs))
                              + " program(s) found: " + ",".join(programs))
 

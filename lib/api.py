@@ -128,9 +128,10 @@ class GDCQuery(object):
         return self._query_paginator(page_size=page_size)
 
 
-def get_projects(program, legacy=False):
+def get_projects(program=None, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
-    query.add_eq_filter('program.name', program)
+    if program:
+        query.add_eq_filter('program.name', program)
     query.add_fields('project_id')
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
@@ -143,7 +144,7 @@ def get_data_categories(project, legacy=False):
     projects = query.get()
 
     #Sanity check
-    if len(projects) != 1:
+    if len(projects) > 1:
         raise ValueError("More than one project matched '" + project + "'")
 
     proj = projects[0]
@@ -214,8 +215,10 @@ def get_program(project, legacy=False):
     projects = query.get()
 
     #Sanity check
-    if len(projects) != 1:
+    if len(projects) > 1:
         raise ValueError("More than one project matched '" + project + "'")
+    elif len(projects) == 0:
+        raise ValueError("No project matched '" + project + "'")
 
     return projects[0]['program']['name']
 
