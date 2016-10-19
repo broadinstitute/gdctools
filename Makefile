@@ -25,6 +25,7 @@ PIP=$(DEST)/bin/pip
 TOOLS= \
 	gdc_mirror \
 	gdc_dice \
+	gdcls \
 	create_loadfile \
 	sample_report
 
