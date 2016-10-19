@@ -22,7 +22,6 @@ import sys
 import gzip
 from pkg_resources import resource_filename #@UnresolvedImport
 
-from lib.convert import util as convert_util
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv

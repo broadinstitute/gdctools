@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import csv
-from lib.convert import util as convert_util
 from lib.common import safeMakeDirs, map_blank_to_na, writeCsvFile
 from lib.meta import tcga_id, diced_file_paths
 
