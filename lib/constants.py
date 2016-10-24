@@ -40,8 +40,8 @@ REPORT_DATA_TYPES = ('BCR', 'Clinical', 'CN', 'mRNA', 'miR', 'MAF')
 ANNOT_TO_DATATYPE = {
     'clinical__primary'         : 'Clinical',
     'clinical__biospecimen'     : 'BCR',
-    'CNV__snp6'                 : 'CN',
-    'CNV_no_germline__snp6'     : 'CN',
+    'CNV__filtered__snp6'                 : 'CN',
+    'CNV__snp6'     : 'CN',
     'miR__geneExp'              : 'miR',
     'miR__isoformExp'           : 'miR',
     'mRNA__geneExp__FPKM'       : 'mRNA',
