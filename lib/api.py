@@ -21,7 +21,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 class GDCQuery(object):
     # Class variables
-    ENDPOINTS = ('cases', 'files', 'projects')
+    ENDPOINTS = ('cases', 'files', 'programs', 'projects', 'submission')
     GDC_ROOT = 'https://gdc-api.nci.nih.gov/'
 
     # Queries returning more than this many results will log a warning
@@ -29,8 +29,9 @@ class GDCQuery(object):
 
     def __init__(self, endpoint, fields=None, expand=None,
                 legacy=False, filters=None):
+
+        self._endpoint = endpoint.lower()               # normalize to lowercase
         assert(endpoint in GDCQuery.ENDPOINTS)
-        self._endpoint = endpoint
         # Make copies of all mutable
         self._fields   = fields if fields else []
         self._expand   = expand if expand else []
@@ -91,10 +92,11 @@ class GDCQuery(object):
         # lookup tells the right field to use based on the endpoint
         sort_lookup = { 'files' : 'file_id',
                         'cases' : 'case_id',
-                        'projects' : 'project_id'}
+                        'projects' : 'project_id',
+                        'submission': 'links'}
 
-        sort = sort_lookup[endpoint.rstrip('/').split('/')[-1]]
-        p['sort'] = sort
+        endpoint_name = endpoint.rstrip('/').split('/')[-1]
+        p['sort'] = sort_lookup.get(endpoint_name, "")
 
         # Make initial call
         r = requests.get(endpoint, params=p)
@@ -102,6 +104,20 @@ class GDCQuery(object):
 
         # Log any warnings in response, but don't raise an error yet
         _log_warnings(r_json)
+
+        # GDC 'submission' endpoint is inconsistent (does not yet return results
+        # within a {"data": {"hits": … } }  JSON block--so we work around here.
+        if endpoint_name == 'submission':
+            results = r_json['links']
+            results = [ program.split('/')[-1] for program in results ]
+            self.hits = results
+            return results
+
+        # The 'programs' endpoint does not actually exist in GDC api (but has 
+        # been requested by Broad). Until then we fake it for convenience.
+        if endpoint_name == 'programs':
+            self.hits = get_programs()
+            return self.hits
 
         # Get first page of hits, and pagination data
         data = r_json['data']
@@ -127,7 +143,6 @@ class GDCQuery(object):
     def get(self, page_size=500):
         return self._query_paginator(page_size=page_size)
 
-
 def get_projects(program=None, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
     if program:
@@ -135,7 +150,6 @@ def get_projects(program=None, legacy=False):
     query.add_fields('project_id')
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
-
 
 def get_data_categories(project, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
@@ -152,7 +166,6 @@ def get_data_categories(project, legacy=False):
         return [d['data_category'] for d in proj['summary']['data_categories']]
     else:
         return [] # Needed to protect against projects with no data
-
 
 def get_project_files(project_id, data_category, workflow_type=None, cases=None,
                       page_size=500, legacy=False):
@@ -180,7 +193,6 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
 
     return query.get(page_size=page_size)
 
-
 def py_download_file(uuid, file_name, legacy=False, chunk_size=4096):
     """Download a single file from GDC."""
     url = GDCQuery.GDC_ROOT
@@ -206,7 +218,6 @@ def curl_download_file(uuid, file_name, legacy=False, max_time=180):
     curl_args = ['curl', '--max-time', str(max_time), '--fail', '-o', file_name, url]
     return subprocess.check_call(curl_args)
 
-
 def get_program(project, legacy=False):
     '''Return the program name of a project.'''
     query = GDCQuery('projects', legacy=legacy)
@@ -222,34 +233,32 @@ def get_program(project, legacy=False):
 
     return projects[0]['program']['name']
 
-
 def get_programs():
-    '''Return list of programs in GDC.'''
-    #TODO: eliminate hard coded values (no direct API call yet)
-    return ["TCGA", "TARGET"]
-
+    '''Return list of programs that have data EXPOSED in GDC.  Note that this
+       may be different from the set of programs that have SUBMITTED data to
+       the GDC, because (a) it takes time to validate submissions before GDC
+       will make them public, and (b) GDC does only periodic data releases'''
+    programs  = [ proj.split('-')[0] for proj in get_projects()]
+    return list(set(programs))
 
 # Module helpers
 def _log_warnings(r_json):
     '''Check for warnings in a server response'''
-    warnings = r_json['warnings']
+    warnings = r_json.get('warnings', None)
     if warnings:
         warnmsg =  "GDC query produced a warning:\n"
         warnmsg += json.dumps(warnings, indent=2)
         warnmsg += "\nRequest URL: " + r.url
         logging.warning(warnmsg)
 
-
 def _eq_filter(field, value):
     return {"op" : "=", "content" : {"field" : field, "value" : [value]}}
-
 
 def _and_filter(filters):
     return {"op" : "and", "content" : filters}
 
 def _in_filter(field, values):
     return {"op" : "in", "content" : {"field": field, "value": values} }
-
 
 def _decode_json(request):
     """ Attempt to decode response from request using the .json() method.
