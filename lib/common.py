@@ -52,12 +52,12 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
             os.symlink(os.path.abspath(logfile), latest)
 
 
-    # Write logging data to console
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(log_formatter)
-    root_logger.addHandler(console_handler)
-
+    # Send to console, too, if running at valid TTY (e.g. not cron job)
+    if os.isatty(sys.stdout.fileno()):
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(log_formatter)
+        root_logger.addHandler(console_handler)
 
 def silent_rm(filename):
     try:
