@@ -44,6 +44,9 @@ class gdc_mirror(GDCtool):
                         help='Download files even if already mirrored locally.'+
                              ' (DO NOT use during incremental mirroring)')
 
+        # detect if we have curl installed
+        self.has_cURL = api.curl_exists()
+
     def set_timestamp(self):
         '''Creates a timestamp for the current mirror'''
         self.timestamp = common.timetuple2stamp() #'2017_02_01__00_00_00'
@@ -147,7 +150,10 @@ class gdc_mirror(GDCtool):
                     time = 180
                     #Download file
                     uuid = file_d['file_id']
-                    api.curl_download_file(uuid, savepath, max_time=time)
+                    if self.has_cURL:
+                        api.curl_download_file(uuid, savepath, max_time=time)
+                    else:
+                        api.py_download_file(uuid, savepath)
                     break
                 except Exception as e:
                     logging.warning("Download failed: " + str(e) +'\nRetrying...')
