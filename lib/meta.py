@@ -324,7 +324,7 @@ def dice_extension(file_dict):
         ext = "clin.txt"
     elif dtype in ['Copy Number Variation']:
         ext = "seg.txt"
-    elif dtype in ['Transcriptome Profiling']:
+    elif dtype in ['Methylation Beta Value', 'Transcriptome Profiling']:
         ext = "data.txt"
     elif dtype in ['Masked Somatic Mutation']:
         ext = "maf.txt"
@@ -368,8 +368,7 @@ def tumor_code(tumor_type):
         "Recurrent Solid Tumor" : ('02', 'TR'),
         "Recurrent Tumor" : ('02', 'TR'), # GDC had new name for this
         "Solid Tissue Normal" : ('11', 'NT'),
-        # FIXME: Hack, GDC has labelled some FFPE's with a new tumor type, rather than
-        # using the correct primary.
+        # FIXME: Hack, Some late TCGA submissions include this new type
         "FFPE Scrolls" : ('01', 'TP')
     }
     return lookup[tumor_type]

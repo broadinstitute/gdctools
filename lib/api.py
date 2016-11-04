@@ -113,7 +113,7 @@ class GDCQuery(object):
             self.hits = results
             return results
 
-        # The 'programs' endpoint does not actually exist in GDC api (but has 
+        # The 'programs' endpoint does not actually exist in GDC api (but has
         # been requested by Broad). Until then we fake it for convenience.
         if endpoint_name == 'programs':
             self.hits = get_programs()
@@ -134,6 +134,7 @@ class GDCQuery(object):
             #Iterate over pages to get the remaning hits
             p['from'] = from_idx
             r = requests.get(endpoint, params=p)
+
             hits = _decode_json(r)['data']['hits']
             all_hits.extend(hits)
 
@@ -192,6 +193,15 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
     query.expand('cases', 'annotations', 'cases.samples')
 
     return query.get(page_size=page_size)
+
+
+def curl_exists():
+    """ Return true if curl can be executed on this system """
+    try:
+        subprocess.check_call(['curl', '-V'])
+        return True
+    except OSError, subprocess.CalledProcessError:
+        return False
 
 def py_download_file(uuid, file_name, legacy=False, chunk_size=4096):
     """Download a single file from GDC."""

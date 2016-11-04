@@ -26,6 +26,7 @@ from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
 from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.convert import tsv2magetab as gdac_tsv2magetab
+from lib.convert import copy as gdac_copy
 from lib.heatmap import draw_heatmaps
 from lib.convert import maf as mutect_maf
 from lib import common
@@ -237,6 +238,9 @@ class gdc_dicer(GDCtool):
 
     def aggregate_diced_metadata(self, prog_dir, timestamp):
         '''Aggregates the diced metadata files for aggregate cohorts'''
+        # Note we can only aggregate data where each cohort in the aggregate
+        # has the same timestamp for the diced metadata
+
         aggregates = self.config.aggregates
         for agg, cohorts in aggregates.iteritems():
             cohorts = sorted(cohorts.split(','))
@@ -247,13 +251,24 @@ class gdc_dicer(GDCtool):
             agg_meta_file = os.path.abspath(os.path.join(agg_meta_folder,
                                                         agg_meta_file))
             skip_header = False
+
+            # check to see if all the necessary diced files exist
+            cohort_diced_tsvs = []
+            for c in cohorts:
+                c_meta_folder = os.path.join(prog_dir, c, "metadata", timestamp)
+                c_meta_file = ".".join([c, timestamp, 'diced_metadata', 'tsv'])
+                c_meta_file = os.path.abspath(os.path.join(c_meta_folder,
+                                                           c_meta_file))
+                cohort_diced_tsvs.append(c_meta_file)
+
+            if not all(os.path.exists(f) for f in cohort_diced_tsvs):
+                logging.warning("Cohorts in aggregate " + agg + " have differing timestamps")
+                return
+
+            # otherwise, merge as normal
             with open(agg_meta_file, 'w') as out:
-                for c in cohorts:
-                    c_meta_folder = os.path.join(prog_dir, c, "metadata", timestamp)
-                    c_meta_file = ".".join([c, timestamp, 'diced_metadata', 'tsv'])
-                    c_meta_file = os.path.abspath(os.path.join(c_meta_folder,
-                                                               c_meta_file))
-                    with open(c_meta_file, 'r') as f_in:
+                for meta_f in cohort_diced_tsvs:
+                    with open(meta_f, 'r') as f_in:
                         if skip_header:
                             f_in.next()
                         for line in f_in:
@@ -604,6 +619,7 @@ def converter(converter_name):
 
     CONVERTERS = {
         'clinical' : gdac_clin.process,
+        'copy' : gdac_copy.process,
         'maf': mutect_maf.process,
         'seg_broad': gdac_seg.process,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
