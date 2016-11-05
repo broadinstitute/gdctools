@@ -522,13 +522,15 @@ def write_sset(samples_lfp, sset_filename, sset_name):
 
         # A sample is ffpe if the cohort name ends with FFPE.
         # e.g. BRCAFFPE-A7-A0DB-TP is FFPE, ACC-OR-A5J1-NB is not
-        # Only add to the full sample set if the sample is not FFPE
-        is_ffpe = samp_id.split('-')[0].endswith('FFPE')
-        if is_ffpe:
-            sset_data += sset_name + "-FFPE" + '\t' + samp_id + '\n'
-        else:
+        if not samp_id.split('-')[0].endswith('FFPE'):
+            # Typically samples are included in the sample-type-specific set
+            # AND the aggregate sample set: e.g. all TCGA-UCEC-*-NB samples
+            # would appear in both TCGA-UCEC-NB AND TCGA-UCEC sample sets
+            sset_data = sset_name + "-" + sset_type + "\t" + samp_id + "\n"
             sset_data += sset_name + "\t" + samp_id + "\n"
-
+        else:
+            # But FFPE samples are not included in the aggregate sample set
+            sset_data = sset_name + "-FFPE" + '\t' + samp_id + '\n'
 
         outfile.write(sset_data)
 
