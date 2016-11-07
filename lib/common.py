@@ -9,15 +9,12 @@ import logging
 import sys
 import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
-
 from fasteners import InterProcessLock
 from lib.constants import LOGGING_FMT, TIMESTAMP_REGEX
 
-
-# Initialize logging to stdout and to logfile
-# see http://stackoverflow.com/a/13733863
 def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
-    '''Initialize logging to stdout and to a logfile'''
+    '''Initialize logging to stdout and to a logfile
+       (see http://stackoverflow.com/a/13733863)'''
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 
@@ -41,16 +38,11 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
         root_logger.addHandler(file_handler)
 
         logging.info("Logfile:" + logfile)
-        # Symlink a '*.latest.log' to logfile
         if link_latest:
-            lf_base = os.path.basename(logfile)
-            # Logfiles should be of the format *.<timestamp>.log
-            timestamp = lf_base.split('.')[-2]
             # For easier eyeballing & CLI tab-completion, symlink to latest.log
-            latest = "latest.log"
+            latest = os.path.join(log_dir,"latest.log")
             silent_rm(latest)
             os.symlink(os.path.abspath(logfile), latest)
-
 
     # Send to console, too, if running at valid TTY (e.g. not cron job)
     if os.isatty(sys.stdout.fileno()):
@@ -67,7 +59,6 @@ def silent_rm(filename):
         if e.errno != errno.ENOENT:
             raise
 
-
 def timestamp2tuple(timestamp):
     '''Takes a timestamp of the format YYYY_MM_DD__HH_MM_SS and converts it to
     a time-tuple usable by built in datetime functions. HH is in 24hr format.'''
@@ -75,13 +66,11 @@ def timestamp2tuple(timestamp):
         raise ValueError('%s is not in expected format: YYYY_MM_DD__HH_MM_SS' % timestamp)
     return time.strptime(timestamp, '%Y_%m_%d__%H_%M_%S')
 
-
 def timetuple2stamp(timetuple=time.localtime()):
     '''Takes a time-tuple and converts it to the standard GDAC timestamp
     (YYYY_MM_DD__HH_MM_SS). No argument will generate a current time
     timestamp.'''
     return time.strftime('%Y_%m_%d__%H_%M_%S', timetuple)
-
 
 def increment_file(filepath):
     '''Returns filepath if filepath doesn't exist. Otherwise returns
@@ -92,7 +81,6 @@ def increment_file(filepath):
         count = sum((1 for _ in fnmatch.filter(os.listdir(dirname), filename + '*')), 1)
         filepath = '.'.join((filepath, str(count)))
     return filepath
-
 
 def immediate_subdirs(path):
     subdirs = [d for d in os.listdir(path)
@@ -121,10 +109,6 @@ def safeMakeDirs(dir_name, permissions=None):
         else:
             raise  # Reraise other errors
 
-
-#===============================================================================
-#
-#===============================================================================
 def safe_make_hardlink(input_file_path,output_file_path):
     output_file_dir = os.path.dirname(output_file_path)
     # Verify the input file is actually there
