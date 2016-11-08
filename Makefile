@@ -16,6 +16,7 @@ VERSION = $(shell cat $(__PATH__)/VERSION)
 LONGVERSION=$(VERSION) ($(TIMESTAMP) $(REPO_HASH))
 
 PYTHON_HOME=$(shell config/findPython.sh)
+$(info $(PYTHON_HOME))
 DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
 PYTHON=$(DEST)/bin/python
@@ -90,9 +91,12 @@ gather: default $(STAGING_DIR) Makefile $(PKG_SRCFILES) $(METAFILES)
 	mkdir -p $(PKG_DIR)/config ; \
 	cp -fp $(PKG_SRC_FILES) $(PKG_DIR)/. ;\
 	cp -fp config/annotations_table.tsv $(PKG_DIR)/config/. ;\
+	cp -rfp lib $(PKG_DIR)/lib ; \
 	$(EMAKE) $(PKG_DIR)/__init__.py ;\
 	cp -fp $(METAFILES) $(STAGING_DIR)/. ; \
 	cd $(STAGING_DIR) ; \
+	find . -name '*~' -exec \rm -f {} \; ; \
+	find . -name '*.pyc' -exec \rm -f {} \; ; \
 	sed "s/%VERSION%/\"$(VERSION)\"/" setup.ac > setup.py
 
 uninstall:
