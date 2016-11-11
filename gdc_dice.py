@@ -66,6 +66,7 @@ class gdc_dicer(GDCtool):
         if opts.dice_dir: config.dice.dir = opts.dice_dir
         if opts.programs: config.programs = opts.programs
         if opts.projects: config.projects = opts.projects
+        if opts.cases     config.cases = opts.cases
         self.force_dice = opts.force_dice
 
         # # If undefined, discover which GDC program(s) data to dice
@@ -78,8 +79,6 @@ class gdc_dicer(GDCtool):
             program = config.programs[0]
             mirror_prog_root = os.path.join(config.mirror.dir, program)
             config.projects = common.immediate_subdirs(mirror_prog_root)
-
-
 
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
@@ -129,8 +128,9 @@ class gdc_dicer(GDCtool):
                 latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
                 metadata = meta.latest_metadata(latest_meta)
 
-                # If --cases option was used, filter out other file dicts
-                metadata = filter_by_case(metadata, self.options.cases)
+                # If subset of cases was selected (via --case or config file),
+                # then filter out other file dicts
+                metadata = filter_by_case(metadata, config.cases)
 
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
@@ -495,7 +495,6 @@ def filter_by_case(metadata, cases):
                 filt_meta.append(fd)
         metadata = filt_meta
     return metadata
-
 
 def _case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''
