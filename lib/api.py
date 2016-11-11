@@ -6,8 +6,8 @@
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 GDCQuery class and high-level API functions
 
-@author: Timothy DeFreitas, David Heiman
-@date:  2016_08_01
+@author: Timothy DeFreitas, David Heiman, Michael S. Noble
+@date:  2016_11_10
 '''
 
 # }}}
@@ -193,7 +193,6 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
     query.expand('cases', 'annotations', 'cases.samples')
 
     return query.get(page_size=page_size)
-
 
 def curl_exists():
     """ Return true if curl can be executed on this system """
