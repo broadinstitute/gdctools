@@ -58,8 +58,9 @@ class gdc_mirror(GDCtool):
         config = self.config
         if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
         if opts.log_dir: config.mirror.log_dir = opts.log_dir
-        if opts.projects: config.projects = opts.projects
         if opts.programs: config.programs = opts.programs
+        if opts.projects: config.projects = opts.projects
+        if opts.cases: config.cases = opts.cases
         self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
 
@@ -232,7 +233,7 @@ class gdc_mirror(GDCtool):
 
         # If cases is a list, only files from these cases will be returned,
         # otherwise all files from the category will be
-        cases = self.options.cases
+        cases = self.config.cases
         file_metadata = api.get_project_files(project, category,
                                               workflow_type, cases=cases)
         new_metadata = file_metadata
