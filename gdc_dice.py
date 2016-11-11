@@ -66,7 +66,7 @@ class gdc_dicer(GDCtool):
         if opts.dice_dir: config.dice.dir = opts.dice_dir
         if opts.programs: config.programs = opts.programs
         if opts.projects: config.projects = opts.projects
-        if opts.cases     config.cases = opts.cases
+        if opts.cases:    config.cases = opts.cases
         self.force_dice = opts.force_dice
 
         # # If undefined, discover which GDC program(s) data to dice
