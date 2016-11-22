@@ -46,7 +46,9 @@ class GDCtool(object):
             return
 
         cfgparser = ConfigParser.SafeConfigParser()
-        cfgparser.read( self.options.config )
+        # Since we use argparse to ensure filenames, but config parser expects
+        # filenames, convert them here
+        cfgparser.read([f.name for f in self.options.config])
         config = self.config
 
         # [DEFAULT] defines common variables for interpolation/substitution in

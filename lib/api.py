@@ -16,6 +16,7 @@ import requests
 import json
 import logging
 import subprocess
+import os
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
@@ -197,7 +198,9 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
 def curl_exists():
     """ Return true if curl can be executed on this system """
     try:
-        subprocess.check_call(['curl', '-V'])
+        DEV_NULL = open(os.devnull, 'w')
+        subprocess.check_call(['curl', '-V'],
+                               stdout=DEV_NULL, stderr=subprocess.STDOUT)
         return True
     except OSError, subprocess.CalledProcessError:
         return False
