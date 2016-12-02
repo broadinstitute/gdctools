@@ -14,7 +14,6 @@ from fasteners import InterProcessLock
 
 
 # Helpful constants
-LOGGING_FMT = '%(asctime)s[%(levelname)s]: %(message)s'
 DATESTAMP_REGEX = re.compile("^\d{4}_[01]\d_[0-3]\d$")
 
 #TODO: Configurable?
@@ -36,40 +35,6 @@ ANNOT_TO_DATATYPE = {
     'SNV__mutect'               : 'MAF'
 }
 
-
-
-def init_logging(tstamp=None, log_dir=None, logname=""):
-    '''Initialize logging to stdout and to a logfile
-       (see http://stackoverflow.com/a/13733863)'''
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-
-    log_formatter = logging.Formatter(LOGGING_FMT)
-
-    # Write logging data to file
-    if log_dir is not None and tstamp is not None:
-        if not os.path.isdir(log_dir):
-            os.makedirs(log_dir)
-        logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"]))
-        logfile = increment_file(logfile)
-        # TODO: Increment so we have files like date.log.1 instead of overwriting
-        file_handler = logging.FileHandler(logfile)
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(log_formatter)
-        root_logger.addHandler(file_handler)
-
-        logging.info("Logfile:" + logfile)
-        # For easier eyeballing & CLI tab-completion, symlink to latest.log
-        latest = os.path.join(log_dir, logname + ".latest.log")
-        silent_rm(latest)
-        os.symlink(os.path.abspath(logfile), latest)
-
-    # Send to console, too, if running at valid TTY (e.g. not cron job)
-    if os.isatty(sys.stdout.fileno()):
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(log_formatter)
-        root_logger.addHandler(console_handler)
 
 def silent_rm(filename):
     try:
