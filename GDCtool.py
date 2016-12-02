@@ -100,6 +100,18 @@ class GDCtool(object):
             if result is None:
                 gabort(100, "Required configuration variable is unset: %s" % v)
 
+    def datestamps(self):
+        """ Returns a list of valid datestamps by reading the datestamps file """
+        if not os.path.isfile(self.config.datestamps):
+            return []
+        else:
+            raw = open(self.config.datestamps).read().strip()
+            if not raw:
+                return [] # Empty file
+            else:
+                # stamps are listed one per line, sorting is a sanity check
+                return sorted(raw.split('\n'))
+
     def init_logging(self):
         # Get today's datestamp, the default value
         datestamp = time.strftime('%Y_%m_%d', time.localtime())
@@ -108,21 +120,21 @@ class GDCtool(object):
             # We are using an explicit datestamp, so it must match one from
             # the datestamps file, or be the string "latest"
             datestamp = self.options.datestamp
-            datestamps_file = self.config.datestamps
-            # Any error trying to read the existing datestamps is equally bad
-            try:
-                # Read existing stamps
-                existing_stamps = sorted([d.strip() for d in open(datestamps_file)])
 
-                if datestamp == "latest":
-                    datestamp = existing_stamps[-1]
-                elif datestamp not in existing_stamps:
-                    # Timestamp not recognized, but print a combined message later
-                    raise Exception
-            except:
+
+            existing_stamps = self.datestamps()
+
+            if datestamp == "latest":
+                if len(existing_stamps) == 0:
+                    raise ValueError("No existing datestamps,"
+                                     "cannot use 'latest' datestamp option ")
+                # already sorted, so last one is latest
+                datestamp = existing_stamps[-1]
+            elif datestamp not in existing_stamps:
+                # Timestamp not recognized, but print a combined message later
                 raise ValueError("Given datestamp not present in "
-                                 + datestamps_file
-                                 + ". Mirror likely does not exist" )
+                                 + datestamps_file + "\n"
+                                 + "Existing datestamps: " + repr(existing_stamps))
 
         # At this point, datestamp must be a valid value, so initialize the
         # logging with that value

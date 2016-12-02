@@ -50,9 +50,6 @@ class gdc_dicer(GDCtool):
                          help='Root of diced data tree')
         cli.add_argument('--dry-run', action='store_true',
                          help="Show expected operations, but don't perform dicing")
-        cli.add_argument('timestamp', nargs='?',
-                         help='Dice using metadata from a particular date.'\
-                         'If omitted, the latest version will be used')
         fd_help = "Skip detection of already diced files, and redice everything"
         cli.add_argument('-f', '--force-dice',
                          action='store_true', help=fd_help)
@@ -103,30 +100,35 @@ class gdc_dicer(GDCtool):
 
             logging.info("Dicing " + program)
 
-            # Use timestamp provided, or inspect the mirror to find the latest
-            timestamp = self.options.timestamp
-            if timestamp is None:
-                timestamp = meta.latest_prog_timestamp(mirror_prog_root)
-            logging.info("Timestamp: " + timestamp)
+            # datestamp set by GDCtool base class
+            datestamp = self.datestamp
+
+            logging.info("Mirror date: " + datestamp)
 
             agg_case_data = dict()
             for project in sorted(config.projects):
                 # Load metadata from mirror, getting the latest metadata
-                # earlier than the given timestamp
+                # earlier than the given datestamp
                 raw_project_root = os.path.join(mirror_prog_root, project)
-                meta_dir = os.path.join(raw_project_root, "metadata")
-                meta_dirs = [d for d in os.listdir(meta_dir) if d <= timestamp]
+                meta_dir = os.path.join(raw_project_root, "metadata", datestamp)
+                #TODO: This is a very redundant format, and doesn't fix the ls issue
+                # Should reorganize the metadata folder structure to
+                # .../proj/metadata/YYYY/metadata.project.<date>.json
+                meta_file = os.path.join(meta_dir,
+                                         '.'.join(["metadata", project, datestamp, "json"]))
 
-                # Check to see if there is actually metadata available,
-                # and skip with a warning if not
-                if len(meta_dirs) < 1:
+                # Sanity check, there must be saved metadata for each
+                # project in order to dice
+                if not os.path.exists(meta_file):
                     _warning =  "No metadata found for " + project
-                    _warning += " earlier than " + timestamp
-                    logging.warning(_warning)
-                    continue
+                    _warning += " on " + datestamp
+                    raise ValueError(_warning)
 
-                latest_meta = os.path.join(meta_dir, sorted(meta_dirs)[-1])
-                metadata = meta.latest_metadata(latest_meta)
+                # Read json metadata as a dict
+                with open(meta_file) as mf:
+                    metadata = json.load(mf)
+
+                # metadata = meta.latest_metadata(latest_meta)
 
                 # If subset of cases was selected (via --case or config file),
                 # then filter out other file dicts
@@ -145,15 +147,15 @@ class gdc_dicer(GDCtool):
 
                 # Diced Metadata
                 diced_meta_dir = os.path.join(diced_project_root,
-                                              "metadata", timestamp)
-                diced_meta_fname = ".".join([project, timestamp,
+                                              "metadata", datestamp)
+                diced_meta_fname = ".".join([project, datestamp,
                                             'diced_metadata', 'tsv'])
                 if not os.path.isdir(diced_meta_dir):
                     os.makedirs(diced_meta_dir)
-                meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
+                diced_meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
 
                 # Count project annotations
-                with open(meta_file, 'w') as mf:
+                with open(diced_meta_file, 'w') as mf:
                     # Header
                     META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
                                     'annotation', 'file_name', 'center',
@@ -181,14 +183,14 @@ class gdc_dicer(GDCtool):
                 # and figures needed for downstream sample reports.
                 # Count available data per sample
                 logging.info("Generating counts for " + project)
-                case_data = _case_data(meta_file)
-                counts_file = ".".join([project, timestamp, "sample_counts.tsv"])
+                case_data = _case_data(diced_meta_file)
+                counts_file = ".".join([project, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
                 _write_counts(case_data, project, counts_file)
 
                 # Heatmaps per sample
                 logging.info("Generating heatmaps for " + project)
-                draw_heatmaps(case_data, project, timestamp, diced_meta_dir)
+                draw_heatmaps(case_data, project, datestamp, diced_meta_dir)
 
                 # keep track of aggregate case data
                 project_aggregates = cohort_agg_dict.get(project, [])
@@ -197,30 +199,27 @@ class gdc_dicer(GDCtool):
                     agg_case_data[agg].update(case_data)
 
             # Create aggregate diced_metadata.tsvs
-            self.aggregate_diced_metadata(diced_prog_root, timestamp)
+            self.aggregate_diced_metadata(diced_prog_root, datestamp)
 
             # As well as aggregate counts and heatmaps
             for agg in agg_case_data:
                 ac_data = agg_case_data[agg]
                 meta_dir = os.path.join(diced_prog_root, agg,
-                                          "metadata", timestamp)
+                                          "metadata", datestamp)
 
                 logging.info("Generating aggregate counts for " + agg)
-                counts_file = ".".join([agg, timestamp, "sample_counts.tsv"])
+                counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
                 _write_counts(ac_data, agg, counts_file)
 
                 logging.info("Generating aggregate heatmaps for " + agg)
-                draw_heatmaps(ac_data, agg, timestamp, meta_dir)
+                draw_heatmaps(ac_data, agg, datestamp, meta_dir)
 
         logging.info("Dicing completed successfuly")
 
     def execute(self):
         super(gdc_dicer, self).execute()
         self.parse_args()
-        # Log to todays date, even if the mirror timestamp is different
-        log_timestamp = common.timetuple2stamp()
-        common.init_logging(log_timestamp, self.config.dice.log_dir, "gdcDice")
         try:
             self.dice()
         except Exception as e:
@@ -236,18 +235,18 @@ class gdc_dicer(GDCtool):
                 cohort_agg[c] = cohort_agg.get(c, []) + [k]
         return cohort_agg
 
-    def aggregate_diced_metadata(self, prog_dir, timestamp):
+    def aggregate_diced_metadata(self, prog_dir, datestamp):
         '''Aggregates the diced metadata files for aggregate cohorts'''
         # Note we can only aggregate data where each cohort in the aggregate
-        # has the same timestamp for the diced metadata
+        # has the same datestamp for the diced metadata
 
         aggregates = self.config.aggregates
         for agg, cohorts in aggregates.iteritems():
             cohorts = sorted(cohorts.split(','))
-            agg_meta_folder = os.path.join(prog_dir, agg, "metadata", timestamp)
+            agg_meta_folder = os.path.join(prog_dir, agg, "metadata", datestamp)
             if not os.path.isdir(agg_meta_folder):
                 os.makedirs(agg_meta_folder)
-            agg_meta_file = ".".join([agg, timestamp, 'diced_metadata', 'tsv'])
+            agg_meta_file = ".".join([agg, datestamp, 'diced_metadata', 'tsv'])
             agg_meta_file = os.path.abspath(os.path.join(agg_meta_folder,
                                                         agg_meta_file))
             skip_header = False
@@ -255,14 +254,15 @@ class gdc_dicer(GDCtool):
             # check to see if all the necessary diced files exist
             cohort_diced_tsvs = []
             for c in cohorts:
-                c_meta_folder = os.path.join(prog_dir, c, "metadata", timestamp)
-                c_meta_file = ".".join([c, timestamp, 'diced_metadata', 'tsv'])
+                c_meta_folder = os.path.join(prog_dir, c, "metadata", datestamp)
+                c_meta_file = ".".join([c, datestamp, 'diced_metadata', 'tsv'])
                 c_meta_file = os.path.abspath(os.path.join(c_meta_folder,
                                                            c_meta_file))
                 cohort_diced_tsvs.append(c_meta_file)
 
+            # Further sanity check
             if not all(os.path.exists(f) for f in cohort_diced_tsvs):
-                logging.warning("Cohorts in aggregate " + agg + " have differing timestamps")
+                logging.warning("Cohorts in aggregate " + agg + " have differing datestamps")
                 return
 
             # otherwise, merge as normal
@@ -366,7 +366,8 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
     """
     mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
     if not os.path.isfile(mirror_path):
-        logging.warning("expected mirror file missing: " + mirror_path)
+        # Bad, this means there are integrity issues
+        raise ValueError("Expected mirror file missing: " + mirror_path)
     else:
         ## Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
@@ -376,12 +377,15 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
             # convert expected path to a relative path from the diced_root
             expected_paths = meta.diced_file_paths(dice_path, file_dict)
             expected_paths = [os.path.abspath(p) for p in expected_paths]
-            logging.info("Dicing file " + mirror_path)
+
             if not dry_run:
                 # Dice if force_dice is enabled or not all expected files exist
                 already_diced = all(os.path.isfile(p) for p in expected_paths)
                 if force or not already_diced:
+                    logging.info("Dicing file " + mirror_path)
                     convert(file_dict, mirror_path, dice_path)
+                else:
+                    logging.info("Skipping file " + mirror_path + " (already diced)")
 
                 append_diced_metadata(file_dict, expected_paths,
                                       annot, meta_file_writer)
