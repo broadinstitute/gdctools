@@ -26,33 +26,23 @@ main <- function(...) {
   if (length(args)  != 4) {
     stop(
       paste(
-            "Usage: RedactionsReport.R <timestamp> <reportDir> <refDir>",
+            "Usage: RedactionsReport.R <datestamp> <reportDir> <refDir>",
             "<blacklist>"))
     }
-  timestamp           = args[[1]]
+  datestamp           = args[[1]]
   reportDir           = args[[2]]
   refDir              = args[[3]]
   blacklistPath       = args[[4]]
   ############################################################################
   # Initialization
   ############################################################################
-  ### GDC era doesn't have any AnnotationTSVs
-  ### annotPaths = findAnnotationTSVs(redacDir, timestamp)
-  ### redacFile  = annotPaths[[REDACTIONS.HEAD]]
-  ### ffpeFile   = annotPaths[[FFPES.HEAD]]
-
-###   maps            = getMaps(refDir)
-###   centerCodeMap   = maps[[1]]
-###   platformCodeMap = maps[[2]]
-###   diseaseStudyMap = maps[[3]]
-###   sampleTypeMap   = maps[[4]]
 
   aggregatesPath = file.path(reportDir, "aggregates.txt")
   result = getAggregates(aggregatesPath)
   tumorTypeToAggregateNamesMap = result[[1]]
   aggregateNameToTumorTypesMap = result[[2]]
 
-  runDate = strsplit(timestamp, "__", TRUE)[[1]][1]
+  runDate = datestamp
   runStmp = paste(runDate, "Data Snapshot")
   runName = paste0("stddata__", runDate)
 
@@ -69,13 +59,13 @@ main <- function(...) {
   # Summary
   ############################################################################
   #  FIXME: nrow() the raw data, not the Nozzle table?
-  redactionsTable  <- getRedactionsTable(reportDir, timestamp)
+  redactionsTable  <- getRedactionsTable(reportDir, datestamp)
   redactionsCount  <- 0 # nrow(redactionsTable)
 
-  ffpeTable        <- getFFPETable(reportDir, timestamp)
+  ffpeTable        <- getFFPETable(reportDir, datestamp)
   ffpeCount        <- 0 # nrow(ffpeTable)
 
-  filterTableList  <- getFilterTable(reportDir, timestamp, aggregateNametoTumorTypesMap)
+  filterTableList  <- getFilterTable(reportDir, datestamp, aggregateNametoTumorTypesMap)
   filterTable      <- filterTableList[[1]]
   filterCount      <- filterTableList[[2]]
 
@@ -90,7 +80,7 @@ main <- function(...) {
   # Heatmaps SubSection
   ############################################################################
   heatmapsStart   <- Sys.time()
-  heatmaps        <- generateHeatmapsSubSection(timestamp, reportDir)
+  heatmaps        <- generateHeatmapsSubSection(datestamp, reportDir)
   report          <- addToResults(report, heatmaps)
   print(sprintf("Heatmaps section generated in %s minutes.",
                 difftime(Sys.time(), heatmapsStart, units="min")))
@@ -100,7 +90,7 @@ main <- function(...) {
   # Ingested Samples
   ############################################################################
   ingestSamplesStartTime <- Sys.time()
-  sampleCountsPath <- paste("sample_counts", timestamp, "tsv", sep=".")
+  sampleCountsPath <- paste("sample_counts", datestamp, "tsv", sep=".")
   sampleCountsPath <- file.path(reportDir, sampleCountsPath)
   sampleCountsTableRaw <- read.table(sampleCountsPath, header = TRUE,
                                     sep = "\t", stringsAsFactors=FALSE)
@@ -111,11 +101,11 @@ main <- function(...) {
 
   sampleCountsTable <- generateSampleCountsTable(sampleCountsPath,
                                      sampleCountsTableRaw,
-                                     refDir, timestamp, reportDir,
+                                     refDir, datestamp, reportDir,
                                      blacklistPath, aggregateNameToTumorTypesMap)
   report  <- addToSummary(report, sampleCountsTable$tbl)
 #    createStandaloneTable(sampleCountsTable$df, "sample_counts", reportDir,
-#                          timestamp)
+#                          datestamp)
   print(sprintf("Created Ingested Samples section in %s minutes.",
                  difftime(Sys.time(), ingestSamplesStartTime, units="min")))
 
@@ -313,15 +303,15 @@ generateSamplesSubsection <- function(tumorType, sampleType, dataType,
     return(subsection)
 }
 
-generateHeatmapFigure <- function(heatmapsDir, tumorType, timestamp) {
+generateHeatmapFigure <- function(heatmapsDir, tumorType, datestamp) {
     heatmapFilename    =
-        sprintf("%s.%s.low_res.heatmap.png", tumorType, timestamp)
+        sprintf("%s.%s.low_res.heatmap.png", tumorType, datestamp)
     lowResHeatmapPath  =
         file.path(heatmapsDir,
-                  sprintf("%s.%s.low_res.heatmap.png", tumorType, timestamp))
+                  sprintf("%s.%s.low_res.heatmap.png", tumorType, datestamp))
     highResHeatmapPath =
         file.path(heatmapsDir,
-                  sprintf("%s.%s.high_res.heatmap.png", tumorType, timestamp))
+                  sprintf("%s.%s.high_res.heatmap.png", tumorType, datestamp))
 
     figure = NULL
     if (file.exists(lowResHeatmapPath)) {
@@ -499,9 +489,9 @@ generateFilterSubsection <- function(tumorType, filterTableRaw) {
     return(subsection)
 }
 
-generateHeatmapsSubSection <- function(timestamp, reportDir) {
+generateHeatmapsSubSection <- function(datestamp, reportDir) {
     heatmapsFilePattern =
-        sprintf("^[-0-9A-Za-z]+.%s.low_res.heatmap.png", timestamp)
+        sprintf("^[-0-9A-Za-z]+.%s.low_res.heatmap.png", datestamp)
     heatmaps = list.files(reportDir, pattern=heatmapsFilePattern)
     heatmapsSubSection = newSubSection("Sample Heatmaps")
     for (heatmap in heatmaps) {
@@ -550,7 +540,7 @@ generateHeatmapSubSubSection <- function(tumorType, lowResHeatmapPath,
 # Generate Sample Counts Table
 ################################################################################
 generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
-                                   refDir, timestamp, reportDir,
+                                   refDir, datestamp, reportDir,
                                    blacklistPath, aggregateNameToTumorTypesMap) {
   ### Create a list of sample types and their abbreviations
   sampleTypeMap <- getSampleTypeMap(refDir)
@@ -564,7 +554,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
          newParagraph(
                    sprintf("%s: %s", sampleType, sampleTypeMap[[sampleType]])))
   }
-  countsPattern <- paste("", timestamp, "sample_counts.tsv", sep='.')
+  countsPattern <- paste("", datestamp, "sample_counts.tsv", sep='.')
   cohortCountsFiles <- list.files(reportDir, pattern=countsPattern)
   cohorts <- lapply(cohortCountsFiles, function(fn) {
     unlist(strsplit(fn, "\\."))[1]
@@ -576,15 +566,15 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
   for (tumorType in cohorts){
     # Create the tumor specific heatmap and sample counts table
     # TODO: These steps should be moved to createTumorSamplesReport
-    tumorCountsPath <- paste0(tumorType, ".", timestamp, ".sample_counts.tsv")
+    tumorCountsPath <- paste0(tumorType, ".", datestamp, ".sample_counts.tsv")
     tumorCountsPath <- file.path(reportDir, tumorCountsPath)
-    tumorDicedMetaPath <- paste0(tumorType, ".", timestamp, ".diced_metadata.tsv")
+    tumorDicedMetaPath <- paste0(tumorType, ".", datestamp, ".diced_metadata.tsv")
     tumorDicedMetaPath <- file.path(reportDir, tumorDicedMetaPath)
     sampleCountsTable <-
         generateTumorTypeSampleCountsTable(tumorType, tumorCountsPath,
                                            tumorDicedMetaPath, sampleTypeMap)
     heatmap <-
-        generateHeatmapFigure(reportDir, tumorType, timestamp)
+        generateHeatmapFigure(reportDir, tumorType, datestamp)
 
     fullName <- tumorType
     if ((! is.null(names(diseaseStudyMap))) &&
@@ -596,7 +586,7 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
     url <-
       createTumorSamplesReport(tumorType, fullName,
         reportDir, sampleCountsTable, sampleTypeDescription,
-        sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap)
+        sampleTypeList, heatmap, datestamp, aggregateNameToTumorTypesMap)
 
     # Update row for this cohort  with link to cohort report
     # FIXME: TCGA-Hard coded here
@@ -666,11 +656,11 @@ generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, tumor
 ################################################################################
 # Create a standalone table file
 ################################################################################
-createStandaloneTable <- function(dataFrame, tableName, reportDir, timestamp,
+createStandaloneTable <- function(dataFrame, tableName, reportDir, datestamp,
                                   del = FALSE) {
     tableReport <- newCustomReport("")
     tableReport <- addTo(tableReport, newTable(dataFrame))
-    tableName <- file.path(reportDir, paste(tableName, timestamp, sep = "."))
+    tableName <- file.path(reportDir, paste(tableName, datestamp, sep = "."))
     writeReport(tableReport, filename = tableName, output = c(HTML.REPORT),
                 credits = FALSE)
     if (del) {
@@ -709,7 +699,7 @@ html2png <- function(htmlFile, del = FALSE) {
 ################################################################################
 createTumorSamplesReport <- function(disease, fullName,
   reportDir, sampleCountsTable, sampleTypeDescription,
-  sampleTypeList, heatmap, timestamp, aggregateNameToTumorTypesMap) {
+  sampleTypeList, heatmap, datestamp, aggregateNameToTumorTypesMap) {
 
   reportStartTime <- Sys.time()
   print(sprintf("Generating sample report for %s...", disease))
@@ -722,7 +712,7 @@ createTumorSamplesReport <- function(disease, fullName,
 
   reportName <- paste(reportName, " Samples Report")
 
-  runDate <- strsplit(timestamp, "__", TRUE)[[1]][1]
+  runDate <- datestamp
   runStmp <- paste(runDate, "Data Snapshot")
 
   diseaseReport <- newReport(reportName)
@@ -750,7 +740,7 @@ createTumorSamplesReport <- function(disease, fullName,
 ###         ffpeCount = 0
 ###     }
 ###
-  filterTableList         <- getFilterTable(reportDir, timestamp,
+  filterTableList         <- getFilterTable(reportDir, datestamp,
                                             aggregateNameToTumorTypesMap, disease)
   filterTable    <- filterTableList[[1]]
   filterCount    <- filterTableList[[2]]
@@ -797,7 +787,7 @@ createTumorSamplesReport <- function(disease, fullName,
 
 ###     createStandaloneTable(sampleCountsTable$df,
 ###                           paste(disease, "sample_counts", sep = "."), reportDir,
-###                           timestamp, del = TRUE)
+###                           datestamp, del = TRUE)
 
     writeReport(diseaseReport, filename=reportPath)
     print(sprintf("Finished generating sample report for %s in %s minutes",
@@ -1053,14 +1043,14 @@ addToMethodsSection <- function(report) {
     return(report)
 }
 #TODO: Fully implement these functions
-getRedactionsTable <- function(reportDir, timestamp){
+getRedactionsTable <- function(reportDir, datestamp){
   return(NULL)
 }
-getFFPETable <- function (reportDir, timestamp){
+getFFPETable <- function (reportDir, datestamp){
   return(NULL)
 }
-getFilterTable <- function (reportDir, timestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
-  filtered.file <- paste("TCGA", timestamp, "filtered_samples.txt", sep=".")
+getFilterTable <- function (reportDir, datestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
+  filtered.file <- paste("TCGA", datestamp, "filtered_samples.txt", sep=".")
   filtered.file <- file.path(reportDir, filtered.file)
   filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   if (!is.null(tumor.type)){
