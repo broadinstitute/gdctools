@@ -31,7 +31,7 @@ from lib.heatmap import draw_heatmaps
 from lib.convert import maf as mutect_maf
 from lib import common
 from lib import meta
-from lib.constants import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
+from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 

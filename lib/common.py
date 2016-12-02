@@ -6,11 +6,37 @@ import fnmatch
 import csv
 import errno
 import logging
+import re
 import sys
 import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 from fasteners import InterProcessLock
-from lib.constants import LOGGING_FMT
+
+
+# Helpful constants
+LOGGING_FMT = '%(asctime)s[%(levelname)s]: %(message)s'
+DATESTAMP_REGEX = re.compile("^\d{4}_[01]\d_[0-3]\d$")
+
+#TODO: Configurable?
+REPORT_DATA_TYPES = ('BCR', 'Clinical', 'CN', 'mRNA', 'miR', 'MAF', 'Methylation')
+
+
+ANNOT_TO_DATATYPE = {
+    'clinical__primary'         : 'Clinical',
+    'clinical__biospecimen'     : 'BCR',
+    'CNV__unfiltered__snp6'                 : 'CN',
+    'CNV__snp6'     : 'CN',
+    'methylation__HM27' : 'Methylation',
+    'methylation__HM450' : 'Methylation',
+    'miR__geneExp'              : 'miR',
+    'miR__isoformExp'           : 'miR',
+    'mRNA__geneExp__FPKM'       : 'mRNA',
+    'mRNA__geneExpNormed__FPKM' : 'mRNA',
+    'mRNA__counts__FPKM'        : 'mRNA',
+    'SNV__mutect'               : 'MAF'
+}
+
+
 
 def init_logging(tstamp=None, log_dir=None, logname=""):
     '''Initialize logging to stdout and to a logfile
