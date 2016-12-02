@@ -47,11 +47,6 @@ class gdc_mirror(GDCtool):
         # detect if we have curl installed
         self.has_cURL = api.curl_exists()
 
-    def set_timestamp(self):
-        '''Creates a timestamp for the current mirror'''
-        self.timestamp = common.timetuple2stamp() #'2017_02_01__00_00_00'
-        return self.timestamp
-
     def parse_args(self):
         '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
@@ -124,6 +119,8 @@ class gdc_mirror(GDCtool):
                 for project in sorted(projects):
                     self.mirror_project(prgm, project)
 
+        # Update the datestamps file with this version of the mirror
+        self.update_datestamps_file()
         logging.info("Mirror completed successfully.")
 
     def __mirror_file(self, file_d, proj_root, n, total, retries=3):
@@ -174,7 +171,7 @@ class gdc_mirror(GDCtool):
 
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
-        tstamp = self.timestamp
+        datestamp = self.datestamp
 
         logging.info("Mirroring started for {0} ({1})".format(project, program))
         if self.options.data_categories is not None:
@@ -190,10 +187,10 @@ class gdc_mirror(GDCtool):
         logging.info("Mirroring data to " + proj_dir)
 
         # Read the previous metadata, if present
-        prev_timestamp = meta.latest_timestamp(proj_dir, None, ignore=tstamp)
+        prev_datestamp = meta.latest_datestamp(proj_dir, None)
         prev_metadata = []
-        if prev_timestamp is not None:
-            prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_timestamp)
+        if prev_datestamp is not None:
+            prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_datestamp)
             prev_metadata = meta.latest_metadata(prev_stamp_dir)
 
         # Mirror each category separately, recording metadata (file dicts)
@@ -207,12 +204,12 @@ class gdc_mirror(GDCtool):
         # Record project-level metadata
         # file dicts, counts, redactions, blacklist, etc.
         meta_folder = os.path.join(proj_dir,"metadata")
-        stamp_folder = os.path.join(meta_folder, tstamp)
+        stamp_folder = os.path.join(meta_folder, datestamp)
         if not os.path.isdir(stamp_folder):
             os.makedirs(stamp_folder)
 
         # Write file metadata
-        meta_json = ".".join(["metadata", project, tstamp, "json" ])
+        meta_json = ".".join(["metadata", project, datestamp, "json" ])
         meta_json = os.path.join(stamp_folder, meta_json)
         with open(meta_json, 'w') as jf:
             json.dump(file_metadata, jf, indent=2)
@@ -222,7 +219,7 @@ class gdc_mirror(GDCtool):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
-        tstamp = self.timestamp
+        datestamp = self.datestamp
         proj_dir = os.path.join(self.config.mirror.dir, program, project)
         cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
 
@@ -243,7 +240,6 @@ class gdc_mirror(GDCtool):
         if not self.force_download:
             new_metadata = meta.files_diff(proj_dir, file_metadata, prev_metadata)
 
-
         num_files = len(new_metadata)
         logging.info("{0} new {1} files".format(num_files, category))
 
@@ -255,12 +251,27 @@ class gdc_mirror(GDCtool):
     def execute(self):
         super(gdc_mirror, self).execute()
         self.parse_args()
-        self.set_timestamp()
-        common.init_logging(self.timestamp, self.config.mirror.log_dir, "gdcMirror")
         try:
             self.mirror()
         except Exception as e:
             logging.exception("Mirroring FAILED:")
+
+    def update_datestamps_file(self):
+        """ Update the datestamps file with this mirror """
+        datestamps_file = self.config.datestamps
+
+        logging.info("Updating datestamps in " + datestamps_file)
+
+        # if it doesn't exist, create a blank one
+        if not os.path.isfile(datestamps_file):
+            open(datestamps_file, 'w')
+
+        # Now read the file
+        datestamps_file = open(datestamps_file, 'r+')
+        stamps = datestamps_file.read().strip().split('\n')
+        if stamps[-1] != self.datestamp:
+            datestamps_file.write(self.datestamp + '\n')
+
 
 if __name__ == "__main__":
     gdc_mirror().execute()

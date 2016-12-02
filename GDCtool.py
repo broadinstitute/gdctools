@@ -22,6 +22,8 @@ import time
 from GDCcli import GDCcli
 from GDCcore import *
 
+from lib import common
+
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
     def __init__(self, version=None):
@@ -33,6 +35,7 @@ class GDCtool(object):
     def execute(self):
         self.options = self.cli.parse_args()
         self.parse_config()
+        self.init_logging()
 
     def parse_config(self):
         '''
@@ -96,6 +99,44 @@ class GDCtool(object):
             result = eval("self.config." + v)
             if result is None:
                 gabort(100, "Required configuration variable is unset: %s" % v)
+
+    def init_logging(self):
+        # Get today's datestamp, the default value
+        datestamp = time.strftime('%Y_%m_%d', time.localtime())
+
+        if self.options.datestamp:
+            # We are using an explicit datestamp, so it must match one from
+            # the datestamps file, or be the string "latest"
+            datestamp = self.options.datestamp
+            datestamps_file = self.config.datestamps
+            # Any error trying to read the existing datestamps is equally bad
+            try:
+                # Read existing stamps
+                existing_stamps = sorted([d.strip() for d in open(datestamps_file)])
+
+                if datestamp == "latest":
+                    datestamp = existing_stamps[-1]
+                elif datestamp not in existing_stamps:
+                    # Timestamp not recognized, but print a combined message later
+                    raise Exception
+            except:
+                raise ValueError("Given datestamp not present in "
+                                 + datestamps_file
+                                 + ". Mirror likely does not exist" )
+
+        # At this point, datestamp must be a valid value, so initialize the
+        # logging with that value
+        self.datestamp = datestamp
+
+        # Put the logs in the right place, with the right name
+        log_dir = self.config.log_dir
+        tool_name = self.__class__.__name__
+        log_dir = os.path.join(log_dir, tool_name)
+
+        #TODO: Move the rest of this function here
+        common.init_logging(datestamp, log_dir, tool_name)
+
+
 
     def status(self):
         # Emit system info (as header comments suitable for TSV, etc) ...

@@ -57,7 +57,9 @@ class GDCcli(argparse.ArgumentParser):
                          help='Process data ONLY from these GDC projects')
         self.add_argument('--cases', nargs='+', metavar='case_id',
                          help='Process data ONLY from these GDC cases')
-
+        self.add_argument('datestamp', nargs='?', help='Use GDC data for a'
+                          ' specific date. If omitted, the latest available'
+                          ' data will be used.')
         self.version = version
 
     def parse_args(self):

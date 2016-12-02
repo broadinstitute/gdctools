@@ -29,8 +29,8 @@ GDAC_DATA_DIR            = "/xchip/gdac_data"
 
 # String Formats
 LOGGING_FMT = '%(asctime)s[%(levelname)s]: %(message)s'
-_TIMESTAMP_PATTERN = "^\d{4}_[01]\d_[0-3]\d__[0-2]\d_[0-5]\d_[0-5]\d$"
-TIMESTAMP_REGEX = re.compile(_TIMESTAMP_PATTERN)
+_DATESTAMP_PATTERN = "^\d{4}_[01]\d_[0-3]\d$"
+DATESTAMP_REGEX = re.compile(_DATESTAMP_PATTERN)
 
 #TODO: Configurable?
 REPORT_DATA_TYPES = ('BCR', 'Clinical', 'CN', 'mRNA', 'miR', 'MAF', 'Methylation')

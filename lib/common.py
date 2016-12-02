@@ -10,9 +10,9 @@ import sys
 import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 from fasteners import InterProcessLock
-from lib.constants import LOGGING_FMT, TIMESTAMP_REGEX
+from lib.constants import LOGGING_FMT
 
-def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
+def init_logging(tstamp=None, log_dir=None, logname=""):
     '''Initialize logging to stdout and to a logfile
        (see http://stackoverflow.com/a/13733863)'''
     root_logger = logging.getLogger()
@@ -25,24 +25,18 @@ def init_logging(tstamp=None, log_dir=None, logname="", link_latest=True):
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
         logfile = os.path.join(log_dir, ".".join([logname, tstamp, "log"]))
-        # TODO: For a dicing, this can append to an existing log, is
-        # this a good thing, or not?
-        # Pro: All dicing attempts for a given timestamp are colocated,
-        #     no data is lost
-        # Cons: Logs can get very large, and it's difficult to tell if it
-        #     succeeded or failed, and to tell the difference between dice
-        #     runs.
+        logfile = increment_file(logfile)
+        # TODO: Increment so we have files like date.log.1 instead of overwriting
         file_handler = logging.FileHandler(logfile)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(log_formatter)
         root_logger.addHandler(file_handler)
 
         logging.info("Logfile:" + logfile)
-        if link_latest:
-            # For easier eyeballing & CLI tab-completion, symlink to latest.log
-            latest = os.path.join(log_dir,"latest.log")
-            silent_rm(latest)
-            os.symlink(os.path.abspath(logfile), latest)
+        # For easier eyeballing & CLI tab-completion, symlink to latest.log
+        latest = os.path.join(log_dir, logname + ".latest.log")
+        silent_rm(latest)
+        os.symlink(os.path.abspath(logfile), latest)
 
     # Send to console, too, if running at valid TTY (e.g. not cron job)
     if os.isatty(sys.stdout.fileno()):
@@ -59,18 +53,11 @@ def silent_rm(filename):
         if e.errno != errno.ENOENT:
             raise
 
-def timestamp2tuple(timestamp):
-    '''Takes a timestamp of the format YYYY_MM_DD__HH_MM_SS and converts it to
-    a time-tuple usable by built in datetime functions. HH is in 24hr format.'''
-    if TIMESTAMP_REGEX.match(timestamp) is None:
-        raise ValueError('%s is not in expected format: YYYY_MM_DD__HH_MM_SS' % timestamp)
-    return time.strptime(timestamp, '%Y_%m_%d__%H_%M_%S')
 
-def timetuple2stamp(timetuple=time.localtime()):
-    '''Takes a time-tuple and converts it to the standard GDAC timestamp
-    (YYYY_MM_DD__HH_MM_SS). No argument will generate a current time
-    timestamp.'''
-    return time.strftime('%Y_%m_%d__%H_%M_%S', timetuple)
+def datestamp(timetuple=time.localtime()):
+    '''Takes a time-tuple and converts it to the standard GDAC datestamp
+    (YYYY_MM_DD). No argument will generate current date'''
+    return time.strftime('%Y_%m_%d', timetuple)
 
 def increment_file(filepath):
     '''Returns filepath if filepath doesn't exist. Otherwise returns
@@ -157,26 +144,6 @@ def writeCsvFile(filename, data):
     csvfile.writerows(data)
     rawfile.close()
 
-#===========================================================================
-# The same as argparse.ArgumentDefaultsHelpFormatter, except using
-# RawDescriptionHelpFormatter as the base class
-#===========================================================================
-class RawDescriptionArgumentDefaultsHelpFormatter(RawDescriptionHelpFormatter):
-    """Help message formatter which retains any formatting in descriptions and
-    adds default values to argument help.
-
-    Only the name of this class is considered a public API. All the methods
-    provided by the class are considered an implementation detail.
-    """
-
-    def _get_help_string(self, action):
-        help = action.help
-        if '%(default)' not in action.help:
-            if action.default is not SUPPRESS:
-                defaulting_nargs = [OPTIONAL, ZERO_OR_MORE]
-                if action.option_strings or action.nargs in defaulting_nargs:
-                    help += ' (default: %(default)s)'
-        return help
 
 @contextlib.contextmanager
 def lock_context(path, name="gdctool"):

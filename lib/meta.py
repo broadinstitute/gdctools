@@ -18,7 +18,7 @@ from __future__ import print_function
 import os
 import json
 import sys
-from lib.constants import TIMESTAMP_REGEX
+from lib.constants import DATESTAMP_REGEX
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,
@@ -54,7 +54,7 @@ def files_diff(proj_root, new_files, old_files):
     new_dicts = [fd for fd in new_files if fd['file_id'] not in old_uuids]
     return new_dicts
 
-def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
+def latest_datestamp(proj_dir, date_prefix=None, ignore=None):
     '''Get the timestamp of the last mirror or dicer run for a project.
 
     Will only return a date matching date_prefix, but can ignore an explicit
@@ -66,7 +66,7 @@ def latest_timestamp(proj_dir, date_prefix=None, ignore=None):
         # new mirror, no existing timestamps
         return None
     timestamps = [d for d in os.listdir(meta_dir)
-                  if TIMESTAMP_REGEX.match(d) is not None
+                  if DATESTAMP_REGEX.match(d) is not None
                   and os.path.isdir(os.path.join(meta_dir, d))
                   and d != ignore]
     if date_prefix is not None:
