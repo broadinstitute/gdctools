@@ -121,7 +121,6 @@ class GDCtool(object):
             # the datestamps file, or be the string "latest"
             datestamp = self.options.datestamp
 
-
             existing_stamps = self.datestamps()
 
             if datestamp == "latest":
@@ -133,7 +132,7 @@ class GDCtool(object):
             elif datestamp not in existing_stamps:
                 # Timestamp not recognized, but print a combined message later
                 raise ValueError("Given datestamp not present in "
-                                 + datestamps_file + "\n"
+                                 + self.config.datestamps + "\n"
                                  + "Existing datestamps: " + repr(existing_stamps))
 
         # At this point, datestamp must be a valid value, so initialize the

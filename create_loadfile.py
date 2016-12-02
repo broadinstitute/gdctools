@@ -34,9 +34,7 @@ class create_loadfile(GDCtool):
                         ' referenced in loadfile [defaults to value of dice_dir]')
         cli.add_argument('-d', '--dice-dir', help='Dir from which diced data will be read')
         cli.add_argument('-o', '--load-dir', help='Where generated loadfiles will be placed')
-        cli.add_argument('datestamp', nargs='?', help='Dice using metadata from a particular date.'\
-                         'If omitted, the latest version will be used')
-        self.datestamp = None
+
         self.program = None
 
     def parse_args(self):
@@ -101,20 +99,6 @@ class create_loadfile(GDCtool):
                 # dictionaries for the columns in a loadfile
                 project = dict()
                 projpath = os.path.join(program_dir, projname)
-                projdate = meta.latest_timestamp(projpath, self.options.datestamp)
-
-                # Auto-generated loadfiles should not mix data across >1 datestamp
-                if self.datestamp:
-                    if projdate != self.datestamp:
-                        raise ValueError("Datestamp of {0} for {1} conflicts "\
-                                    "with existing datestamp of {2}\n"\
-                                    .format(projname, projdate, self.datestamp))
-                else:
-                    self.datestamp = projdate
-
-                if not self.datestamp:
-                    logging.info("No data found for %s, ignoring" % projname)
-                    continue
 
                 logging.info("Inspecting data for {0} version {1}"\
                                 .format(projname, self.datestamp))
@@ -320,33 +304,34 @@ class create_loadfile(GDCtool):
         self.parse_args()
         opts = self.options
 
-        common.init_logging()
+        try:
+            # Discern what data is available for given program on given datestamp
+            (projects, annotations) = self.inspect_data()
 
-        # Discern what data is available for given program on given datestamp
-        (projects, annotations) = self.inspect_data()
+            # ... then generate singleton loadfiles (one per project/cohort)
+            for project in sorted(projects.keys()):
+                self.generate_loadfiles(project, annotations, [projects[project]])
 
-        # ... then generate singleton loadfiles (one per project/cohort)
-        for project in sorted(projects.keys()):
-            self.generate_loadfiles(project, annotations, [projects[project]])
+            # ... then, generate any aggregate loadfiles (>1 project/cohort)
+            for aggr_name, aggr_definition in self.config.aggregates.items():
+                aggregate = []
+                for project in aggr_definition.split(","):
+                    # Guard against case where project/cohort was not inspected due
+                    # to omission from --projects flag, but is STILL in aggregates
+                    project = projects.get(project, None)
+                    if project:
+                        aggregate.append(project)
+                # Also guard against extreme version of above edge case, where NONE
+                # of the projects/cohorts in this aggregate definition were loaded
+                if aggregate:
+                    print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
+                    self.generate_loadfiles(aggr_name, annotations, aggregate)
 
-        # ... then, generate any aggregate loadfiles (>1 project/cohort)
-        for aggr_name, aggr_definition in self.config.aggregates.items():
-            aggregate = []
-            for project in aggr_definition.split(","):
-                # Guard against case where project/cohort was not inspected due
-                # to omission from --projects flag, but is STILL in aggregates
-                project = projects.get(project, None)
-                if project:
-                    aggregate.append(project)
-            # Also guard against extreme version of above edge case, where NONE
-            # of the projects/cohorts in this aggregate definition were loaded
-            if aggregate:
-                print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
-                self.generate_loadfiles(aggr_name, annotations, aggregate)
-
-        # ... finally, assemble a compositle loadfile for all available samples
-        # and sample sets
-        self.generate_master_loadfiles(projects, annotations)
+            # ... finally, assemble a compositle loadfile for all available samples
+            # and sample sets
+            self.generate_master_loadfiles(projects, annotations)
+        except Exception as e:
+            logging.exception("Create Loadfile FAILED:")
 
 def get_diced_metadata(project, project_root, datestamp):
     # At this point the datestamp has been vetted to be the latest HH_MM_SS
@@ -356,7 +341,8 @@ def get_diced_metadata(project, project_root, datestamp):
     mpath = os.path.join(mpath, project + '.' + datestamp + ".diced_metadata.tsv")
     if os.path.exists(mpath):
         return mpath
-    raise ValueError("Could not find dicing metadata: "+mpath)
+    # sanity check
+    raise ValueError("Could not find dice metadata for " + project + "on " + datestamp)
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
