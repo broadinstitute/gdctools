@@ -22,16 +22,16 @@ import sys
 import gzip
 from pkg_resources import resource_filename #@UnresolvedImport
 
-from lib.convert import seg as gdac_seg
-from lib.convert import py_clinical as gdac_clin
-from lib.convert import tsv2idtsv as gdac_tsv2idtsv
-from lib.convert import tsv2magetab as gdac_tsv2magetab
-from lib.convert import copy as gdac_copy
-from lib.heatmap import draw_heatmaps
-from lib.convert import maf as mutect_maf
-from lib import common
-from lib import meta
-from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
+from gdctools.lib.convert import seg as gdac_seg
+from gdctools.lib.convert import py_clinical as gdac_clin
+from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
+from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
+from gdctools.lib.convert import copy as gdac_copy
+from gdctools.lib.convert import maf as mutect_maf
+from gdctools.lib.heatmap import draw_heatmaps
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 
@@ -638,5 +638,8 @@ def converter(converter_name):
 def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
 
-if __name__ == "__main__":
+def main():
     gdc_dicer().execute()
+
+if __name__ == "__main__":
+    main()

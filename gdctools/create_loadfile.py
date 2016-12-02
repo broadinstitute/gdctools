@@ -20,9 +20,9 @@ import os
 import csv
 from functools import cmp_to_key
 
-from lib import common
-from lib import meta
-from GDCtool import GDCtool
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.GDCtool import GDCtool
 
 class create_loadfile(GDCtool):
 
@@ -520,5 +520,8 @@ def write_sset(samples_lfp, sset_filename, sset_name):
 
         outfile.write(sset_data)
 
-if __name__ == "__main__":
+def main():
     create_loadfile().execute()
+
+if __name__ == "__main__":
+    main()

@@ -20,9 +20,10 @@ import logging
 import os
 import csv
 from pkg_resources import resource_filename
-from lib import common
-from lib import meta
-from GDCtool import GDCtool
+
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.GDCtool import GDCtool
 
 class sample_report(GDCtool):
 
@@ -218,5 +219,8 @@ def link_loadfile_metadata(loadfiles_dir, program, report_dir, datestamp):
     filtered = program + '.' + datestamp + ".filtered_samples.txt"
     link_metadata_file(from_dir, report_dir, filtered)
 
-if __name__ == "__main__":
+def main():
     sample_report().execute()
+
+if __name__ == "__main__":
+    main()

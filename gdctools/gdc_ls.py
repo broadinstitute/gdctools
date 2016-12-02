@@ -16,8 +16,9 @@ gdcls: List data available in the GDC
 from __future__ import print_function
 import json
 from collections import defaultdict
-from GDCtool import GDCtool
-from lib.api import GDCQuery
+
+from gdctools.GDCtool import GDCtool
+from gdctools.lib.api import GDCQuery
 
 class gdcls(GDCtool):
 

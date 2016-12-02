@@ -20,10 +20,10 @@ import traceback
 import ConfigParser
 import time
 import logging
-from GDCcli import GDCcli
-from GDCcore import *
 
-from lib import common
+from gdctools.GDCcli import GDCcli
+from gdctools.GDCcore import *
+from gdctools.lib import common
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
@@ -114,6 +114,8 @@ class GDCtool(object):
                 return sorted(raw.split('\n'))
 
     def init_logging(self):
+        # If no config was provided, don't initialize logging
+
         # Get today's datestamp, the default value
         datestamp = time.strftime('%Y_%m_%d', time.localtime())
 
@@ -141,9 +143,8 @@ class GDCtool(object):
         self.datestamp = datestamp
 
         # Put the logs in the right place, with the right name
-        log_dir = self.config.log_dir
+        log_dir = self.config.log_dir if self.config else None
         tool_name = self.__class__.__name__
-        log_dir = os.path.join(log_dir, tool_name)
 
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
@@ -152,6 +153,7 @@ class GDCtool(object):
 
         # Write logging data to file
         if log_dir is not None and datestamp is not None:
+            log_dir = os.path.join(log_dir, tool_name)
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
             logfile = os.path.join(log_dir, ".".join([tool_name, datestamp, "log"]))

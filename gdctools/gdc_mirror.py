@@ -20,10 +20,10 @@ import logging
 import time
 import json
 
-from GDCtool import GDCtool
-import lib.api as api
-import lib.meta as meta
-import lib.common as common
+from gdctools.GDCtool import GDCtool
+import gdctools.lib.api as api
+import gdctools.lib.meta as meta
+import gdctools.lib.common as common
 
 class gdc_mirror(GDCtool):
 
@@ -272,6 +272,8 @@ class gdc_mirror(GDCtool):
         if stamps[-1] != self.datestamp:
             datestamps_file.write(self.datestamp + '\n')
 
+def main():
+    gdc_mirror().execute()
 
 if __name__ == "__main__":
-    gdc_mirror().execute()
+    main()
