@@ -142,6 +142,8 @@ class GDCtool(object):
 
         # Put the logs in the right place, with the right name
         log_dir = self.config.log_dir
+        if not log_dir:
+            log_dir = "."
         tool_name = self.__class__.__name__
         log_dir = os.path.join(log_dir, tool_name)
 
