@@ -18,7 +18,7 @@ from __future__ import print_function
 import os
 import json
 import sys
-from lib.constants import DATESTAMP_REGEX
+from lib.common import DATESTAMP_REGEX
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,
