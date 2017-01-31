@@ -22,7 +22,7 @@ from matplotlib.colors import ListedColormap, NoNorm
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import font_manager
 
-from lib.constants import REPORT_DATA_TYPES
+from lib.common import REPORT_DATA_TYPES
 
 def draw_heatmaps(case_data, project, timestamp, diced_meta_dir):
     rownames, matrix = _build_heatmap_matrix(case_data)
