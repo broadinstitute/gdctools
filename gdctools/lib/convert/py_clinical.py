@@ -1,6 +1,6 @@
-from lib.meta import diced_file_paths
-from lib.clinxml import parse_clinical_xml
-from lib.common import safeMakeDirs
+from ..meta import diced_file_paths
+from ..clinxml import parse_clinical_xml
+from ..common import safeMakeDirs
 
 def process(file_dict, infile, outdir):
     # should only produce one file

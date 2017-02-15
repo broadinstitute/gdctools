@@ -2,8 +2,8 @@
 
 import csv
 
-from lib.common import safeMakeDirs, writeCsvFile
-from lib import meta
+from ..common import safeMakeDirs, writeCsvFile
+from .. import meta
 
 
 def process(file_dict, infile, outdir, dialect='seg_broad'):

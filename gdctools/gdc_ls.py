@@ -98,5 +98,8 @@ def filter_params(filters):
     else:
         return api._and_filter(eq_filters)
 
-if __name__ == "__main__":
+def main():
     gdcls().execute()
+
+if __name__ == "__main__":
+    main()

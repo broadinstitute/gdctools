@@ -14,7 +14,8 @@ setup(
             'gdc_mirror = gdctools.gdc_mirror:main',
             'gdc_dice = gdctools.gdc_dice:main',
             'create_loadfile = gdctools.create_loadfile:main',
-            'sample_report = gdctools.sample_report:main'
+            'sample_report = gdctools.sample_report:main',
+            'gdc_ls = gdctools.gdc_ls:main' 
         ]
     },
     package_data={'gdctools':['config/*.tsv', 'config/*.cfg', 'lib/GDCSampleReport.R' ]
