@@ -69,7 +69,7 @@ class sample_report(GDCtool):
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_sample_report = resource_filename("gdctools","lib/GDCSampleReport.R")
+        gdc_sample_report = resource_filename(__name__,"lib/GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,

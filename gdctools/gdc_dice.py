@@ -80,7 +80,7 @@ class gdc_dicer(GDCtool):
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        trans_dict = build_translation_dict(resource_filename("gdctools",
+        trans_dict = build_translation_dict(resource_filename(__name__,
                                                 "config/annotations_table.tsv"))
         config = self.config
         # Get cohort to aggregate map
