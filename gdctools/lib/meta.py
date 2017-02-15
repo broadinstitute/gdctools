@@ -18,7 +18,12 @@ from __future__ import print_function
 import os
 import json
 import sys
+<<<<<<< HEAD:lib/meta.py
 from lib.common import DATESTAMP_REGEX
+=======
+
+from gdctools.lib.common import DATESTAMP_REGEX
+>>>>>>> pkg:gdctools/lib/meta.py
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,

@@ -35,11 +35,10 @@ from __future__ import print_function
 import os
 import re
 import sys
-import inspect 
+import inspect
 import requests
 import __builtin__
 
-from GDCversion import GDCT_VERSION
 __interactive__ = os.isatty(sys.stdout.fileno())
 
 # Silence SSL warnings on older systems: should check Unix kernel
@@ -256,7 +255,7 @@ def set_codec(codec):
     Attempts to set the codec to an unsupported value will be silently ignored.
     '''
     if __Decoders.get(codec, None):
-        __gdc_config.codec = codec 
+        __gdc_config.codec = codec
 
 def get_codec():
     ''' Return the current default codec.  See set_codec() for more details '''
@@ -333,5 +332,5 @@ def get(url, codec=None, verify=False, stream=True, pages=1):
             url = (chunk.links['next']['url'])
         else:
             break
-        
+
     return result

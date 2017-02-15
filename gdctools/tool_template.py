@@ -23,7 +23,7 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 # }}}
 
-from GDCtool import GDCtool
+from gdctools.GDCtool import GDCtool
 
 class TOOLNAME(GDCtool):
 

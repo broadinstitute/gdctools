@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import csv
-
-from lib.common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile
-from lib.meta import tcga_id, diced_file_paths
 from os.path import basename
+
+from gdctools.lib.common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile
+from gdctools.lib.meta import tcga_id, diced_file_paths
+
 
 def process(file_dict, infile, outdir, fpkm=False):
     filepath = diced_file_paths(outdir, file_dict)[0]

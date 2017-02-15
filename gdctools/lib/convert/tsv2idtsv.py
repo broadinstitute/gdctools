@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import csv
-from lib.common import safeMakeDirs, map_blank_to_na, writeCsvFile
-from lib.meta import tcga_id, diced_file_paths
+from gdctools.lib.common import safeMakeDirs, map_blank_to_na, writeCsvFile
+from gdctools.lib.meta import tcga_id, diced_file_paths
 
 def process(file_dict, infile, outdir):
     # Should only produce one file

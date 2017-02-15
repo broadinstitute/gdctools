@@ -16,7 +16,7 @@ SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 import sys
 import argparse
-from GDCcore import *
+from gdctools.GDCcore import *
 
 # Stop Python from complaining when I/O pipes are closed
 from signal import signal, SIGPIPE, SIG_DFL
