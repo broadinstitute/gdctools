@@ -21,9 +21,9 @@ import ConfigParser
 import time
 import logging
 
-from gdctools.GDCcli import GDCcli
-from gdctools.GDCcore import *
-from gdctools.lib import common
+from GDCcli import GDCcli
+from GDCcore import *
+from lib import common
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''

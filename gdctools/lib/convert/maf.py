@@ -3,8 +3,8 @@ import logging
 import gzip
 import os
 
-from gdctools.lib import meta
-from gdctools.lib.common import safeMakeDirs
+from lib import meta
+from lib.common import safeMakeDirs
 
 _TUMOR_SAMPLE_COLNAME_LC    = 'Tumor_Sample_Barcode'
 _TUMOR_SAMPLE_COLNAME_UC    = 'TUMOR_SAMPLE_ID'

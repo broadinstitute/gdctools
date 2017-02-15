@@ -3,8 +3,8 @@
 import csv
 from os.path import basename
 
-from gdctools.lib.common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile
-from gdctools.lib.meta import tcga_id, diced_file_paths
+from lib.common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile
+from lib.meta import tcga_id, diced_file_paths
 
 
 def process(file_dict, infile, outdir, fpkm=False):

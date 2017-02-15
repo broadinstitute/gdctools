@@ -22,16 +22,16 @@ import sys
 import gzip
 from pkg_resources import resource_filename #@UnresolvedImport
 
-from gdctools.lib.convert import seg as gdac_seg
-from gdctools.lib.convert import py_clinical as gdac_clin
-from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
-from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
-from gdctools.lib.convert import copy as gdac_copy
-from gdctools.lib.convert import maf as mutect_maf
-from gdctools.lib.heatmap import draw_heatmaps
-from gdctools.lib import common
-from gdctools.lib import meta
-from gdctools.lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
+from lib.convert import seg as gdac_seg
+from lib.convert import py_clinical as gdac_clin
+from lib.convert import tsv2idtsv as gdac_tsv2idtsv
+from lib.convert import tsv2magetab as gdac_tsv2magetab
+from lib.convert import copy as gdac_copy
+from lib.convert import maf as mutect_maf
+from lib.heatmap import draw_heatmaps
+from lib import common
+from lib import meta
+from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 
@@ -80,8 +80,8 @@ class gdc_dicer(GDCtool):
     def dice(self):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
-        trans_dict = build_translation_dict(resource_filename("gdctools",
-                                                "config/annotations_table.tsv"))
+        trans_dict = build_translation_dict(resource_filename("config",
+                                                "annotations_table.tsv"))
         config = self.config
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()

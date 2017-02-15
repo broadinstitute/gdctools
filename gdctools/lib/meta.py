@@ -20,7 +20,7 @@ import json
 import sys
 
 
-from gdctools.lib.common import DATESTAMP_REGEX
+from common import DATESTAMP_REGEX
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,

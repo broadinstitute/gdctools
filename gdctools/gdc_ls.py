@@ -17,8 +17,8 @@ from __future__ import print_function
 import json
 from collections import defaultdict
 
-from gdctools.GDCtool import GDCtool
-from gdctools.lib.api import GDCQuery
+from GDCtool import GDCtool
+from lib.api import GDCQuery
 
 class gdcls(GDCtool):
 

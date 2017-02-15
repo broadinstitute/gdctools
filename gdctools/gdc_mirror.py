@@ -20,10 +20,10 @@ import logging
 import time
 import json
 
-from gdctools.GDCtool import GDCtool
-import gdctools.lib.api as api
-import gdctools.lib.meta as meta
-import gdctools.lib.common as common
+from GDCtool import GDCtool
+import lib.api as api
+import lib.meta as meta
+import lib.common as common
 
 class gdc_mirror(GDCtool):
 
@@ -66,6 +66,8 @@ class gdc_mirror(GDCtool):
         config = self.config
         projects = config.projects
         programs = config.programs
+
+        # Check for configuration errors
 
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)

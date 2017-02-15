@@ -1,7 +1,7 @@
 import shutil
 
-from gdctools.lib.meta import tcga_id, diced_file_paths
-from gdctools.lib.common import safeMakeDirs
+from lib.meta import tcga_id, diced_file_paths
+from lib.common import safeMakeDirs
 # Copy from mirror to dice dir
 
 def process(file_dict, mirror_path, dice_path):

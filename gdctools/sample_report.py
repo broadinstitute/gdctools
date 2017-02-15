@@ -21,9 +21,9 @@ import os
 import csv
 from pkg_resources import resource_filename
 
-from gdctools.lib import common
-from gdctools.lib import meta
-from gdctools.GDCtool import GDCtool
+from lib import common
+from lib import meta
+from GDCtool import GDCtool
 
 class sample_report(GDCtool):
 
@@ -69,7 +69,7 @@ class sample_report(GDCtool):
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_sample_report = resource_filename("gdctools","lib/GDCSampleReport.R")
+        gdc_sample_report = resource_filename("lib","GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,
