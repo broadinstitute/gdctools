@@ -45,6 +45,7 @@ __interactive__ = os.isatty(sys.stdout.fileno())
 requests.packages.urllib3.disable_warnings()
 
 GDC_ROOT_URI = "https://gdc-api.nci.nih.gov"
+GDCT_VERSION = "0.1.0"
 
 def eprint(*args, **kwargs):
     # If not interactive (e.g. writing to log), show user from whence msg came

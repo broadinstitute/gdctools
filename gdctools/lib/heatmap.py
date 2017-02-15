@@ -22,11 +22,8 @@ from matplotlib.colors import ListedColormap, NoNorm
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import font_manager
 
-<<<<<<< HEAD:lib/heatmap.py
-from lib.common import REPORT_DATA_TYPES
-=======
 from gdctools.lib.common import REPORT_DATA_TYPES
->>>>>>> pkg:gdctools/lib/heatmap.py
+
 
 def draw_heatmaps(case_data, project, timestamp, diced_meta_dir):
     rownames, matrix = _build_heatmap_matrix(case_data)
