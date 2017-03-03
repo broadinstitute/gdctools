@@ -38,12 +38,12 @@ test_mirror:
 	@$(PERFORM_MIRROR) 2>&1 | egrep "GDC|Mirroring data|Mirroring start"
 
 	@# Now see that the named set of mirrored files matches what we expect
-	$(FIND_TCGA_FILES) > $(TEST_ROOT)/mirrored-files.txt
-	diff baselines/mirrored-files.txt $(TEST_ROOT)/.
+	$(FIND_TCGA_FILES) | sort > $(TEST_ROOT)/mirrored-files.txt
+	diff -b baselines/mirrored-files.txt $(TEST_ROOT)/.
 
 	@# Verify integrity (but using our stored MD5s, not those just downloaded)
-	$(FIND_TCGA_FILES) -exec $(MD5) {} \; > $(TEST_ROOT)/md5sums.txt
-	diff baselines/md5sums.txt $(TEST_ROOT)/.
+	$(FIND_TCGA_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/md5sums.txt
+	diff -b baselines/md5sums.txt $(TEST_ROOT)/.
 
 test_redo_mirror:
 	@echo Test that redoing a mirror does not download files already mirrored
