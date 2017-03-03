@@ -1,0 +1,51 @@
+#===============================================================================
+# The Broad Institute
+# SOFTWARE COPYRIGHT NOTICE AGREEMENT
+# This software and its documentation are copyright 2016-2017 by the
+# Broad Institute/Massachusetts Institute of Technology. All rights reserved.
+#
+# This software is supplied without any warranty or guaranteed support whatsoever.
+# Neither the Broad Institute nor MIT can be responsible for its use, misuse, or
+# functionality.
+#===============================================================================
+
+import os
+from setuptools import setup, find_packages
+
+#===============================================================================
+# Setup
+#===============================================================================
+
+README = open('README.md').read()
+README = README.replace("&nbsp;","")
+README = README.replace("**","")
+version = open('VERSION').read().strip()
+
+setup(
+	name         = 'gdctools',
+    version      = version,
+    author       = 'Michael S. Noble, Timothy DeFreitas, David Heiman',
+    author_email = 'gdac@broadinstitute.org',
+    url          = 'https://github.com/broadinstitute/gdctools',
+    packages     = find_packages(),
+    description  = (
+		"GDCtools: Python and UNIX CLI utils to simplify interaction with the NIH/NCI Genomics Data Commons."
+	),
+    long_description = README,
+    entry_points     = {
+		'console_scripts': [
+			# FIXME: this list s/b generated from $(TOOLS) macro in Makefile
+			'gdc_dice = gdctools.gdc_dice:main',
+			'gdc_ls = gdctools.gdc_ls:main',
+			'gdc_mirror = gdctools.gdc_mirror:main',
+            'create_loadfile = gdctools.create_loadfile:main',
+            'sample_report = gdctools.sample_report:main'
+		]
+	},
+    package_data = {'gdctools':['config/*.tsv', 'config/*.cfg', 'lib/GDCSampleReport.R' ]},
+    test_suite   = 'nose.collector',
+    install_requires = [
+        'requests',
+        'fasteners'
+    ],
+)
