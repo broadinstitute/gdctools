@@ -132,7 +132,7 @@ class gdc_mirror(GDCtool):
         '''
         savepath = meta.mirror_path(proj_root, file_d)
         dirname, basename = os.path.split(savepath)
-        logging.info("Mirroring {0} | {1} of {2}".format(basename, n, total))
+        logging.info("Mirroring file {0} | {1} of {2}".format(basename, n, total))
 
         #Ensure <root>/<cat>/<type>/ exists
         if not os.path.isdir(dirname):
