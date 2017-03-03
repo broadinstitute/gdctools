@@ -9,7 +9,6 @@ VERSION = $(shell cat $(__PATH__)/VERSION)
 LONGVERSION=$(VERSION) ($(TIMESTAMP) $(REPO_HASH))
 
 PYTHON_HOME=$(shell gdctools/config/findPython.sh)
-$(info $(PYTHON_HOME))
 DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
 PYTHON=$(DEST)/bin/python
@@ -18,13 +17,13 @@ PIP=$(DEST)/bin/pip
 
 help:
 	@echo
-	@echo "test and install the firecloud command line tool"
+	@echo "Build, test and install the GDCtools package"
 	@echo
 	@echo "Targets:"
 	@echo
-	@echo  "1. test                     Run nosetests for firecloud"
-	@echo  "2. install                  Install locally with pip"
-	@echo  "3. uninstall                Uninstall with pip"
+	@echo  "1. test                     Exercise tests for this package"
+	@echo  "2. install                  Install locally, using pip"
+	@echo  "3. uninstall                Remove local install, using pip"
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
