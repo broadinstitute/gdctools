@@ -5,7 +5,7 @@ SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
-DEFAULT_TESTS=test_smoke test_mirror
+DEFAULT_TESTS=test_smoke test_mirror test_redo_mirror echo_success
 TCGA_DATA_DIR=$(TEST_ROOT)/mirror/TCGA 
 FIND_TCGA_FILES=cd $(TCGA_DATA_DIR) && find TCGA-* -name '*.gz'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
@@ -76,7 +76,10 @@ testi:
 	@# Test the installed package
 	@(cd /tmp ; $(PYTHON) -c $(VERTEST))
 
-.PHONY: test clean
+.PHONY: test clean echo_success
+
+echo_success:
+	@echo Success!
 
 clean:
 	rm -rf build dist *.egg-info *~ *mirror.log
