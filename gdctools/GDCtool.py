@@ -27,7 +27,7 @@ from lib import common
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version=None):
+    def __init__(self, version=""):
 
         self.cli = GDCcli(version=version)
         # Derived classes can/should add custom options/description/version &
