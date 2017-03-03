@@ -30,6 +30,9 @@ publish:
 clean:
 	rm -rf build dist *.egg-info *~
 
+rclean: clean
+	(cd tests && $(MAKE) rclean)
+
 test:
 	cd tests && $(MAKE) test
 
