@@ -28,7 +28,7 @@ class GDCcli(argparse.ArgumentParser):
 
     ALL_REMAINING_ARGS = argparse.REMAINDER
 
-    def __init__(self, descrip=None, version=None):
+    def __init__(self, descrip=None, version=""):
 
         if not descrip:
             descrip =  'GDCtools: a suite of CLI tools plus Python bindings\n'
@@ -38,9 +38,7 @@ class GDCcli(argparse.ArgumentParser):
             descrip += 'done by Firehose & FireBrowse in the Broad Institute\n'
             descrip += 'GDAC, as part of the The Cancer Genome Atlast.\n'
 
-        if not version:
-            version = GDCT_VERSION
-
+        version = version + " (GDCtools: " + GDCT_VERSION + ")"
         super(GDCcli,self).__init__(description=descrip,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
 
