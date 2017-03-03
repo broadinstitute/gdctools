@@ -44,7 +44,7 @@ publish:
 	rm -rf build dist *.egg-info
 
 clean:
-	rm -rf build dist *.egg-info
+	rm -rf build dist *.egg-info *~
 
 TEST_CONFIG=--config tests/tcgaSmoketest.cfg
 
