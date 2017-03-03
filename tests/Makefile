@@ -35,7 +35,7 @@ test_smoke:
 
 test_mirror:
 	@# Mirror a very small amount of data (and filter most of the output)
-	@$(PERFORM_MIRROR) 2>&1 | grep Mirror
+	@$(PERFORM_MIRROR) 2>&1 | egrep "GDC|Mirroring data|Mirroring start"
 
 	@# Now see that the named set of mirrored files matches what we expect
 	$(FIND_TCGA_FILES) > $(TEST_ROOT)/mirrored-files.txt
