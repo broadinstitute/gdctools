@@ -174,7 +174,7 @@ class GDCtool(object):
             os.symlink(os.path.abspath(logfile), latest)
 
         # Send to console, too, if running at valid TTY (e.g. not cron job)
-        if os.isatty(sys.stdout.fileno()):
+        if os.isatty(sys.stdin.fileno()):
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.INFO)
             console_handler.setFormatter(log_formatter)
