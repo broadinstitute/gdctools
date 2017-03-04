@@ -10,7 +10,7 @@ To get started from a Unix command line, simply clone the repo and install:
     %  git clone https://github.com/broadinstitute/gdctools
     %  make install
 ```
-At this point you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line
+This should take only a minute or two, at which point you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line
 ```
     gdc_mirror --config tests/tcgaSmoketest.cfg
 ```
