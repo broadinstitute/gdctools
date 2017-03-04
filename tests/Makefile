@@ -5,7 +5,6 @@ SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
-DEFAULT_TESTS=test_smoke test_mirror test_redo_mirror echo_success
 TCGA_DATA_DIR=$(TEST_ROOT)/mirror/TCGA 
 FIND_TCGA_FILES=cd $(TCGA_DATA_DIR) && find TCGA-* -name '*.gz'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
@@ -23,18 +22,22 @@ help:
 	@echo
 
 
-test: $(DEFAULT_TESTS)
+test: test_smoke
 
-test_all: $(DEFAULT_TESTS) test_redo_mirror test_dice test_loadfile test_report
+test_all: test_redo_mirror test_dice test_loadfile test_report
 
-test_smoke:
-	@# Basic smoketest in local directory: can anything even run?
-	@ $(PYTHON) $(SRC)/GDCcli.py
+test_smoke: test_invoke test_mirror test_redo_mirror echo_success
+
+test_invoke:
 	@echo
-	$(PYTHON) $(SRC)/GDCtool.py
+	@echo Test runnability: invoke some tools to show nothing thrown to stderr
+	@$(PYTHON) $(SRC)/GDCcli.py >/dev/null
+	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
+	@$(PYTHON) $(SRC)/gdc_ls.py --help >/dev/null
 
 test_mirror:
-	@# Mirror a very small amount of data (and filter most of the output)
+	@echo
+	@echo "Test mirror: download small set of data, compare to baselines"
 	@$(PERFORM_MIRROR) 2>&1 | egrep "GDC|Mirroring data|Mirroring start"
 
 	@# Now see that the named set of mirrored files matches what we expect
@@ -46,7 +49,8 @@ test_mirror:
 	diff -b baselines/md5sums.txt $(TEST_ROOT)/.
 
 test_redo_mirror:
-	@echo Test that redoing a mirror does not download files already mirrored
+	@echo
+	@echo Test retry of mirror: nothing should be re-downloaded
 	@$(PERFORM_MIRROR) 2>&1 | grep -w new | grep -vl " [^0][0-9]* new " >/dev/null
 
 test_dice:
@@ -79,6 +83,7 @@ testi:
 .PHONY: test clean echo_success
 
 echo_success:
+	@echo
 	@echo Success!
 
 clean:
