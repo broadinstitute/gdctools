@@ -13,28 +13,28 @@ To get started from a Unix command line, simply clone the repo, test, then insta
 ```
 At this point you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line, and perform many other operations such as seeing which NIH/NCI programs have exposed data for download
 ```
-%  gdc_ls programs
-[
-  "TCGA", 
-  "TARGET"
-]
+    %  gdc_ls programs
+    [
+      "TCGA", 
+      "TARGET"
+    ]
 ```
 or see what programs have submitted data (that may not be exposed yet)
 ```
-%  gdc_ls submission
-[
-  "CCLE", 
-  "REBC", 
-  "TCGA", 
-  "TARGET", 
-  "CGCI", 
-  "CDDP", 
-  "ALCHEMIST", 
-  "GDC", 
-  "Exceptional_Responders", 
-  "UAT08", 
-  "TRIO", 
-  "CPTAC"
-]
+    %  gdc_ls submission
+    [
+      "CCLE", 
+      "REBC", 
+      "TCGA", 
+      "TARGET", 
+      "CGCI", 
+      "CDDP", 
+      "ALCHEMIST", 
+      "GDC", 
+      "Exceptional_Responders", 
+      "UAT08", 
+      "TRIO", 
+      "CPTAC"
+    ]
 ```
 For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/818725/GDCtools-overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
