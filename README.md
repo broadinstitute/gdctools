@@ -1,8 +1,7 @@
 # gdctools
 Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/)
 
-Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)
-
+Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)  
 Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
                       David Heiman      (dheiman@broadinstitute.org)
 
