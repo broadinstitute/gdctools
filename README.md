@@ -5,7 +5,7 @@ Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)
 Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
                       David Heiman      (dheiman@broadinstitute.org)
 
-To get started from a Unix command line, simply clone the repo, test, then install:
+To get started from a Unix command line, simply clone the repo and install:
 ```
     %  git clone https://github.com/broadinstitute/gdctools
     %  make install
