@@ -8,10 +8,13 @@ Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
 To get started from a Unix command line, simply clone the repo, test, then install:
 ```
     %  git clone https://github.com/broadinstitute/gdctools
-    %  make test
     %  make install
 ```
-At this point you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line, and perform many other operations such as seeing which NIH/NCI programs have exposed data for download
+At this point you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line
+```
+    gdc_mirror --config tests/tcgaSmoketest.cfg
+```
+(this is what the `make test` target does) or perform other operations such as seeing which NIH/NCI programs have exposed data for download
 ```
     %  gdc_ls programs
     [
@@ -19,7 +22,7 @@ At this point you should be able to easily [mirror](https://github.com/broadinst
       "TARGET"
     ]
 ```
-or see what programs have submitted data (that may not be exposed yet)
+or what programs have submitted data (that may not be exposed yet)
 ```
     %  gdc_ls submission
     [
