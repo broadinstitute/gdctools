@@ -11,4 +11,4 @@ To get started from a Unix command line, simply clone the repo, test, then insta
      make test
      make install
 ```
-For more information see the overview and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
+For more information and examples see the overview and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
