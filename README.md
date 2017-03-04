@@ -18,3 +18,12 @@ source of data.  The ultimate goal of this package, though, goes beyond simply
 connecting Firehose to the GDC: we aim to provide a set of Python bindings and
 UNIX cli wrappers to the GDC application programming interface (API) that are
 vastly simpler to use for the majority of common operations.
+
+To get started from a Unix command line, simply clone the repo, test, then install:
+```
+     git clone https://github.com/broadinstitute/gdctools`
+     make test
+     make install
+```
+For more information see the tutorial and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
+       
