@@ -37,4 +37,4 @@ or see what programs have submitted data (that may not be exposed yet)
   "CPTAC"
 ]
 ```
-For more information and examples see the [overview](files/GDCtools_overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
+For more information and examples see the [overview](https://github.com/broadinstitute/gdctools/wiki/files/GDCtools_overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
