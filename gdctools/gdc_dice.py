@@ -81,7 +81,7 @@ class gdc_dicer(GDCtool):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
         trans_dict = build_translation_dict(resource_filename(__name__,
-                                                "config/annotations_table.tsv"))
+                                                "lib/annotations_table.tsv"))
         config = self.config
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
