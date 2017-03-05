@@ -35,10 +35,10 @@ from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 
-class gdc_dicer(GDCtool):
+class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dicer, self).__init__(version="0.5.0")
+        super(gdc_dice, self).__init__(version="0.5.0", logging=True)
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -218,7 +218,7 @@ class gdc_dicer(GDCtool):
         logging.info("Dicing completed successfuly")
 
     def execute(self):
-        super(gdc_dicer, self).execute()
+        super(gdc_dice, self).execute()
         self.parse_args()
         try:
             self.dice()
@@ -639,7 +639,7 @@ def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
 
 def main():
-    gdc_dicer().execute()
+    gdc_dice().execute()
 
 if __name__ == "__main__":
     main()
