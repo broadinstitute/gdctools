@@ -20,10 +20,10 @@ from collections import defaultdict
 from GDCtool import GDCtool
 from lib.api import GDCQuery
 
-class gdclist(GDCtool):
+class gdc_list(GDCtool):
 
     def __init__(self):
-        super(gdclist, self).__init__(version="0.1.0")
+        super(gdc_list, self).__init__(version="0.1.0")
         cli = self.cli
 
         cli.description = 'List metadata available from toplevel endpoints:\n\n'\
@@ -72,7 +72,7 @@ class gdclist(GDCtool):
         return params
 
     def execute(self):
-        super(gdclist, self).execute()
+        super(gdc_list, self).execute()
         params = self.build_params()
         query = GDCQuery(self.options.endpoint,
                          filters=params['filters'],
@@ -99,7 +99,7 @@ def filter_params(filters):
         return api._and_filter(eq_filters)
 
 def main():
-    gdclist().execute()
+    gdc_list().execute()
 
 if __name__ == "__main__":
     main()
