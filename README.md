@@ -16,7 +16,7 @@ This should take only a minute or two, at which point you should be able to easi
 ```
 (this is what the `make test` target does) or perform other operations such as seeing which NIH/NCI programs have exposed data for download
 ```
-    %  gdc_ls programs
+    %  gdc_list programs
     [
       "TCGA", 
       "TARGET"
@@ -24,7 +24,7 @@ This should take only a minute or two, at which point you should be able to easi
 ```
 or what programs have submitted data (that may not be exposed yet)
 ```
-    %  gdc_ls submission
+    %  gdc_list submission
     [
       "CCLE", 
       "REBC", 
