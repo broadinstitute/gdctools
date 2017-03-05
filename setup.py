@@ -42,7 +42,7 @@ setup(
             'gdc_report = gdctools.gdc_report:main'
 		]
 	},
-    package_data = {'gdctools':['lib/annot*.tsv', 'lib/GDCSampleReport.R' ]},
+    package_data = {'gdctools':['lib/annot*.tsv', 'lib/GDCSampleReport.R', 'default.cfg' ]},
     test_suite   = 'nose.collector',
     install_requires = [
         'requests',
