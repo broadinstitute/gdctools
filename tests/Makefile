@@ -35,7 +35,7 @@ test_invoke:
 	@echo Test runnability: invoke some tools to show nothing thrown to stderr
 	@$(PYTHON) $(SRC)/GDCcli.py >/dev/null
 	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
-	@$(PYTHON) $(SRC)/gdc_ls.py --help >/dev/null
+	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
 
 test_mirror:
 	@echo
