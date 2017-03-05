@@ -5,9 +5,11 @@ SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
-TCGA_DATA_DIR=$(TEST_ROOT)/mirror/TCGA 
-FIND_TCGA_FILES=cd $(TCGA_DATA_DIR) && find TCGA-* -name '*.gz'
+FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
+							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
+FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
+PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) --projects TCGA-ACC TCGA-OV
 
 help:
 	@echo
@@ -22,11 +24,11 @@ help:
 	@echo
 
 
-test: test_smoke
+test: test_smoke echo_success
 
-test_all: test_redo_mirror test_dice test_loadfile test_report
+test_all: test_smoke test_dice test_loadfile test_report echo_success
 
-test_smoke: test_invoke test_mirror test_redo_mirror echo_success
+test_smoke: test_invoke test_mirror test_redo_mirror
 
 test_invoke:
 	@echo
@@ -41,12 +43,12 @@ test_mirror:
 	@$(PERFORM_MIRROR) 2>&1 | egrep "GDC|Mirroring data|Mirroring start"
 
 	@# Now see that the named set of mirrored files matches what we expect
-	$(FIND_TCGA_FILES) | sort > $(TEST_ROOT)/mirrored-files.txt
-	diff -b baselines/mirrored-files.txt $(TEST_ROOT)/.
+	$(FIND_MIRROR_FILES) | sort > $(TEST_ROOT)/mirror-files.txt
+	diff -b baselines/mirror-files.txt $(TEST_ROOT)/.
 
 	@# Verify integrity (but using our stored MD5s, not those just downloaded)
-	$(FIND_TCGA_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/md5sums.txt
-	diff -b baselines/md5sums.txt $(TEST_ROOT)/.
+	$(FIND_MIRROR_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/mirror-md5sums.txt
+	diff -b baselines/mirror-md5sums.txt $(TEST_ROOT)/.
 
 test_redo_mirror:
 	@echo
@@ -54,7 +56,16 @@ test_redo_mirror:
 	@$(PERFORM_MIRROR) 2>&1 | grep -w new | grep -vl " [^0][0-9]* new " >/dev/null
 
 test_dice:
-	$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG)
+	@echo
+	@echo Test dice: on subset of cohorts, to show CLI args override config file
+	$(PERFORM_DICE) > dice.log 2>&1
+
+	$(FIND_DICE_FILES) | sort > $(TEST_ROOT)/dice-files.txt
+	diff -b baselines/dice-files.txt $(TEST_ROOT)/.
+
+	@# Verify integrity (but using our stored MD5s, not those just downloaded)
+	$(FIND_DICE_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/dice-md5sums.txt
+	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
 test_loadfile:
 	$(PYTHON) $(SRC)/create_loadfile.py $(CONFIG_FLAG)
@@ -80,14 +91,14 @@ testi:
 	@# Test the installed package
 	@(cd /tmp ; $(PYTHON) -c $(VERTEST))
 
-.PHONY: test clean echo_success
+.PHONY: test clean echo_success test_mirror test_dice test_redo_mirror
 
 echo_success:
 	@echo
 	@echo Success!
 
 clean:
-	rm -rf build dist *.egg-info *~ *mirror.log
+	rm -rf build dist *.egg-info *~ *mirror*log *dice*log
 
 rclean: clean
 	\rm -rf sandbox GDCtool
