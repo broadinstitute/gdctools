@@ -20,6 +20,7 @@ import traceback
 import ConfigParser
 import time
 import logging
+from pkg_resources import resource_filename
 
 from GDCcli import GDCcli
 from GDCcore import *
@@ -27,9 +28,9 @@ from lib import common
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version=""):
-
+    def __init__(self, version="", logging=False):
         self.cli = GDCcli(version=version)
+        self.perform_logging = logging
         # Derived classes can/should add custom options/description/version &
         # behavior in their respective __init__()/execute() implementations
 
@@ -46,8 +47,10 @@ class GDCtool(object):
         '''
 
         self.config = attrdict(default=attrdict())      # initially empty
-        if not self.options.config:                     # list of config files
-            return
+        if not self.options.config:                     # list of file objects
+            # No config file specified, use default
+            cfg_default = resource_filename(__name__, "default.cfg")
+            self.options.config = [open(cfg_default,"r")]
 
         cfgparser = ConfigParser.SafeConfigParser()
         # Since we use argparse to ensure filenames, but config parser expects
@@ -114,7 +117,8 @@ class GDCtool(object):
                 return sorted(raw.split('\n'))
 
     def init_logging(self):
-        # If no config was provided, don't initialize logging
+        if not self.perform_logging:
+            return
 
         # Get today's datestamp, the default value
         datestamp = time.strftime('%Y_%m_%d', time.localtime())
@@ -123,7 +127,6 @@ class GDCtool(object):
             # We are using an explicit datestamp, so it must match one from
             # the datestamps file, or be the string "latest"
             datestamp = self.options.datestamp
-
             existing_stamps = self.datestamps()
 
             if datestamp == "latest":
@@ -148,10 +151,8 @@ class GDCtool(object):
             log_dir = "."
 
         tool_name = self.__class__.__name__
-
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
-
         log_formatter = logging.Formatter('%(asctime)s[%(levelname)s]: %(message)s')
 
         # Write logging data to file
