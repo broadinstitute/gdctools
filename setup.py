@@ -36,10 +36,10 @@ setup(
 		'console_scripts': [
 			# FIXME: this list s/b generated from $(TOOLS) macro in Makefile
 			'gdc_dice = gdctools.gdc_dice:main',
-			'gdc_ls = gdctools.gdc_ls:main',
+			'gdc_list = gdctools.gdc_list:main',
 			'gdc_mirror = gdctools.gdc_mirror:main',
-            'create_loadfile = gdctools.create_loadfile:main',
-            'sample_report = gdctools.sample_report:main'
+            'gdc_loadfile = gdctools.gdc_loadfile:main',
+            'gdc_report = gdctools.gdc_report:main'
 		]
 	},
     package_data = {'gdctools':['lib/annot*.tsv', 'lib/GDCSampleReport.R' ]},

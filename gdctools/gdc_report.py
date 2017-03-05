@@ -5,7 +5,7 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-sample_report: wrapper around SampleSummaryReport.R for GDC-derived data
+gdc_report: wrapper around SampleSummaryReport.R for GDC-derived data
 See the <root>/COPYRIGHT file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 @author: Timothy DeFreitas, Michael S. Noble
@@ -25,10 +25,10 @@ from lib import common
 from lib import meta
 from GDCtool import GDCtool
 
-class sample_report(GDCtool):
+class gdc_report(GDCtool):
 
     def __init__(self):
-        super(sample_report, self).__init__(version="0.3.0")
+        super(gdc_report, self).__init__(version="0.3.0")
         cli = self.cli
 
         cli.description = 'Generate a sample report for a snapshot of data '\
@@ -69,8 +69,8 @@ class sample_report(GDCtool):
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_sample_report = resource_filename(__name__,"lib/GDCSampleReport.R")
-        self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
+        gdc_gdc_report = resource_filename(__name__,"lib/GDCSampleReport.R")
+        self.cmdArgs.extend([ gdc_gdc_report,        # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,
                               config.reference_dir,
@@ -78,7 +78,7 @@ class sample_report(GDCtool):
                             ])
 
     def execute(self):
-        super(sample_report, self).execute()
+        super(gdc_report, self).execute()
         self.parse_args()
         # TODO: better error handling
         logging.info("Running GDCSampleReport.R ")
@@ -220,7 +220,7 @@ def link_loadfile_metadata(loadfiles_dir, program, report_dir, datestamp):
     link_metadata_file(from_dir, report_dir, filtered)
 
 def main():
-    sample_report().execute()
+    gdc_report().execute()
 
 if __name__ == "__main__":
     main()

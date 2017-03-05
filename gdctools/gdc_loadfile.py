@@ -24,10 +24,10 @@ from lib import common
 from lib import meta
 from GDCtool import GDCtool
 
-class create_loadfile(GDCtool):
+class gdc_loadfile(GDCtool):
 
     def __init__(self):
-        super(create_loadfile, self).__init__(version="0.3.1")
+        super(gdc_loadfile, self).__init__(version="0.3.1")
         cli = self.cli
         cli.description = 'Create a Firehose-style loadfile from diced GDC data'
         cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
@@ -300,7 +300,7 @@ class create_loadfile(GDCtool):
 
     def execute(self):
 
-        super(create_loadfile, self).execute()
+        super(gdc_loadfile, self).execute()
         self.parse_args()
         opts = self.options
 
@@ -521,7 +521,7 @@ def write_sset(samples_lfp, sset_filename, sset_name):
         outfile.write(sset_data)
 
 def main():
-    create_loadfile().execute()
+    gdc_loadfile().execute()
 
 if __name__ == "__main__":
     main()
