@@ -168,7 +168,7 @@ class GDCtool(object):
 
             logging.info("Logfile:" + logfile)
             # For easier eyeballing & CLI tab-completion, symlink to latest.log
-            latest = os.path.join(log_dir, tool_name + ".latest.log")
+            latest = os.path.join(log_dir, "latest.log")
             common.silent_rm(latest)
             os.symlink(os.path.abspath(logfile), latest)
 
