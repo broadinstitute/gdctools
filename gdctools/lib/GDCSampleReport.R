@@ -3,8 +3,12 @@
 # William Mallard / Redactions Report / April 2012
 # Dan DiCara / Updated to Samples Summary Report / January 2013
 # Tim DeFreitas / Updated for GDC + GDAN era / June 2016
+# Michael S. Noble / More GDC + GDAN updates / March 2017
 
-# Note, do not use 'require', as it does not fail correctly
+if(!require(Nozzle.R1)){
+    install.packages("Nozzle.R1", repos='https://cloud.r-project.org/')
+}
+
 library(Nozzle.R1)
 options(error = function() traceback(2))
 
