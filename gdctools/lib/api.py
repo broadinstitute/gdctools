@@ -104,7 +104,7 @@ class GDCQuery(object):
         r_json = _decode_json(r)
 
         # Log any warnings in response, but don't raise an error yet
-        _log_warnings(r_json)
+        _log_warnings(r_json, r.url)
 
         # GDC 'submission' endpoint is inconsistent (does not yet return results
         # within a {"data": {"hits": … } }  JSON block--so we work around here.
@@ -254,13 +254,13 @@ def get_programs():
     return list(set(programs))
 
 # Module helpers
-def _log_warnings(r_json):
+def _log_warnings(r_json, r_url):
     '''Check for warnings in a server response'''
     warnings = r_json.get('warnings', None)
     if warnings:
         warnmsg =  "GDC query produced a warning:\n"
         warnmsg += json.dumps(warnings, indent=2)
-        warnmsg += "\nRequest URL: " + r.url
+        warnmsg += "\nRequest URL: " + r_url
         logging.warning(warnmsg)
 
 def _eq_filter(field, value):
