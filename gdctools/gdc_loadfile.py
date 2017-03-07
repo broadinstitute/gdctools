@@ -195,18 +195,21 @@ class gdc_loadfile(GDCtool):
 
         logging.info("Generating loadfile for {0}".format(projname))
         loadfile_root = os.path.abspath(self.config.loadfiles.dir)
+        latest = os.path.join(loadfile_root, program, "latest")
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
+            common.silent_rm(latest)
+            os.symlink(os.path.abspath(loadfile_root), latest)
 
         # First: the samples loadfile
-        samples_loadfile = projname + "." + datestamp + ".Sample.loadfile.txt"
+        samples_loadfile = projname + ".Sample.loadfile.txt"
         samples_loadfile = os.path.join(loadfile_root, samples_loadfile)
         logging.info("Writing samples loadfile to " + samples_loadfile)
         samples_lfp = open(samples_loadfile, 'w+')
 
         # and the filtered samples file
-        filtered_samples_file = projname + "." + datestamp + ".filtered_samples.txt"
+        filtered_samples_file = projname + ".filtered_samples.txt"
         filtered_samples_file = os.path.join(loadfile_root, filtered_samples_file)
         filtered_lfp = open(filtered_samples_file, 'w+')
 
@@ -225,7 +228,7 @@ class gdc_loadfile(GDCtool):
                           headers, samples_in_this_cohort)
 
         # Second: now the sample set loadfile, derived from the samples loadfile
-        sset_loadfile = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
+        sset_loadfile = projname + ".Sample_Set.loadfile.txt"
         sset_loadfile = os.path.join(loadfile_root, sset_loadfile)
         logging.info("Writing sample set loadfile to " + sset_loadfile)
         write_sset(samples_lfp, sset_loadfile, projname)
@@ -242,13 +245,13 @@ class gdc_loadfile(GDCtool):
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
 
-        all_samp_loadfile = program + '.' + datestamp + ".Sample.loadfile.txt"
+        all_samp_loadfile = program + ".Sample.loadfile.txt"
         all_samp_loadfile = os.path.join(loadfile_root, all_samp_loadfile)
 
-        all_sset_loadfile = program + '.' + datestamp + ".Sample_Set.loadfile.txt"
+        all_sset_loadfile = program + ".Sample_Set.loadfile.txt"
         all_sset_loadfile = os.path.join(loadfile_root, all_sset_loadfile)
 
-        all_filter_file   = program + '.' + datestamp + ".filtered_samples.txt"
+        all_filter_file   = program + ".filtered_samples.txt"
         all_filter_file   = os.path.join(loadfile_root, all_filter_file)
 
         with open(all_samp_loadfile, 'w') as aslfp, \
@@ -271,7 +274,7 @@ class gdc_loadfile(GDCtool):
             for projname in sorted(projects.keys()):
                 # Write to sample file, but avoid duplicates if its an aggregate
                 if projname not in self.config.aggregates:
-                    proj_samples = projname + "." + datestamp + ".Sample.loadfile.txt"
+                    proj_samples = projname + ".Sample.loadfile.txt"
                     proj_samples = os.path.join(loadfile_root, proj_samples)
                     with open(proj_samples) as ps:
                          # Skip header, and copy the rest of the file
@@ -279,7 +282,7 @@ class gdc_loadfile(GDCtool):
                         for line in ps:
                             aslfp.write(line)
 
-                proj_sset = projname + "." + datestamp + ".Sample_Set.loadfile.txt"
+                proj_sset = projname + ".Sample_Set.loadfile.txt"
                 proj_sset = os.path.join(loadfile_root, proj_sset)
                 with open(proj_sset) as psset:
                      # Skip header, and copy the rest of the file
@@ -290,7 +293,7 @@ class gdc_loadfile(GDCtool):
                 # combine filtered samples, but don't do this for aggregates
                 # to avoid double counting
                 if projname not in self.config.aggregates:
-                    proj_filtered = projname + "." + datestamp + ".filtered_samples.txt"
+                    proj_filtered = projname + ".filtered_samples.txt"
                     proj_filtered = os.path.join(loadfile_root, proj_filtered)
                     with open(proj_filtered) as pf:
                         # skip header, copy the rest
