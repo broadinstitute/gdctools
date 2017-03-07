@@ -20,6 +20,7 @@ import logging
 import time
 import json
 
+from GDCcore import *
 from GDCtool import GDCtool
 import lib.api as api
 import lib.meta as meta
@@ -60,33 +61,35 @@ class gdc_mirror(GDCtool):
         self.workflow_type = opts.workflow_type
 
     def mirror(self):
-        logging.info("GDC Mirror Version: %s", self.cli.version)
-        logging.info("Command: " + " ".join(sys.argv))
 
         config = self.config
         projects = config.projects
         programs = config.programs
 
-        # Check for configuration errors
+        if not (programs or projects):
+            gabort(0, "No programs or projects specified in config file "+
+                      "or at command line")
 
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
-        # Get available programs and projects, so the mirror can fail fast when
-        # given bad --projects or  --programs
+        # Get available programs & projects, to fail fast on bad input
         available_projects = api.get_projects()
         available_programs = api.get_programs()
 
         if projects:
             for proj in projects:
                 if proj not in available_projects:
-                    logging.error("Project " + proj + " not found in GDC")
-                    sys.exit(1)
+                    gabort(1, "Project " + proj + " not found in GDC")
+
         if programs:
             for prog in programs:
                 if prog not in available_programs:
-                    logging.error("Program " + prog + " not found in GDC")
-                    sys.exit(1)
+                    gabort(2,"Program " + prog + " not found in GDC")
+
+        # Everything has validated, so let's get mirroring started
+        logging.info("GDC Mirror Version: %s", self.cli.version)
+        logging.info("Command: " + " ".join(sys.argv))
 
         if not projects:
             if programs is None:
@@ -96,11 +99,11 @@ class gdc_mirror(GDCtool):
                 logging.info(str(len(programs))
                              + " program(s) found: " + ",".join(programs))
 
-            logging.info("No projects specified, using GDC API to discover"\
+            logging.info("No projects specified, using GDC API to discover "\
                          "available projects")
             projects = []
             for prgm in programs:
-                new_projects = api.get_projects(prgm)
+                new_projects = available_projects
                 logging.info(str(len(new_projects)) + " project(s) found for "
                              + prgm + ": " + ",".join(new_projects))
                 projects.extend(new_projects)
