@@ -46,12 +46,14 @@ class gdc_report(GDCtool):
 
         #FIXME: Hardcoded to just TCGA for now...
         diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
-
         datestamp = self.datestamp
 
+        latest = os.path.join(config.reports.dir, 'latest')
         config.reports.dir = os.path.join(config.reports.dir, 'report_'+datestamp)
         if not os.path.isdir(config.reports.dir):
             os.makedirs(config.reports.dir)
+            common.silent_rm(latest)
+            os.symlink(os.path.abspath(config.reports.dir), latest)
 
         # Now infer certain values from the diced data directory
         logging.info("Linking diced metadata...")
