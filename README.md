@@ -40,4 +40,4 @@ or what programs have submitted data (that may not be exposed yet)
       "CPTAC"
     ]
 ```
-If you have *matplotlib* installed you may also run [gdc_dice](https://github.com/broadinstitute/gdctools/wiki/GDC-Dicer) on the mirror tree; likewise, if you have R installed you may also run the *gdc_report* tool to generate a samples report for the mirrored & diced data.  For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/818725/GDCtools-overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
+If *matplotlib* is installed you may also run [gdc_dice](https://github.com/broadinstitute/gdctools/wiki/GDC-Dicer) on the mirror tree; likewise, if you have R installed you may also run the *gdc_report* tool to generate a samples report for the mirrored & diced data.  For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/818725/GDCtools-overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
