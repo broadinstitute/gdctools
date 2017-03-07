@@ -46,7 +46,7 @@ setup(
     test_suite   = 'nose.collector',
     install_requires = [
         'requests',
-        'fasteners'
+        'fasteners',
         'matplotlib'
     ],
 )
