@@ -12,7 +12,7 @@
 
 # Front Matter {{{
 '''
-Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
+Copyright (c) 2017 The Broad Institute, Inc.  All rights are reserved.
 
 TOOLNAME: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
@@ -23,7 +23,7 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 # }}}
 
-from gdctools.GDCtool import GDCtool
+from GDCtool import GDCtool
 
 class TOOLNAME(GDCtool):
 

@@ -62,7 +62,6 @@ def latest_datestamp(proj_dir, date_prefix=None, ignore=None):
     Will only return a date matching date_prefix, but can ignore an explicit
     stamp. Returns none if no timestamp matches
     '''
-    latest_tstamp = None
     meta_dir = os.path.join(proj_dir, "metadata")
     if not os.path.isdir(meta_dir):
         # new mirror, no existing timestamps
@@ -81,7 +80,7 @@ def latest_datestamp(proj_dir, date_prefix=None, ignore=None):
 def latest_prog_timestamp(prog_dir, date_prefix=None, ignore=None):
     project_dirs = [os.path.join(prog_dir, d) for d in os.listdir(prog_dir)
                     if os.path.isdir(os.path.join(prog_dir, d))]
-    proj_timestamps = [latest_timestamp(proj_dir, date_prefix, ignore)
+    proj_timestamps = [latest_datestamp(proj_dir, date_prefix, ignore)
                        for proj_dir in project_dirs]
     # Filter out None's
     proj_timestamps = [t for t in proj_timestamps if t is not None]

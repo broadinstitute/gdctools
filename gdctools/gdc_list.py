@@ -5,7 +5,7 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-gdc_list: List data available in the GDC
+gdcls: List data available in the GDC
 
 @author: Timothy DeFreitas, Michael S. Noble
 @date:  2016_10_19
@@ -18,12 +18,12 @@ import json
 from collections import defaultdict
 
 from GDCtool import GDCtool
-from lib.api import GDCQuery
+from lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as and_filter
 
-class gdc_list(GDCtool):
+class gdcls(GDCtool):
 
     def __init__(self):
-        super(gdc_list, self).__init__(version="0.1.0", logging=False)
+        super(gdcls, self).__init__(version="0.1.1")
         cli = self.cli
 
         cli.description = 'List metadata available from toplevel endpoints:\n\n'\
@@ -72,7 +72,7 @@ class gdc_list(GDCtool):
         return params
 
     def execute(self):
-        super(gdc_list, self).execute()
+        super(gdcls, self).execute()
         params = self.build_params()
         query = GDCQuery(self.options.endpoint,
                          filters=params['filters'],
@@ -84,22 +84,22 @@ def filter_params(filters):
     '''Builds a dictionary of filters passed as 'key=value' pairs'''
     # TODO: make more intelligent expansion of key=value pairs?
     # E.g. project_id --> cases.samples.project_id for the cases endpoint
-    if filters is None: return d
+    if filters is None: return dict()
     eq_filters = []
 
     #Build individual equals filters
     for filt in filters:
         key, value = filt.split("=")
-        eq_filters.append(api._eq_filter(key, value))
+        eq_filters.append(eq_filter(key, value))
 
     # If there is only one, return it, otherwise 'and' them together
     if len(eq_filters) == 1:
         return eq_filters[0]
     else:
-        return api._and_filter(eq_filters)
+        return and_filter(eq_filters)
 
 def main():
-    gdc_list().execute()
+    gdcls().execute()
 
 if __name__ == "__main__":
     main()
