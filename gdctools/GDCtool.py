@@ -28,7 +28,7 @@ from lib import common
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version="", logging=False):
+    def __init__(self, version="", logging=True):
         self.cli = GDCcli(version=version)
         self.perform_logging = logging
         # Derived classes can/should add custom options/description/version &
@@ -37,6 +37,29 @@ class GDCtool(object):
     def execute(self):
         self.options = self.cli.parse_args()
         self.parse_config()
+
+        # Get today's datestamp, the default value
+        datestamp = time.strftime('%Y_%m_%d', time.localtime())
+
+        if self.options.datestamp:
+            # We are using an explicit datestamp, so it must match one from
+            # the datestamps file, or be the string "latest"
+            datestamp = self.options.datestamp
+            existing_stamps = self.datestamps()
+
+            if datestamp == "latest":
+                if len(existing_stamps) == 0:
+                    raise ValueError("No existing datestamps,"
+                                     "cannot use 'latest' datestamp option ")
+                # already sorted, so last one is latest
+                datestamp = existing_stamps[-1]
+            elif datestamp not in existing_stamps:
+                # Timestamp not recognized, but print a combined message later
+                raise ValueError("Given datestamp not present in "
+                                 + self.config.datestamps + "\n"
+                                 + "Existing datestamps: " + repr(existing_stamps))
+
+        self.datestamp = datestamp
         self.init_logging()
 
     def parse_config(self):
@@ -120,32 +143,7 @@ class GDCtool(object):
         if not self.perform_logging:
             return
 
-        # Get today's datestamp, the default value
-        datestamp = time.strftime('%Y_%m_%d', time.localtime())
-
-        if self.options.datestamp:
-            # We are using an explicit datestamp, so it must match one from
-            # the datestamps file, or be the string "latest"
-            datestamp = self.options.datestamp
-            existing_stamps = self.datestamps()
-
-            if datestamp == "latest":
-                if len(existing_stamps) == 0:
-                    raise ValueError("No existing datestamps,"
-                                     "cannot use 'latest' datestamp option ")
-                # already sorted, so last one is latest
-                datestamp = existing_stamps[-1]
-            elif datestamp not in existing_stamps:
-                # Timestamp not recognized, but print a combined message later
-                raise ValueError("Given datestamp not present in "
-                                 + self.config.datestamps + "\n"
-                                 + "Existing datestamps: " + repr(existing_stamps))
-
-        # At this point, datestamp must be a valid value, so initialize the
-        # logging with that value
-        self.datestamp = datestamp
-
-        # Put the logs in the right place, with the right name
+        datestamp = self.datestamp
         log_dir = self.config.log_dir
         if not log_dir:
             log_dir = "."
