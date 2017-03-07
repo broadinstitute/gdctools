@@ -1,5 +1,5 @@
 # gdctools
-Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/)
+Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/), and automate tasks that are common to most data-driven science projects.
 
 Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)  
 Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
