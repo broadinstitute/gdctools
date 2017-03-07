@@ -32,7 +32,7 @@ test: test_smoke echo_success
 
 test_all: test_smoke test_dice test_loadfile test_report echo_success
 
-test_smoke: test_invoke test_mirror test_redo_mirror
+test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg
 
 test_invoke:
 	@echo
@@ -58,6 +58,13 @@ test_redo_mirror:
 	@echo
 	@echo Test retry of mirror: nothing should be re-downloaded
 	@$(PERFORM_MIRROR) 2>&1 | grep -w new | grep -vl " [^0][0-9]* new " >/dev/null
+
+test_badcfg:
+	@echo
+	@echo Test that attempting to use bad config file quickly aborts with error
+	@touch bad.cfg
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg || Result=$$? ; \
+	if ((!$$Result)) ; then false ; fi
 
 test_dice:
 	@echo
@@ -109,7 +116,7 @@ echo_success:
 	@echo Success!
 
 clean:
-	rm -rf build dist *.egg-info *~ test_*.log
+	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
 
 rclean: clean
 	\rm -rf sandbox GDCtool gdctools_tmp
