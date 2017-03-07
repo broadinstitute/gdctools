@@ -38,7 +38,7 @@ from GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.0", logging=True)
+        super(gdc_dice, self).__init__(version="0.5.0")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
