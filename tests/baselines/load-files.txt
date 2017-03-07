@@ -1,0 +1,9 @@
+./TCGA-ACC.Sample.loadfile.txt
+./TCGA-ACC.Sample_Set.loadfile.txt
+./TCGA-ACC.filtered_samples.txt
+./TCGA-ACCSKCM.Sample.loadfile.txt
+./TCGA-ACCSKCM.Sample_Set.loadfile.txt
+./TCGA-ACCSKCM.filtered_samples.txt
+./TCGA-SKCM.Sample.loadfile.txt
+./TCGA-SKCM.Sample_Set.loadfile.txt
+./TCGA-SKCM.filtered_samples.txt
