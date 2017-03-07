@@ -1,10 +1,6 @@
 # gdctools
 Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/), and automate tasks that are common to most data-driven science projects.   For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/818725/GDCtools-overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
 
-Corresponding Author: Michael S. Noble  (mnoble@broadinstitute.org)  
-Contributing Authors: Timothy DeFreitas (timdef@broadinstitute.org)
-                      David Heiman      (dheiman@broadinstitute.org)
-
 To get started from a Unix command line, simply clone the repo and install:
 ```
     %  git clone https://github.com/broadinstitute/gdctools
