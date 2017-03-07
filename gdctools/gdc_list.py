@@ -23,7 +23,7 @@ from lib.api import GDCQuery
 class gdc_list(GDCtool):
 
     def __init__(self):
-        super(gdc_list, self).__init__(version="0.1.0")
+        super(gdc_list, self).__init__(version="0.1.0", logging=False)
         cli = self.cli
 
         cli.description = 'List metadata available from toplevel endpoints:\n\n'\
