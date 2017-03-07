@@ -7,7 +7,7 @@ To get started from a Unix command line, simply clone the repo and install:
     %  cd gdctools
     %  make install
 ```
-This should take only a minute or two (and may install [requests](http://docs.python-requests.org/en/master/), [fasteners](https://github.com/harlowja/fasteners) or [matplotlib](http://matplotlib.org/) dependencies).  Note that if you are installing to a protected location you should preface the `make install` command with `sudo `.  After this you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line
+This should take only a minute or two (and may install [requests](http://docs.python-requests.org/en/master/), [fasteners](https://github.com/harlowja/fasteners) or [matplotlib](http://matplotlib.org/) dependencies).  Note that if you are installing to a protected location you may need to preface the `make install` command with `sudo `.  After this you should be able to easily [mirror](https://github.com/broadinstitute/gdctools/wiki/GDC-Mirror) GDC data directly from the command line
 ```
     gdc_mirror --config tests/tcgaSmoketest.cfg
 ```
