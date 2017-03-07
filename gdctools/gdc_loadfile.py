@@ -327,7 +327,7 @@ class gdc_loadfile(GDCtool):
                     print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
                     self.generate_loadfiles(aggr_name, annotations, aggregate)
 
-            # ... finally, assemble a compositle loadfile for all available samples
+            # ... finally, assemble a composite loadfile for all available samples
             # and sample sets
             self.generate_master_loadfiles(projects, annotations)
         except Exception as e:
@@ -430,6 +430,8 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
 
 def choose_file(files):
+    # Remove path from filenames, to promote robustness in comparator
+    files = [ f.split('/')[-1] for f in files]
     preferred_order = sorted(files, key=cmp_to_key(diced_file_comparator))
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored
