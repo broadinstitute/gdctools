@@ -64,13 +64,14 @@ class gdc_report(GDCtool):
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
             self.write_aggregate_definitions()
-            logging.info("Writing aggregate counts ...")
-            self.write_aggregate_counts(diced_prog_root,datestamp)
+
+        logging.info("Combining all sample counts into one file ...")
+        self.write_combined_counts(diced_prog_root, datestamp)
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_gdc_report = resource_filename(__name__,"lib/GDCSampleReport.R")
-        self.cmdArgs.extend([ gdc_gdc_report,        # From gdctools pkg
+        report_script = resource_filename(__name__,"lib/GDCSampleReport.R")
+        self.cmdArgs.extend([ report_script,            # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,
                               config.reference_dir,
@@ -90,12 +91,11 @@ class gdc_report(GDCtool):
         except Exception as e:
             logging.exception("Sample report generation FAILED:")
 
-    def write_aggregate_counts(self, diced_prog_root, datestamp):
+    def write_combined_counts(self, diced_prog_root, datestamp):
         '''Create a program-wide counts file combining all cohorts, including aggregates'''
         # FIXME: TCGA hardcoded here
         aggregate_cohorts = self.config.aggregates.keys()
         aggregate_cohorts = [ag.replace('TCGA-', '') for ag in aggregate_cohorts]
-
         agg_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
         agg_counts_file = os.path.join(self.config.reports.dir, agg_counts_file)
 
