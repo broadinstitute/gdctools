@@ -25,6 +25,7 @@ from pkg_resources import resource_filename
 from GDCcli import GDCcli
 from GDCcore import *
 from lib import common
+from lib import api
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
@@ -37,6 +38,7 @@ class GDCtool(object):
     def execute(self):
         self.options = self.cli.parse_args()
         self.parse_config()
+        self.reconcile_config()
 
         # Get today's datestamp, the default value
         datestamp = time.strftime('%Y_%m_%d', time.localtime())
@@ -95,6 +97,11 @@ class GDCtool(object):
                 if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
 
+        # FIXME: should this check for more config variables?
+        self.validate_config(["root_dir"], UnsetValue={})
+        if not config.datestamps:
+            config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
+
         def get_config_values_as_list(values):
             if values:
                 return [ v.strip() for v in values.split(',') ]
@@ -106,11 +113,6 @@ class GDCtool(object):
         config.projects = get_config_values_as_list(config.projects)
         config.cases    = get_config_values_as_list(config.cases)
 
-        # FIXME: should this check for more config variables?
-        self.validate_config(["root_dir"], UnsetValue={})
-        if not config.datestamps:
-            config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
-
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
         # If no aggregates are defined, change None obj to empty dict, for
@@ -120,6 +122,35 @@ class GDCtool(object):
                 config.aggregates[key.upper()] = config.aggregates.pop(key)
         else:
             config.aggregates = {}
+
+    def reconcile_config(self):
+        # The runtime configuration of each GDCtool comes from several sources
+        #   - built in defaults
+        #   - configuration files
+        #   - command line flags
+        # in order of increasing precedence (i.e. cmd line flags are highest).
+        # We enforce that precedence with this method, because it cannot be
+        # done simply by parsing the CLI args after reading the config file,
+        # as --config is also a cmd line flag.  So we have to give --config
+        # CLI flag "a chance" to be utilized in parse_config(), then override
+        # the config variables here if they were ALSO set at the command line
+
+        opts = self.options
+        config = self.config
+        if opts.programs: config.programs = opts.programs
+        if opts.projects: config.projects = opts.projects
+        if opts.cases: config.cases = opts.cases
+
+        # If a list of individual cases has been specified then it completely
+        # defines the projects & programs to be queried, and takes precedence
+        # over any other configuration file settings or command line flags
+        if config.cases:
+            config.projects = api.get_project_from_cases(config.cases)
+            config.programs = api.get_programs(config.projects)
+        elif config.projects:
+            # Simiarly, if projects is specified then the programs corresponding
+            # to those projects takes precedence over config & CLI values
+            config.programs = api.get_programs(config.projects)
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
