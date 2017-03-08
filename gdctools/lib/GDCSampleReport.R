@@ -1037,7 +1037,7 @@ getFFPETable <- function (reportDir, datestamp){
   return(NULL)
 }
 getFilterTable <- function (reportDir, datestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
-  filtered.file <- paste("TCGA", datestamp, "filtered_samples.txt", sep=".")
+  filtered.file <- paste("TCGA", "filtered_samples.txt", sep=".")
   filtered.file <- file.path(reportDir, filtered.file)
   filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   if (!is.null(tumor.type)){
