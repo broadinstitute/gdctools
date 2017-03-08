@@ -1,5 +1,5 @@
 # gdctools
-Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/), and automate tasks that are common to most data-driven science projects.   For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/825892/GDCtools-overview.pdf) and [Wiki pages](https://github.com/broadinstitute/gdctools/wiki).
+Python and UNIX CLI utilities to simplify interaction with the [NIH/NCI Genomics Data Commons](https://gdc.cancer.gov/), and automate tasks that are common to most data-driven science projects.   For more information and examples see the [overview](https://docs.google.com/viewer?url=https://github.com/broadinstitute/gdctools/files/825892/GDCtools-overview.pdf), [Wiki pages](https://github.com/broadinstitute/gdctools/wiki) and [tests/Makefile](tests/Makefile).
 
 To get started from a Unix command line, simply clone the repo and install:
 ```
@@ -11,7 +11,15 @@ This should take only a minute or two, and may install [requests](http://docs.py
 ```
     gdc_mirror --config tests/tcgaSmoketest.cfg
 ```
-(this is what the `make test` target does) or perform other operations such as seeing which NIH/NCI programs have exposed data for download
+(this is what the `make test` target does), even for a single patient case
+```
+    gdc_mirror --cases TCGA-EE-A3J8
+```
+or just one category of data for that patient
+```
+    gdc_mirror --cases TCGA-EE-A3J8 --data-categories Copy_Number_Variation
+```
+or perform other operations such as seeing which NIH/NCI programs have exposed data for download
 ```
     %  gdc_list programs
     [
