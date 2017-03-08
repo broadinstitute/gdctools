@@ -158,7 +158,7 @@ def get_project_from_cases(cases, program=None, legacy=False):
     query.add_in_filter('submitter_id', cases)
     query.add_fields('project.project_id')
     projects = [p['project']['project_id'] for p in query.get()]
-    return sorted(projects)
+    return sorted(set(projects))
 
 def get_data_categories(project, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
@@ -256,8 +256,14 @@ def get_programs(projects=None):
     '''Return list of programs that have data EXPOSED in GDC.  Note that this
        may be different from the set of programs that have SUBMITTED data to
        the GDC, because (a) it takes time to validate submissions before GDC
-       will make them public, and (b) GDC does only periodic data releases'''
-    if not projects:
+       will make them public, and (b) GDC does only periodic data releases.
+       An optional projects parameter can be passed to prune the list of
+       programs to those that have submitted data to the specified project(s)
+       '''
+
+    if projects:
+        projects = list(set(projects) & set(get_projects()))
+    else:
         projects = get_projects()
     programs  = [ proj.split('-')[0] for proj in projects]
     return list(set(programs))
