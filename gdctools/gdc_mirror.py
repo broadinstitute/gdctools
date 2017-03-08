@@ -54,59 +54,54 @@ class gdc_mirror(GDCtool):
         config = self.config
         if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
         if opts.log_dir: config.mirror.log_dir = opts.log_dir
-        if opts.programs: config.programs = opts.programs
-        if opts.projects: config.projects = opts.projects
-        if opts.cases: config.cases = opts.cases
         self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
 
     def mirror(self):
 
         config = self.config
-        projects = config.projects
-        programs = config.programs
+        projects = []
+        programs = []
 
+        # Validate program and project names, if specified
+        if config.projects:
+            all_projects = api.get_projects()
+            for proj in config.projects:
+                if proj not in all_projects:
+                    gprint("Project " + proj + " not found in GDC, ignoring")
+                else:
+                    projects.append(proj)
+
+        if config.programs:
+            all_programs = api.get_programs()
+            for prog in config.programs:
+                if prog not in all_programs:
+                    gprint("Program " + prog + " not found in GDC, ignoring")
+                else:
+                    programs.append(prog)
+
+        # Avoid accidental attempts to download entire GDC. Also note that
+        # other tools do not need to be this stringent, because they can
+        # infer programs/projects/cases from mirror or derivatives of it
         if not (programs or projects):
-            gabort(0, "No programs or projects specified in config file "+
-                      "or at command line")
+            gabort(0, "Cannot determine programs or projects from config "+
+                      "file or command line flags")
 
+        # Everything has validated, so let's get mirroring started
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
-        # Get available programs & projects, to fail fast on bad input
-        available_projects = api.get_projects()
-        available_programs = api.get_programs()
-
-        if projects:
-            for proj in projects:
-                if proj not in available_projects:
-                    gabort(1, "Project " + proj + " not found in GDC")
-
-        if programs:
-            for prog in programs:
-                if prog not in available_programs:
-                    gabort(2,"Program " + prog + " not found in GDC")
-
-        # Everything has validated, so let's get mirroring started
         logging.info("GDC Mirror Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
 
         if not projects:
-            if programs is None:
-                logging.info("No programs or projects specified, using GDC API"\
-                             "to discover available programs")
-                programs = available_programs
-                logging.info(str(len(programs))
-                             + " program(s) found: " + ",".join(programs))
-
-            logging.info("No projects specified, using GDC API to discover "\
-                         "available projects")
+            logging.info("No projects specified, inferring from programs")
             projects = []
             for prgm in programs:
-                new_projects = available_projects
+                projects_for_this_program = api.get_projects(program=prgm)
                 logging.info(str(len(new_projects)) + " project(s) found for "
                              + prgm + ": " + ",".join(new_projects))
-                projects.extend(new_projects)
+                projects.extend(projects_for_this_program)
 
         # Make list of which projects belong to each program
         program_projects = dict()
