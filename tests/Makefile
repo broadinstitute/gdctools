@@ -32,7 +32,7 @@ test: test_smoke echo_success
 
 test_all: test_smoke test_dice test_loadfile test_report echo_success
 
-test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg
+test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
 	@echo
@@ -91,6 +91,18 @@ test_report:
 	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | sort > $(TEST_ROOT)/report-files.txt
 	diff -b baselines/report-files.txt $(TEST_ROOT)/.
 
+test_cases:
+	@echo
+	@echo "Test fine-grained retrieval of 1 case (and 1 data category)"
+	@$(PYTHON) $(SRC)/gdc_mirror.py --config onlycases.cfg \
+					--cases TCGA-EE-A3J8 \
+					--data-categories Biospecimen 2>&1 | tee $@.log | \
+					egrep "GDC|Mirroring data|Mirroring start"
+	@cd onlycases/mirror/TCGA && find TCGA-* \
+					-name '*.*' |  grep -v json | \
+					sort > ../../onlycases-files.txt
+	diff -b baselines/onlycases-files.txt onlycases/.
+
 USE=/broad/tools/scripts/useuse
 test3: default
 	@# Python 3 compatibility
@@ -119,4 +131,4 @@ clean:
 	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
 
 rclean: clean
-	\rm -rf sandbox GDCtool gdctools_tmp
+	\rm -rf sandbox GDCtool gdctools_tmp onlycases
