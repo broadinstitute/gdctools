@@ -342,7 +342,7 @@ def get_diced_metadata(project, project_root, datestamp):
     if os.path.exists(mpath):
         return mpath
     # sanity check
-    raise ValueError("Could not find dice metadata for " + project + "on " + datestamp)
+    raise ValueError("Could not find dice metadata for " + project + " on " + datestamp)
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''

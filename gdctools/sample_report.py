@@ -19,20 +19,20 @@ import subprocess
 import logging
 import os
 import csv
+from lib.heatmap import draw_heatmaps
+from lib.meta import extract_case_data
 from pkg_resources import resource_filename
 
-from lib import common
-from lib import meta
 from GDCtool import GDCtool
 
 class sample_report(GDCtool):
 
     def __init__(self):
-        super(sample_report, self).__init__(version="0.3.0")
+        super(sample_report, self).__init__(version="0.3.1")
         cli = self.cli
 
-        cli.description = 'Generate a sample report for a snapshot of data '\
-                        'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
+        cli.description = 'Generate a sample report for a snapshot of data ' + \
+                         'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
 
         # FIXME: add options for each config setting
 
@@ -49,17 +49,18 @@ class sample_report(GDCtool):
 
         datestamp = self.datestamp
 
-        config.reports.dir = os.path.join(config.reports.dir, 'report_'+datestamp)
+        config.reports.dir = os.path.join(config.reports.dir,
+                                          'report_' + datestamp)
         if not os.path.isdir(config.reports.dir):
             os.makedirs(config.reports.dir)
 
         # Now infer certain values from the diced data directory
-        logging.info("Linking diced metadata...")
-        link_diced_metadata(diced_prog_root, config.reports.dir, datestamp)
+        logging.info("Obtaining diced metadata...")
+        get_diced_metadata(diced_prog_root, config.reports.dir, datestamp)
 
         #FIXME: only works for TCGA
-        sample_loadfile = link_loadfile_metadata(config.loadfiles.dir, "TCGA",
-                                            config.reports.dir, datestamp)
+        link_loadfile_metadata(config.loadfiles.dir, "TCGA", config.reports.dir,
+                               datestamp)
 
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
@@ -69,7 +70,7 @@ class sample_report(GDCtool):
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_sample_report = resource_filename(__name__,"lib/GDCSampleReport.R")
+        gdc_sample_report = resource_filename(__name__, "lib/GDCSampleReport.R")
         self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,
@@ -87,7 +88,7 @@ class sample_report(GDCtool):
             p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             for line in iter(p.stdout.readline, ''):
                 logging.info(line.rstrip())
-        except Exception as e:
+        except:
             logging.exception("Sample report generation FAILED:")
 
     def write_aggregate_counts(self, diced_prog_root, datestamp):
@@ -151,8 +152,8 @@ class sample_report(GDCtool):
         information is read from the [aggregates] section of the config file.
         '''
         aggregates = self.config.aggregates
-        file = os.path.join(self.config.reports.dir, 'aggregates.txt')
-        with open(file, 'w') as f:
+        ag_file = os.path.join(self.config.reports.dir, 'aggregates.txt')
+        with open(ag_file, 'w') as f:
             f.write('Aggregate Name\tTumor Types\n')
             for agg in sorted(aggregates.keys()):
                 f.write(agg + '\t' + aggregates[agg] + '\n')
@@ -160,7 +161,7 @@ class sample_report(GDCtool):
 def _counts_files(diced_prog_root, datestamp):
     '''Generate the counts files for each project in a program'''
     # 'dirs' will be the diced project names
-    root, dirs, files = os.walk(diced_prog_root).next()
+    root, dirs, _ = os.walk(diced_prog_root).next()
 
     for project in dirs:
         meta_dir = os.path.join(root, project, 'metadata')
@@ -181,18 +182,14 @@ def _counts_files(diced_prog_root, datestamp):
             if os.path.isfile(count_f):
                 yield count_f
 
-def link_diced_metadata(diced_prog_root, report_dir, datestamp):
-    '''Symlink all heatmaps into <reports_dir>/report_<datestamp> and return
-    that directory'''
-    root, dirs, files = os.walk(diced_prog_root).next()
+def get_diced_metadata(diced_prog_root, report_dir, datestamp):
+    '''
+    Create heatmaps and symlinks to dicing metadata in
+    <reports_dir>/report_<datestamp>.
+    '''
+    root, dirs, _ = os.walk(diced_prog_root).next()
     for project in dirs:
         meta_dir = os.path.join(root, project, 'metadata', datestamp)
-
-        # Link high and low res heatmaps to the report dir
-        heatmap_high = '.'.join([project, datestamp, 'high_res.heatmap.png'])
-        heatmap_low = '.'.join([project, datestamp, 'low_res.heatmap.png'])
-        link_metadata_file(meta_dir, report_dir, heatmap_high)
-        link_metadata_file(meta_dir, report_dir, heatmap_low)
 
         #Link project-level sample counts
         samp_counts = '.'.join([project, datestamp, 'sample_counts', 'tsv'])
@@ -201,6 +198,11 @@ def link_diced_metadata(diced_prog_root, report_dir, datestamp):
         # Link the diced metadata TSV
         diced_meta = '.'.join([project, datestamp, 'diced_metadata', 'tsv'])
         link_metadata_file(meta_dir, report_dir, diced_meta)
+        
+        # Create high and low res heatmaps in the report dir
+        logging.info("Generating heatmaps for " + project)
+        case_data = extract_case_data(os.path.join(meta_dir, diced_meta))
+        draw_heatmaps(case_data, project, datestamp, report_dir)
 
 def link_metadata_file(from_dir, report_dir, filename):
     """ Ensures symlink report_dir/filename -> from_dir/filename exists"""
