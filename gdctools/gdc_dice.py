@@ -86,8 +86,8 @@ class gdc_dice(GDCtool):
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
 
-        # validate early and fail if any errors exist
-        self.validate_config()
+        # Validate early and fail if any errors exist
+        self.validate()
 
         # Programs is a list, but with only one element
         program = config.programs[0]
@@ -275,7 +275,7 @@ class gdc_dice(GDCtool):
                             out.write(line)
                     skip_header = True
 
-    def validate_config(self):
+    def validate(self):
         '''Checks to see if the config options, like programs/projects are
         properly mirrored.'''
         # Validate programs and and projects by ensuring a folder exists for each
