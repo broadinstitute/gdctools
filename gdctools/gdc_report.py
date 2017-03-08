@@ -216,9 +216,9 @@ def link_metadata_file(from_dir, report_dir, filename):
 def link_loadfile_metadata(loadfiles_dir, program, report_dir, datestamp):
     """Symlink loadfile and filtered samples into report directory"""
     from_dir = os.path.join(loadfiles_dir, program, datestamp)
-    loadfile = program + '.' + datestamp + ".Sample.loadfile.txt"
+    loadfile = program + ".Sample.loadfile.txt"
     link_metadata_file(from_dir, report_dir, loadfile)
-    filtered = program + '.' + datestamp + ".filtered_samples.txt"
+    filtered = program + ".filtered_samples.txt"
     link_metadata_file(from_dir, report_dir, filtered)
 
 def main():
