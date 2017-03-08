@@ -153,6 +153,13 @@ def get_projects(program=None, legacy=False):
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
 
+def get_project_from_cases(cases, program=None, legacy=False):
+    query = GDCQuery('cases', legacy=legacy)
+    query.add_in_filter('submitter_id', cases)
+    query.add_fields('project.project_id')
+    projects = [p['project']['project_id'] for p in query.get()]
+    return sorted(projects)
+
 def get_data_categories(project, legacy=False):
     query = GDCQuery('projects', legacy=legacy)
     query.add_eq_filter('project_id', project)
@@ -245,12 +252,14 @@ def get_program(project, legacy=False):
 
     return projects[0]['program']['name']
 
-def get_programs():
+def get_programs(projects=None):
     '''Return list of programs that have data EXPOSED in GDC.  Note that this
        may be different from the set of programs that have SUBMITTED data to
        the GDC, because (a) it takes time to validate submissions before GDC
        will make them public, and (b) GDC does only periodic data releases'''
-    programs  = [ proj.split('-')[0] for proj in get_projects()]
+    if not projects:
+        projects = get_projects()
+    programs  = [ proj.split('-')[0] for proj in projects]
     return list(set(programs))
 
 # Module helpers
