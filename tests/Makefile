@@ -5,11 +5,15 @@ SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
+PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM -- latest
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
+FIND_LOAD_FILES=cd $(TEST_ROOT)/loadfiles/TCGA/latest && find . -name 'TCGA-*.txt'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
-PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) --projects TCGA-ACC TCGA-OV
+PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
+PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
+PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 
 help:
 	@echo
@@ -28,19 +32,19 @@ test: test_smoke echo_success
 
 test_all: test_smoke test_dice test_loadfile test_report echo_success
 
-test_smoke: test_invoke test_mirror test_redo_mirror
+test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
 	@echo
 	@echo Test runnability: invoke some tools to show nothing thrown to stderr
 	@$(PYTHON) $(SRC)/GDCcli.py >/dev/null
 	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
-	@$(PYTHON) $(SRC)/gdc_ls.py --help >/dev/null
+	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
 
 test_mirror:
 	@echo
 	@echo "Test mirror: download small set of data, compare to baselines"
-	@$(PERFORM_MIRROR) 2>&1 | egrep "GDC|Mirroring data|Mirroring start"
+	@$(PERFORM_MIRROR) 2>&1 | tee $@.log | egrep "GDC|Mirroring data|Mirroring start"
 
 	@# Now see that the named set of mirrored files matches what we expect
 	$(FIND_MIRROR_FILES) | sort > $(TEST_ROOT)/mirror-files.txt
@@ -55,11 +59,17 @@ test_redo_mirror:
 	@echo Test retry of mirror: nothing should be re-downloaded
 	@$(PERFORM_MIRROR) 2>&1 | grep -w new | grep -vl " [^0][0-9]* new " >/dev/null
 
+test_badcfg:
+	@echo
+	@echo Test that attempting to use bad config file quickly aborts with error
+	@touch bad.cfg
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg || Result=$$? ; \
+	if ((!$$Result)) ; then false ; fi
+
 test_dice:
 	@echo
 	@echo Test dice: on subset of cohorts, to show CLI args override config file
-	$(PERFORM_DICE) > dice.log 2>&1
-
+	$(PERFORM_DICE) 2>&1 | tee $@.log  | grep "Dicing TCGA"
 	$(FIND_DICE_FILES) | sort > $(TEST_ROOT)/dice-files.txt
 	diff -b baselines/dice-files.txt $(TEST_ROOT)/.
 
@@ -68,10 +78,30 @@ test_dice:
 	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
 test_loadfile:
-	$(PYTHON) $(SRC)/create_loadfile.py $(CONFIG_FLAG)
+	@echo
+	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
+	$(FIND_LOAD_FILES) | sort > $(TEST_ROOT)/load-files.txt
+	diff -b baselines/load-files.txt $(TEST_ROOT)/.
+	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/load-md5sums.txt
+	diff -b baselines/load-md5sums.txt $(TEST_ROOT)/.
 
 test_report:
-	$(PYTHON) $(SRC)/sample_report.py $(CONFIG_FLAG)
+	@echo
+	$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
+	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | sort > $(TEST_ROOT)/report-files.txt
+	diff -b baselines/report-files.txt $(TEST_ROOT)/.
+
+test_cases:
+	@echo
+	@echo "Test fine-grained retrieval of 1 case (and 1 data category)"
+	@$(PYTHON) $(SRC)/gdc_mirror.py --config onlycases.cfg \
+					--cases TCGA-EE-A3J8 \
+					--data-categories Biospecimen 2>&1 | tee $@.log | \
+					egrep "GDC|Mirroring data|Mirroring start"
+	@cd onlycases/mirror/TCGA && find TCGA-* \
+					-name '*.*' |  grep -v json | \
+					sort > ../../onlycases-files.txt
+	diff -b baselines/onlycases-files.txt onlycases/.
 
 USE=/broad/tools/scripts/useuse
 test3: default
@@ -98,7 +128,7 @@ echo_success:
 	@echo Success!
 
 clean:
-	rm -rf build dist *.egg-info *~ *mirror*log *dice*log
+	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
 
 rclean: clean
-	\rm -rf sandbox GDCtool
+	\rm -rf sandbox GDCtool gdctools_tmp onlycases

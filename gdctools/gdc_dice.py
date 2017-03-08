@@ -34,10 +34,10 @@ from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from GDCtool import GDCtool
 
-class gdc_dicer(GDCtool):
+class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dicer, self).__init__(version="0.5.0")
+        super(gdc_dice, self).__init__(version="0.5.0")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -85,8 +85,8 @@ class gdc_dicer(GDCtool):
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
 
-        # validate early and fail if any errors exist
-        self.validate_config()
+        # Validate early and fail if any errors exist
+        self.validate()
 
         # Programs is a list, but with only one element
         program = config.programs[0]
@@ -213,7 +213,7 @@ class gdc_dicer(GDCtool):
         logging.info("Dicing completed successfuly")
 
     def execute(self):
-        super(gdc_dicer, self).execute()
+        super(gdc_dice, self).execute()
         self.parse_args()
         try:
             self.dice()
@@ -270,7 +270,7 @@ class gdc_dicer(GDCtool):
                             out.write(line)
                     skip_header = True
 
-    def validate_config(self):
+    def validate(self):
         '''Checks to see if the config options, like programs/projects are
         properly mirrored.'''
         # Validate programs and and projects by ensuring a folder exists for each
@@ -577,7 +577,7 @@ def _parse_tags(tags_list):
     return frozenset('' if len(tags_list)==0 else tags_list)
 
 def main():
-    gdc_dicer().execute()
+    gdc_dice().execute()
 
 if __name__ == "__main__":
     main()

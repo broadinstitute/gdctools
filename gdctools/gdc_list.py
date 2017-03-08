@@ -5,7 +5,7 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-gdcls: List data available in the GDC
+gdc_list: List data available in the GDC
 
 @author: Timothy DeFreitas, Michael S. Noble
 @date:  2016_10_19
@@ -20,10 +20,10 @@ from collections import defaultdict
 from GDCtool import GDCtool
 from lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as and_filter
 
-class gdcls(GDCtool):
+class gdc_list(GDCtool):
 
     def __init__(self):
-        super(gdcls, self).__init__(version="0.1.1")
+        super(gdc_list, self).__init__(version="0.1.1", logging=False)
         cli = self.cli
 
         cli.description = 'List metadata available from toplevel endpoints:\n\n'\
@@ -72,7 +72,7 @@ class gdcls(GDCtool):
         return params
 
     def execute(self):
-        super(gdcls, self).execute()
+        super(gdc_list, self).execute()
         params = self.build_params()
         query = GDCQuery(self.options.endpoint,
                          filters=params['filters'],
@@ -99,7 +99,7 @@ def filter_params(filters):
         return and_filter(eq_filters)
 
 def main():
-    gdcls().execute()
+    gdc_list().execute()
 
 if __name__ == "__main__":
     main()

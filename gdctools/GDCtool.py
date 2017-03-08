@@ -20,22 +20,48 @@ import traceback
 import ConfigParser
 import time
 import logging
+from pkg_resources import resource_filename
 
 from GDCcli import GDCcli
 from GDCcore import *
 from lib import common
+from lib import api
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version=""):
-
+    def __init__(self, version="", logging=True):
         self.cli = GDCcli(version=version)
+        self.perform_logging = logging
         # Derived classes can/should add custom options/description/version &
         # behavior in their respective __init__()/execute() implementations
 
     def execute(self):
         self.options = self.cli.parse_args()
         self.parse_config()
+        self.reconcile_config()
+
+        # Get today's datestamp, the default value
+        datestamp = time.strftime('%Y_%m_%d', time.localtime())
+
+        if self.options.datestamp:
+            # We are using an explicit datestamp, so it must match one from
+            # the datestamps file, or be the string "latest"
+            datestamp = self.options.datestamp
+            existing_stamps = self.datestamps()
+
+            if datestamp == "latest":
+                if len(existing_stamps) == 0:
+                    raise ValueError("No existing datestamps,"
+                                     "cannot use 'latest' datestamp option ")
+                # already sorted, so last one is latest
+                datestamp = existing_stamps[-1]
+            elif datestamp not in existing_stamps:
+                # Timestamp not recognized, but print a combined message later
+                raise ValueError("Given datestamp not present in "
+                                 + self.config.datestamps + "\n"
+                                 + "Existing datestamps: " + repr(existing_stamps))
+
+        self.datestamp = datestamp
         self.init_logging()
 
     def parse_config(self):
@@ -46,8 +72,10 @@ class GDCtool(object):
         '''
 
         self.config = attrdict(default=attrdict())      # initially empty
-        if not self.options.config:                     # list of config files
-            return
+        if not self.options.config:                     # list of file objects
+            # No config file specified, use default
+            cfg_default = resource_filename(__name__, "default.cfg")
+            self.options.config = [open(cfg_default,"r")]
 
         cfgparser = ConfigParser.SafeConfigParser()
         # Since we use argparse to ensure filenames, but config parser expects
@@ -68,6 +96,11 @@ class GDCtool(object):
                 # reflects only the options explicitly defined in that section
                 if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
+
+        # FIXME: should this check for more config variables?
+        self.validate_config(["root_dir"], UnsetValue={})
+        if not config.datestamps:
+            config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
 
         def get_config_values_as_list(values):
             if values:
@@ -90,7 +123,36 @@ class GDCtool(object):
         else:
             config.aggregates = {}
 
-    def validate_config(self, vars_to_examine):
+    def reconcile_config(self):
+        # The runtime configuration of each GDCtool comes from several sources
+        #   - built in defaults
+        #   - configuration files
+        #   - command line flags
+        # in order of increasing precedence (i.e. cmd line flags are highest).
+        # We enforce that precedence with this method, because it cannot be
+        # done simply by parsing the CLI args after reading the config file,
+        # as --config is also a cmd line flag.  So we have to give --config
+        # CLI flag "a chance" to be utilized in parse_config(), then override
+        # the config variables here if they were ALSO set at the command line
+
+        opts = self.options
+        config = self.config
+        if opts.programs: config.programs = opts.programs
+        if opts.projects: config.projects = opts.projects
+        if opts.cases: config.cases = opts.cases
+
+        # If a list of individual cases has been specified then it completely
+        # defines the projects & programs to be queried, and takes precedence
+        # over any other configuration file settings or command line flags
+        if config.cases:
+            config.projects = api.get_project_from_cases(config.cases)
+            config.programs = api.get_programs(config.projects)
+        elif config.projects:
+            # Simiarly, if projects is specified then the programs corresponding
+            # to those projects takes precedence over config & CLI values
+            config.programs = api.get_programs(config.projects)
+
+    def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
         Ensure that sufficient configuration state has been defined for tool to
         initiate its work; should only be called after CLI flags are parsed,
@@ -98,8 +160,8 @@ class GDCtool(object):
         '''
         for v in vars_to_examine:
             result = eval("self.config." + v)
-            if result is None:
-                gabort(100, "Required configuration variable is unset: %s" % v)
+            if result == UnsetValue:
+                gabort(100, "Required config variable is unset: %s" % v)
 
     def datestamps(self):
         """ Returns a list of valid datestamps by reading the datestamps file """
@@ -114,44 +176,17 @@ class GDCtool(object):
                 return sorted(raw.split('\n'))
 
     def init_logging(self):
-        # If no config was provided, don't initialize logging
+        if not self.perform_logging:
+            return
 
-        # Get today's datestamp, the default value
-        datestamp = time.strftime('%Y_%m_%d', time.localtime())
-
-        if self.options.datestamp:
-            # We are using an explicit datestamp, so it must match one from
-            # the datestamps file, or be the string "latest"
-            datestamp = self.options.datestamp
-
-            existing_stamps = self.datestamps()
-
-            if datestamp == "latest":
-                if len(existing_stamps) == 0:
-                    raise ValueError("No existing datestamps,"
-                                     "cannot use 'latest' datestamp option ")
-                # already sorted, so last one is latest
-                datestamp = existing_stamps[-1]
-            elif datestamp not in existing_stamps:
-                # Timestamp not recognized, but print a combined message later
-                raise ValueError("Given datestamp not present in "
-                                 + self.config.datestamps + "\n"
-                                 + "Existing datestamps: " + repr(existing_stamps))
-
-        # At this point, datestamp must be a valid value, so initialize the
-        # logging with that value
-        self.datestamp = datestamp
-
-        # Put the logs in the right place, with the right name
+        datestamp = self.datestamp
         log_dir = self.config.log_dir
         if not log_dir:
             log_dir = "."
 
         tool_name = self.__class__.__name__
-
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
-
         log_formatter = logging.Formatter('%(asctime)s[%(levelname)s]: %(message)s')
 
         # Write logging data to file
@@ -169,7 +204,7 @@ class GDCtool(object):
 
             logging.info("Logfile:" + logfile)
             # For easier eyeballing & CLI tab-completion, symlink to latest.log
-            latest = os.path.join(log_dir, tool_name + ".latest.log")
+            latest = os.path.join(log_dir, "latest.log")
             common.silent_rm(latest)
             os.symlink(os.path.abspath(logfile), latest)
 

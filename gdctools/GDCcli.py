@@ -45,10 +45,11 @@ class GDCcli(argparse.ArgumentParser):
         # Note that args with nargs=+ will be instantiated as lists
         self.add_argument('--verbose', dest='verbose', action='count',
                 help='set verbosity level [%(default)s]')
-        self.add_argument('--version',action='version',version=version)
-        self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
+        self.add_argument('--version',action='version',version=self.version)
         self.add_argument('-c','--config', nargs='+', type=argparse.FileType('r'),
                             help='One or more configuration files')
+
+        self.add_argument('-l', '--log-dir', help='Folder to store logfiles')
         self.add_argument('-g', '--programs', nargs='+', metavar='program',
                          help='Process data ONLY from these GDC programs')
         self.add_argument('-p', '--projects', nargs='+', metavar='project',

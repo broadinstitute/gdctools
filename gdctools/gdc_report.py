@@ -5,7 +5,7 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-sample_report: wrapper around SampleSummaryReport.R for GDC-derived data
+gdc_report: wrapper around SampleSummaryReport.R for GDC-derived data
 See the <root>/COPYRIGHT file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 @author: Timothy DeFreitas, Michael S. Noble
@@ -19,16 +19,18 @@ import subprocess
 import logging
 import os
 import csv
+from pkg_resources import resource_filename
+
 from lib.heatmap import draw_heatmaps
 from lib.meta import extract_case_data
-from pkg_resources import resource_filename
+from lib.common import silent_rm
 
 from GDCtool import GDCtool
 
-class sample_report(GDCtool):
+class gdc_report(GDCtool):
 
     def __init__(self):
-        super(sample_report, self).__init__(version="0.3.1")
+        super(gdc_report, self).__init__(version="0.3.1")
         cli = self.cli
 
         cli.description = 'Generate a sample report for a snapshot of data ' + \
@@ -46,13 +48,15 @@ class sample_report(GDCtool):
 
         #FIXME: Hardcoded to just TCGA for now...
         diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
-
         datestamp = self.datestamp
 
+        latest = os.path.join(config.reports.dir, 'latest')
         config.reports.dir = os.path.join(config.reports.dir,
                                           'report_' + datestamp)
         if not os.path.isdir(config.reports.dir):
             os.makedirs(config.reports.dir)
+            silent_rm(latest)
+            os.symlink(os.path.abspath(config.reports.dir), latest)
 
         # Now infer certain values from the diced data directory
         logging.info("Obtaining diced metadata...")
@@ -65,13 +69,14 @@ class sample_report(GDCtool):
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
             self.write_aggregate_definitions()
-            logging.info("Writing aggregate counts ...")
-            self.write_aggregate_counts(diced_prog_root,datestamp)
+            
+        logging.info("Combining all sample counts into one file ...")
+        self.write_combined_counts(diced_prog_root, datestamp)
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
-        gdc_sample_report = resource_filename(__name__, "lib/GDCSampleReport.R")
-        self.cmdArgs.extend([ gdc_sample_report,        # From gdctools pkg
+        report_script = resource_filename(__name__, "lib/GDCSampleReport.R")
+        self.cmdArgs.extend([ report_script,            # From gdctools pkg
                               datestamp,                # Specified from cli
                               config.reports.dir,
                               config.reference_dir,
@@ -79,7 +84,7 @@ class sample_report(GDCtool):
                             ])
 
     def execute(self):
-        super(sample_report, self).execute()
+        super(gdc_report, self).execute()
         self.parse_args()
         # TODO: better error handling
         logging.info("Running GDCSampleReport.R ")
@@ -91,12 +96,11 @@ class sample_report(GDCtool):
         except:
             logging.exception("Sample report generation FAILED:")
 
-    def write_aggregate_counts(self, diced_prog_root, datestamp):
+    def write_combined_counts(self, diced_prog_root, datestamp):
         '''Create a program-wide counts file combining all cohorts, including aggregates'''
         # FIXME: TCGA hardcoded here
         aggregate_cohorts = self.config.aggregates.keys()
         aggregate_cohorts = [ag.replace('TCGA-', '') for ag in aggregate_cohorts]
-
         agg_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
         agg_counts_file = os.path.join(self.config.reports.dir, agg_counts_file)
 
@@ -216,13 +220,13 @@ def link_metadata_file(from_dir, report_dir, filename):
 def link_loadfile_metadata(loadfiles_dir, program, report_dir, datestamp):
     """Symlink loadfile and filtered samples into report directory"""
     from_dir = os.path.join(loadfiles_dir, program, datestamp)
-    loadfile = program + '.' + datestamp + ".Sample.loadfile.txt"
+    loadfile = program + ".Sample.loadfile.txt"
     link_metadata_file(from_dir, report_dir, loadfile)
-    filtered = program + '.' + datestamp + ".filtered_samples.txt"
+    filtered = program + ".filtered_samples.txt"
     link_metadata_file(from_dir, report_dir, filtered)
 
 def main():
-    sample_report().execute()
+    gdc_report().execute()
 
 if __name__ == "__main__":
     main()

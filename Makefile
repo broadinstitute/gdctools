@@ -32,6 +32,7 @@ clean:
 
 rclean: clean
 	(cd tests && $(MAKE) rclean)
+	(cd gdctools && $(MAKE) rclean)
 
 test:
 	cd tests && $(MAKE) test
