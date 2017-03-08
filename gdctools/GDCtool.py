@@ -106,6 +106,11 @@ class GDCtool(object):
         config.projects = get_config_values_as_list(config.projects)
         config.cases    = get_config_values_as_list(config.cases)
 
+        # FIXME: should this check for more config variables?
+        self.validate_config(["root_dir"], UnsetValue={})
+        if not config.datestamps:
+            config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
+
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
         # If no aggregates are defined, change None obj to empty dict, for
@@ -116,7 +121,7 @@ class GDCtool(object):
         else:
             config.aggregates = {}
 
-    def validate_config(self, vars_to_examine):
+    def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
         Ensure that sufficient configuration state has been defined for tool to
         initiate its work; should only be called after CLI flags are parsed,
@@ -124,8 +129,8 @@ class GDCtool(object):
         '''
         for v in vars_to_examine:
             result = eval("self.config." + v)
-            if result is None:
-                gabort(100, "Required configuration variable is unset: %s" % v)
+            if result == UnsetValue:
+                gabort(100, "Required config variable is unset: %s" % v)
 
     def datestamps(self):
         """ Returns a list of valid datestamps by reading the datestamps file """
