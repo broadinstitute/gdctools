@@ -345,7 +345,7 @@ def get_diced_metadata(project, project_root, datestamp):
     if os.path.exists(mpath):
         return mpath
     # sanity check
-    raise ValueError("Could not find dice metadata for " + project + "on " + datestamp)
+    raise ValueError("Could not find dice metadata for " + project + " on " + datestamp)
 
 def sample_id(project, row_dict):
     '''Create a sample id from a row dict'''
@@ -434,7 +434,7 @@ def diced_file_comparator(a, b):
 
 def choose_file(files):
     # Remove path from filenames, to promote robustness in comparator
-    files = [ f.split('/')[-1] for f in files]
+    files = [os.path.basename(f) for f in files]
     preferred_order = sorted(files, key=cmp_to_key(diced_file_comparator))
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored

@@ -18,9 +18,68 @@ from __future__ import print_function
 import os
 import json
 import sys
+import logging
+import csv
 
 
-from common import DATESTAMP_REGEX
+from common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
+
+def extract_case_data(diced_metadata_file):
+    '''Create a case-based lookup of available data types'''
+    # Use a case-based dictionary to count each data type on a case/sample basis
+    # cases[<case_id>][<sample_type>] = set([REPORT_DATA_TYPE, ...])
+    cases = dict()
+    cases_with_clinical = set()
+    cases_with_biospecimen = set()
+
+    projname = os.path.basename(diced_metadata_file).split('.')[0]
+
+    with open(diced_metadata_file, 'r') as dmf:
+        reader = csv.DictReader(dmf, delimiter='\t')
+        # Loop through counting non-case-level annotations
+        for row in reader:
+            annot = row['annotation']
+            case_id = row['case_id']
+            report_dtype = ANNOT_TO_DATATYPE[annot]
+
+            if report_dtype == 'BCR':
+                cases_with_biospecimen.add(case_id)
+            elif report_dtype == 'Clinical':
+                cases_with_clinical.add(case_id)
+            else:
+                # FIXME: Temporary Hack due to GDC bug on a LUAD case
+                if row['sample_type'] == "FFPE Scrolls":
+                    logging.warning("SKIPPING BAD FFPE SCROLLS SAMPLE TYPE")
+                    continue
+                _, sample_type = tumor_code(row['sample_type'])
+                # Filter out ffpe samples into a separate sample_type
+                if row['is_ffpe'] == 'True':
+                    sample_type = 'FFPE'
+                case_dict = cases.get(case_id, {})
+                case_dict[sample_type] = case_dict.get(sample_type, set())
+                case_dict[sample_type].add(report_dtype)
+                cases[case_id] = case_dict
+
+    # Now go back through and add BCR & Clinical to all sample_types, but first,
+    # we must insert cases in for samples who only have clinical data
+    possible_cases = cases_with_clinical | cases_with_biospecimen
+    main_type = main_tumor_sample_type(projname)
+    _, main_type = tumor_code(main_type)
+    for c in possible_cases:
+        if c not in cases:
+            # Have to create a new entry with the default sample type
+            cases[c] = {main_type : set()}
+        elif main_type not in cases[c]:
+            # Each sample must have an entry for the main tumor type
+            cases[c][main_type] = set()
+
+    for c in cases:
+        for st in cases[c]:
+            if c in cases_with_clinical:
+                cases[c][st].add('Clinical')
+            if c in cases_with_biospecimen:
+                cases[c][st].add('BCR')
+    return cases
 
 def append_metadata(file_dicts, metafile):
     ''' Merge the list of filedicts with any filedicts in metafile,

@@ -38,7 +38,7 @@ import sys
 import inspect
 import requests
 import __builtin__
-from pkg_resources import get_distribution
+from pkg_resources import get_distribution, DistributionNotFound
 
 __interactive__ = os.isatty(sys.stdout.fileno())
 
@@ -46,7 +46,10 @@ __interactive__ = os.isatty(sys.stdout.fileno())
 requests.packages.urllib3.disable_warnings()
 
 GDC_ROOT_URI = "https://gdc-api.nci.nih.gov"
-GDCT_VERSION = get_distribution('gdctools').version
+try:
+    GDCT_VERSION = get_distribution('gdctools').version
+except DistributionNotFound as dnf:
+    GDCT_VERSION = 'TESTING'
 
 def eprint(*args, **kwargs):
     # If not interactive (e.g. writing to log), show user from whence msg came

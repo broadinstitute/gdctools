@@ -28,7 +28,6 @@ from lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from lib.convert import tsv2magetab as gdac_tsv2magetab
 from lib.convert import copy as gdac_copy
 from lib.convert import maf as mutect_maf
-from lib.heatmap import draw_heatmaps
 from lib import common
 from lib import meta
 from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
@@ -115,7 +114,8 @@ class gdc_dice(GDCtool):
                 # Should reorganize the metadata folder structure to
                 # .../proj/metadata/YYYY/metadata.project.<date>.json
                 meta_file = os.path.join(meta_dir,
-                                         '.'.join(["metadata", project, datestamp, "json"]))
+                                         '.'.join(["metadata", project,
+                                                   datestamp, "json"]))
 
                 # Sanity check, there must be saved metadata for each
                 # project in order to dice
@@ -143,7 +143,8 @@ class gdc_dice(GDCtool):
                 # file per case per annotation exists, and therefore we must
                 # generate a data structure in this form by iterating over
                 # the metadata before dicing.
-                tcga_lookup, multi_sample_files  = _tcgaid_file_lookup(metadata, trans_dict)
+                tcga_lookup, multi_sample_files  = _tcgaid_file_lookup(metadata,
+                                                                       trans_dict)
 
                 # Diced Metadata
                 diced_meta_dir = os.path.join(diced_project_root,
@@ -166,7 +167,7 @@ class gdc_dice(GDCtool):
 
                     for tcga_id in tcga_lookup:
                         # Dice single sample files first
-                        for annot, file_d in tcga_lookup[tcga_id].iteritems():
+                        for _, file_d in tcga_lookup[tcga_id].iteritems():
                             dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
@@ -183,14 +184,11 @@ class gdc_dice(GDCtool):
                 # and figures needed for downstream sample reports.
                 # Count available data per sample
                 logging.info("Generating counts for " + project)
-                case_data = _case_data(diced_meta_file)
-                counts_file = ".".join([project, datestamp, "sample_counts.tsv"])
+                case_data = meta.extract_case_data(diced_meta_file)
+                counts_file = ".".join([project, datestamp,
+                                        "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
                 _write_counts(case_data, project, counts_file)
-
-                # Heatmaps per sample
-                logging.info("Generating heatmaps for " + project)
-                draw_heatmaps(case_data, project, datestamp, diced_meta_dir)
 
                 # keep track of aggregate case data
                 project_aggregates = cohort_agg_dict.get(project, [])
@@ -204,16 +202,13 @@ class gdc_dice(GDCtool):
             # As well as aggregate counts and heatmaps
             for agg in agg_case_data:
                 ac_data = agg_case_data[agg]
-                meta_dir = os.path.join(diced_prog_root, agg,
-                                          "metadata", datestamp)
+                meta_dir = os.path.join(diced_prog_root, agg, "metadata",
+                                        datestamp)
 
                 logging.info("Generating aggregate counts for " + agg)
                 counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
                 _write_counts(ac_data, agg, counts_file)
-
-                logging.info("Generating aggregate heatmaps for " + agg)
-                draw_heatmaps(ac_data, agg, datestamp, meta_dir)
 
         logging.info("Dicing completed successfuly")
 
@@ -222,7 +217,7 @@ class gdc_dice(GDCtool):
         self.parse_args()
         try:
             self.dice()
-        except Exception as e:
+        except:
             logging.exception("Dicing FAILED:")
 
     def cohort_aggregates(self):
@@ -499,63 +494,6 @@ def filter_by_case(metadata, cases):
                 filt_meta.append(fd)
         metadata = filt_meta
     return metadata
-
-def _case_data(diced_metadata_file):
-    '''Create a case-based lookup of available data types'''
-    # Use a case-based dictionary to count each data type on a case/sample basis
-    # cases[<case_id>][<sample_type>] = set([REPORT_DATA_TYPE, ...])
-    cases = dict()
-    cases_with_clinical = set()
-    cases_with_biospecimen = set()
-
-    projname = os.path.basename(diced_metadata_file).split('.')[0]
-
-    with open(diced_metadata_file, 'r') as dmf:
-        reader = csv.DictReader(dmf, delimiter='\t')
-        # Loop through counting non-case-level annotations
-        for row in reader:
-            annot = row['annotation']
-            case_id = row['case_id']
-            report_dtype = ANNOT_TO_DATATYPE[annot]
-
-            if report_dtype == 'BCR':
-                cases_with_biospecimen.add(case_id)
-            elif report_dtype == 'Clinical':
-                cases_with_clinical.add(case_id)
-            else:
-                # FIXME: Temporary Hack due to GDC bug on a LUAD case
-                if row['sample_type'] == "FFPE Scrolls":
-                    logging.warning("SKIPPING BAD FFPE SCROLLS SAMPLE TYPE")
-                    continue
-                _, sample_type = meta.tumor_code(row['sample_type'])
-                # Filter out ffpe samples into a separate sample_type
-                if row['is_ffpe'] == 'True':
-                    sample_type = 'FFPE'
-                case_dict = cases.get(case_id, {})
-                case_dict[sample_type] = case_dict.get(sample_type, set())
-                case_dict[sample_type].add(report_dtype)
-                cases[case_id] = case_dict
-
-    # Now go back through and add BCR & Clinical to all sample_types, but first,
-    # we must insert cases in for samples who only have clinical data
-    possible_cases = cases_with_clinical | cases_with_biospecimen
-    main_type = meta.main_tumor_sample_type(projname)
-    _, main_type = meta.tumor_code(main_type)
-    for c in possible_cases:
-        if c not in cases:
-            # Have to create a new entry with the default sample type
-            cases[c] = {main_type : set()}
-        elif main_type not in cases[c]:
-            # Each sample must have an entry for the main tumor type
-            cases[c][main_type] = set()
-
-    for c in cases:
-        for st in cases[c]:
-            if c in cases_with_clinical:
-                cases[c][st].add('Clinical')
-            if c in cases_with_biospecimen:
-                cases[c][st].add('BCR')
-    return cases
 
 def _write_counts(case_data, proj_name, f):
     '''Write case data as counts '''

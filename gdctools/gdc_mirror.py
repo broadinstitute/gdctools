@@ -29,7 +29,7 @@ import lib.common as common
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.9.0")
+        super(gdc_mirror, self).__init__(version="0.9.1")
         cli = self.cli
         cli.description = 'Create local mirror of the data from arbitrary '\
                         'programs and projects\nwarehoused at the Genomic Data'\
@@ -99,8 +99,10 @@ class gdc_mirror(GDCtool):
             projects = []
             for prgm in programs:
                 projects_for_this_program = api.get_projects(program=prgm)
-                logging.info(str(len(new_projects)) + " project(s) found for "
-                             + prgm + ": " + ",".join(new_projects))
+                logging.info("%d project(s) found for %s" % \
+                             (len(projects_for_this_program),
+                              prgm + ": " + \
+                              ",".join(projects_for_this_program)))
                 projects.extend(projects_for_this_program)
 
         # Make list of which projects belong to each program
