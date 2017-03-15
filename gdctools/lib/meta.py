@@ -163,6 +163,7 @@ def md5_matches(file_dict, md5file):
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
 
+__SUPPORTED_FILE_TYPES__ = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
 
 def file_basename(file_dict):
     '''Generate a filename based on the file dict.
@@ -173,11 +174,11 @@ def file_basename(file_dict):
 
     E.g:
         nationwidechildrens.org_biospecimen.TCGA-NA-A4QY.xml
-        becomes
+    becomes
         nationwidechildrens.org_biospecimen.TCGA-NA-A4QY.<uuid>.xml
-        &
+    and
         isoforms.quantification.txt
-        becomes
+    becomes
         isoforms.quantification.<uuid>.txt
 
 
@@ -188,18 +189,16 @@ def file_basename(file_dict):
     If no correct file basename can be found, raises ValueError and dumps
     the offending file_dict.
     '''
-    EXTENSIONS = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
     name = file_dict['file_name']
     uuid = file_dict['file_id']
 
     namelist = name.split('.')
     try:
         for i in range(len(namelist) + 1):
-            if namelist[i] in EXTENSIONS:
+            if namelist[i] in __SUPPORTED_FILE_TYPES__:
                 break
     except IndexError:
-        # We went too far, must not have found an extension
-        raise ValueError("No valid extension found for file: " + name)
+        raise ValueError("unsupported file type: " + name)
 
     # i is now the index of the first extension, insert uuid right before
     namelist.insert(i, uuid)
