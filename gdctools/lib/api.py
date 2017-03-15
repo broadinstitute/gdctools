@@ -18,6 +18,8 @@ import logging
 import subprocess
 import os
 
+__legacy = False
+__verbosity = 0
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 class GDCQuery(object):
@@ -28,15 +30,12 @@ class GDCQuery(object):
     # Queries returning more than this many results will log a warning
     WARN_RESULT_CT = 5000
 
-    def __init__(self, endpoint, fields=None, expand=None,
-                legacy=False, filters=None):
-
+    def __init__(self, endpoint, fields=None, expand=None, filters=None):
         self._endpoint = endpoint.lower()               # normalize to lowercase
         assert(endpoint in GDCQuery.ENDPOINTS)
         # Make copies of all mutable
         self._fields   = fields if fields else []
         self._expand   = expand if expand else []
-        self._legacy   = legacy
         self._filters  = filters if filters else []
 
     def add_eq_filter(self, field, value):
@@ -64,10 +63,10 @@ class GDCQuery(object):
         return r.url
 
     def _base_url(self):
-        _url = GDCQuery.GDC_ROOT
-        if self._legacy: _url += 'legacy/'
-        _url += self._endpoint
-        return _url
+        url = GDCQuery.GDC_ROOT
+        if get_legacy(): url += 'legacy/'
+        url += self._endpoint
+        return url
 
     def _params(self):
         params = dict()
@@ -101,6 +100,8 @@ class GDCQuery(object):
 
         # Make initial call
         r = requests.get(endpoint, params=p)
+        if get_verbosity():
+            print("\nGDC query: %s\n" % r.url)
         r_json = _decode_json(r)
 
         # Log any warnings in response, but don't raise an error yet
@@ -145,23 +146,23 @@ class GDCQuery(object):
     def get(self, page_size=500):
         return self._query_paginator(page_size=page_size)
 
-def get_projects(program=None, legacy=False):
-    query = GDCQuery('projects', legacy=legacy)
+def get_projects(program=None):
+    query = GDCQuery('projects')
     if program:
         query.add_eq_filter('program.name', program)
     query.add_fields('project_id')
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
 
-def get_project_from_cases(cases, program=None, legacy=False):
-    query = GDCQuery('cases', legacy=legacy)
+def get_project_from_cases(cases, program=None):
+    query = GDCQuery('cases')
     query.add_in_filter('submitter_id', cases)
     query.add_fields('project.project_id')
     projects = [p['project']['project_id'] for p in query.get()]
     return sorted(set(projects))
 
-def get_data_categories(project, legacy=False):
-    query = GDCQuery('projects', legacy=legacy)
+def get_data_categories(project):
+    query = GDCQuery('projects')
     query.add_eq_filter('project_id', project)
     query.add_fields('summary.data_categories.data_category')
     projects = query.get()
@@ -177,13 +178,16 @@ def get_data_categories(project, legacy=False):
         return [] # Needed to protect against projects with no data
 
 def get_project_files(project_id, data_category, workflow_type=None, cases=None,
-                      page_size=500, legacy=False):
-    query = GDCQuery('files', legacy=legacy)
+                      page_size=500):
+    query = GDCQuery('files')
     query.add_eq_filter("cases.project.project_id", project_id)
     query.add_eq_filter("files.data_category", data_category)
     query.add_eq_filter("access", "open")
-    if workflow_type:
-        query.add_eq_filter('analysis.workflow_type', workflow_type)
+
+    if not __legacy:
+        if workflow_type:
+            query.add_eq_filter('analysis.workflow_type', workflow_type)
+        query.add_fields('analysis.workflow_type')
 
     if cases:
         query.add_in_filter('cases.submitter_id', cases)
@@ -192,14 +196,17 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
                      'data_type', 'data_category', 'data_format',
                      'experimental_strategy', 'md5sum','platform','tags',
                      'center.namespace', 'cases.submitter_id',
-                     'cases.project.project_id', 'analysis.workflow_type',
+                     'cases.project.project_id',
                      # For protein expression data
                      'cases.samples.portions.submitter_id',
                      # For aliquot-level data
                      'cases.samples.portions.analytes.aliquots.submitter_id')
 
-    query.expand('cases', 'annotations', 'cases.samples')
+    # Avoid pathology reports & images (can be huge), only retrieve XML for now
+    if data_category == "Clinical":
+        query.add_eq_filter("data_format", "BCR XML")
 
+    query.expand('cases', 'annotations', 'cases.samples')
     return query.get(page_size=page_size)
 
 def curl_exists():
@@ -212,10 +219,10 @@ def curl_exists():
     except OSError, subprocess.CalledProcessError:
         return False
 
-def py_download_file(uuid, file_name, legacy=False, chunk_size=4096):
+def py_download_file(uuid, file_name, chunk_size=4096):
     """Download a single file from GDC."""
     url = GDCQuery.GDC_ROOT
-    if legacy: url += 'legacy/'
+    if __legacy: url += 'legacy/'
     url += 'data/' + uuid
     r = requests.get(url, stream=True)
     # TODO: Optimize chunk size
@@ -228,18 +235,17 @@ def py_download_file(uuid, file_name, legacy=False, chunk_size=4096):
     # Return the response, which includes status_code, http headers, etc.
     return r
 
-def curl_download_file(uuid, file_name, legacy=False, max_time=180):
+def curl_download_file(uuid, file_name, max_time=180):
     """Download a single file from the GDC, using cURL"""
     url = GDCQuery.GDC_ROOT
-    if legacy:
-        url += 'legacy/'
+    if __legacy: url += 'legacy/'
     url += 'data/' + uuid
     curl_args = ['curl', '--max-time', str(max_time), '--fail', '-o', file_name, url]
     return subprocess.check_call(curl_args)
 
-def get_program(project, legacy=False):
+def get_program(project):
     '''Return the program name of a project.'''
-    query = GDCQuery('projects', legacy=legacy)
+    query = GDCQuery('projects')
     query.add_eq_filter('project_id', project)
     query.add_fields('program.name')
     projects = query.get()
@@ -298,3 +304,30 @@ def _decode_json(request):
         emsg = "No JSON object could be decoded from response. Content:\n"
         emsg += request.text
         raise ValueError(emsg)
+
+def set_legacy(legacy=False):
+    global __legacy
+    previous_value = __legacy
+    __legacy = True if legacy else False
+    return previous_value
+
+def set_legacy(legacy=False):
+    global __legacy
+    previous_value = __legacy
+    __legacy = True if legacy else False
+    return previous_value
+
+def get_legacy():
+    return __legacy
+
+def set_verbosity(verbosity):
+    global __verbosity
+    previous_value = __verbosity
+    try:
+        __verbosity = int(verbosity)
+    except Exception:
+        pass                            # simply keep previous value
+    return previous_value
+
+def get_verbosity():
+    return __verbosity

@@ -39,6 +39,9 @@ class gdc_mirror(GDCtool):
         cli.add_argument('-d', '--data-categories',nargs='+',metavar='category',
                         help='Mirror only these data categories. Many data '+
                         'categories have spaces, use quotes to delimit')
+        cli.add_argument('-L', '--LEGACY', default=False, action='store_true',
+                        help='Retrieve legacy data (e.g. TCGA HG19), '\
+                        'instead of data harmonized at the GDC (the default)')
         cli.add_argument('-w', '--workflow-type',
                         help='Mirror only data of thisworkflow type')
         cli.add_argument('-f', '--force-download', action='store_true',
@@ -54,6 +57,7 @@ class gdc_mirror(GDCtool):
         config = self.config
         if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
         if opts.log_dir: config.mirror.log_dir = opts.log_dir
+        api.set_legacy(opts.LEGACY)
         self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
 

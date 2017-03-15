@@ -152,6 +152,9 @@ class GDCtool(object):
             # to those projects takes precedence over config & CLI values
             config.programs = api.get_programs(config.projects)
 
+        if opts.verbose:
+            api.set_verbosity(opts.verbose)
+
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
         Ensure that sufficient configuration state has been defined for tool to
