@@ -131,4 +131,4 @@ clean:
 	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
 
 rclean: clean
-	\rm -rf sandbox GDCtool gdctools_tmp onlycases
+	\rm -rf sandbox GDCtool gdctools_tmp onlycases legacy
