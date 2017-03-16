@@ -1,6 +1,7 @@
 
 include ../Makefile.inc
 
+PYTHON := set -o pipefail && $(PYTHON)
 SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
@@ -10,6 +11,7 @@ FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
 FIND_LOAD_FILES=cd $(TEST_ROOT)/loadfiles/TCGA/latest && find . -name 'TCGA-*.txt'
+FIND_LEGACY_FILES=cd legacy/mirror/TCGA && find TCGA-* -name '*.*' -a ! -name '*.json'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
 PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
@@ -29,10 +31,8 @@ help:
 
 
 test: test_smoke echo_success
-
-test_all: test_smoke test_cases test_dice test_loadfile test_report echo_success
-
-test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg
+test_all: test_smoke test_dice test_loadfile test_report test_legacy echo_success
+test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
 	@echo
@@ -63,7 +63,7 @@ test_badcfg:
 	@echo
 	@echo Test that attempting to use bad config file quickly aborts with error
 	@touch bad.cfg
-	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg || Result=$$? ; \
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg | Result=$$? ; \
 	if ((!$$Result)) ; then false ; fi
 
 test_dice:
@@ -79,6 +79,7 @@ test_dice:
 
 test_loadfile:
 	@echo
+	@echo "Test loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(FIND_LOAD_FILES) | sort > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
@@ -87,7 +88,8 @@ test_loadfile:
 
 test_report:
 	@echo
-	$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
+	@echo "Test sample report generation ..."
+	@$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
 	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | sort > $(TEST_ROOT)/report-files.txt
 	diff -b baselines/report-files.txt $(TEST_ROOT)/.
 
@@ -99,9 +101,20 @@ test_cases:
 					--data-categories Biospecimen 2>&1 | tee $@.log | \
 					egrep "GDC|Mirroring data|Mirroring start"
 	@cd onlycases/mirror/TCGA && find TCGA-* \
-					-name '*.*' |  grep -v json | \
+					-name '*.*' -a ! -name '*.json' | \
 					sort > ../../onlycases-files.txt
 	diff -b baselines/onlycases-files.txt onlycases/.
+
+test_legacy:
+	@echo
+	@echo "Test legacy data download (for 1 case and 3 data categories)"
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config legacy.cfg  2>&1 | \
+					tee $@.log | \
+					egrep "GDC|Mirroring data|Mirroring start"
+	$(FIND_LEGACY_FILES) | sort > ../../legacy-files.txt
+	diff -b baselines/legacy-files.txt legacy/.
+	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | sort > ../../legacy-md5sums.txt
+	diff -b baselines/legacy-md5sums.txt legacy/.
 
 USE=/broad/tools/scripts/useuse
 test3: default
