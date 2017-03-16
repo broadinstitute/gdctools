@@ -13,7 +13,7 @@ help:
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
-install: README
+install:
 	pip install --upgrade .
 
 reinstall:
@@ -23,18 +23,12 @@ reinstall:
 uninstall:
 	pip uninstall -y gdctools
 
-publish: README
+publish:
 	$(PYTHON) setup.py sdist upload && \
 	rm -rf build dist *.egg-info
 
-# sdist seems to automatically bundle README into tarball for PyPI, so
-# we fake it by creating a soft-link to README.md (which GitHub likes)
-README: README.md
-	\rm -f README
-	ln -s README.md README
-
 clean:
-	rm -rf build dist *.egg-info *~ README
+	rm -rf build dist *.egg-info *~
 
 rclean: clean
 	(cd tests && $(MAKE) rclean)
