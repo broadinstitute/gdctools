@@ -8,7 +8,7 @@ Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
 meta.py: Functions for working with gdc metadata
 
-@author: Timothy DeFreitas
+@author: Timothy DeFreitas, Michael S. Noble
 @date:  2016_05_26
 '''
 
@@ -20,8 +20,6 @@ import json
 import sys
 import logging
 import csv
-
-
 from common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
 
 def extract_case_data(diced_metadata_file):
@@ -94,7 +92,6 @@ def append_metadata(file_dicts, metafile):
     with open(metafile, 'w') as out:
         json.dump(dicts, out, indent=2)
 
-
 def latest_metadata(stamp_dir):
     metadata_files = [f for f in os.listdir(stamp_dir)
                       if os.path.isfile(os.path.join(stamp_dir, f))
@@ -106,12 +103,11 @@ def latest_metadata(stamp_dir):
     with open(latest) as jsonf:
         return json.load(jsonf)
 
-
-def files_diff(proj_root, new_files, old_files):
+def files_diff(proj_root, new_files, old_files, strict=True):
     '''Returns the file dicts in new_files that aren't in old_files.
     Also checks that the file is present on disk.'''
     old_uuids = {fd['file_id'] for fd in old_files
-                if os.path.isfile(mirror_path(proj_root, fd))}
+                if os.path.isfile(mirror_path(proj_root, fd, strict))}
     new_dicts = [fd for fd in new_files if fd['file_id'] not in old_uuids]
     return new_dicts
 
@@ -150,11 +146,11 @@ def latest_prog_timestamp(prog_dir, date_prefix=None, ignore=None):
     else:
         return sorted(proj_timestamps)[-1]
 
-def md5_matches(file_dict, md5file):
+def md5_matches(file_dict, md5file, strict=True):
     """Returns true if the one-line md5file matches the md5 data in file_dict"""
     if not os.path.isfile(md5file):
         return False
-    filename = file_basename(file_dict)
+    filename = file_basename(file_dict, strict)
     md5_basename = os.path.basename(md5file)
     if filename + ".md5" != md5_basename: return False
 
@@ -165,7 +161,7 @@ def md5_matches(file_dict, md5file):
 
 __SUPPORTED_FILE_TYPES__ = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
 
-def file_basename(file_dict):
+def file_basename(file_dict, strict=True):
     '''Generate a filename based on the file dict.
 
     Each file_dict reports a file_name, into which the uuid is inserted.
@@ -192,13 +188,17 @@ def file_basename(file_dict):
     name = file_dict['file_name']
     uuid = file_dict['file_id']
 
+    if not strict:
+        return name
+
     namelist = name.split('.')
     try:
         for i in range(len(namelist) + 1):
             if namelist[i] in __SUPPORTED_FILE_TYPES__:
                 break
     except IndexError:
-        raise ValueError("unsupported file type: " + name)
+        if strict or True:
+            raise ValueError("unsupported file type: " + name)
 
     # i is now the index of the first extension, insert uuid right before
     namelist.insert(i, uuid)
@@ -208,16 +208,15 @@ def file_id(file_dict):
     '''Get the file uuid.'''
     return file_dict['file_id']
 
-def mirror_path(proj_root, file_dict):
+def mirror_path(proj_root, file_dict, strict=True):
     '''Return the file location relative to a root folder.
 
     This location is equivalent to:
     <root>/<category>/<type>/<uuid>.<filename>'''
     category = file_dict['data_category']
     data_type = file_dict['data_type']
-    name = file_basename(file_dict)
+    name = file_basename(file_dict, strict)
     return os.path.join(proj_root, category, data_type, name).replace(' ', '_')
-
 
 def diced_file_paths(root, file_dict):
     '''Return the name of the diced file to be created'''
@@ -245,7 +244,6 @@ def diced_file_paths(root, file_dict):
         fname = '.'.join([_tcga_id, _uuid, _ext])
         return [os.path.join(root, fname)]
 
-
 def has_multiple_samples(file_dict):
     '''Return true if this file is associated with multiple samples.
     Most file_dicts are not, but certain data types (like MAFs) are.
@@ -253,7 +251,6 @@ def has_multiple_samples(file_dict):
     cases = file_dict.get('cases',[])
     samples = [s for c in cases for s in c.get('samples',[])]
     return len(samples) > 1
-
 
 def aliquot_id(file_dict):
     '''Return the aliquot associated with the file. Raise an exception if more
@@ -284,7 +281,6 @@ def aliquot_ids(sample_dicts):
                     aliquots.append(aliquot['submitter_id'])
     return aliquots
 
-
 def case_id(file_dict):
     '''Return the case_id associated with the file. Raise an exception if
     more than one exists.'''
@@ -295,7 +291,6 @@ def case_id(file_dict):
         raise
 
     return file_dict['cases'][0]['submitter_id']
-
 
 def sample_type(file_dict):
     '''Return the sample type associated with the file.'''
@@ -318,7 +313,6 @@ def is_ffpe(file_dict):
         raise
 
     return file_dict['cases'][0].get('samples', [{}])[0].get("is_ffpe", False)
-
 
 def project_id(file_dict):
     '''Return the project_id associated with the file. Raise an exception if
@@ -402,7 +396,6 @@ def main_tumor_sample_type(proj_id):
         stype = 'Primary Tumor'
     return stype
 
-
 #TODO: This should come from a config file
 # Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type
 def tumor_code(tumor_type):
@@ -431,7 +424,6 @@ def tumor_code(tumor_type):
         "FFPE Scrolls" : ('01', 'TP')
     }
     return lookup[tumor_type]
-
 
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
