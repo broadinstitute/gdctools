@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 # Setup
 #===============================================================================
 
-README = open('README.md').read()
+README = open('README').read()
 README = README.replace("&nbsp;","")
 README = README.replace("**","")
 version = open('VERSION').read().strip()
