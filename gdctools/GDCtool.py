@@ -66,6 +66,8 @@ class GDCtool(object):
 
     def get_config_values_as_list(self, values):
         if values:
+            if type(values) is list:
+                return values
             return [ v.strip() for v in values.split(',') ]
         else:
             return [ ]
