@@ -30,9 +30,9 @@ help:
 
 test: test_smoke echo_success
 
-test_all: test_smoke test_dice test_loadfile test_report echo_success
+test_all: test_smoke test_cases test_dice test_loadfile test_report echo_success
 
-test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
+test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg
 
 test_invoke:
 	@echo
