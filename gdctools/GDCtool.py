@@ -64,6 +64,12 @@ class GDCtool(object):
         self.datestamp = datestamp
         self.init_logging()
 
+    def get_config_values_as_list(self, values):
+        if values:
+            return [ v.strip() for v in values.split(',') ]
+        else:
+            return [ ]
+
     def parse_config(self):
         '''
         Read initial configuration state from one or more config files; store
@@ -102,16 +108,10 @@ class GDCtool(object):
         if not config.datestamps:
             config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
 
-        def get_config_values_as_list(values):
-            if values:
-                return [ v.strip() for v in values.split(',') ]
-            else:
-                return [ ]
-
-        # Ensure programs,projects,cases config state are lists
-        config.programs = get_config_values_as_list(config.programs)
-        config.projects = get_config_values_as_list(config.projects)
-        config.cases    = get_config_values_as_list(config.cases)
+        # Ensure programs,projects,cases,data_categories config state are lists
+        config.programs = self.get_config_values_as_list(config.programs)
+        config.projects = self.get_config_values_as_list(config.projects)
+        config.cases    = self.get_config_values_as_list(config.cases)
 
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
