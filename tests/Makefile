@@ -63,8 +63,13 @@ test_badcfg:
 	@echo
 	@echo Test that attempting to use bad config file quickly aborts with error
 	@touch bad.cfg
-	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg | Result=$$? ; \
-	if ((!$$Result)) ; then false ; fi
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg || Result=$$? ; \
+	if (($$Result)) ; then \
+		echo "Good: failed with return code $$Result" ; \
+	else \
+		echo "Error: returned $$Result status, but should've returned non-zero" ; \
+		false ; \
+	fi
 
 test_dice:
 	@echo
