@@ -54,12 +54,34 @@ class gdc_mirror(GDCtool):
     def parse_args(self):
         '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
-        config = self.config
-        if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
-        if opts.log_dir: config.mirror.log_dir = opts.log_dir
-        api.set_legacy(opts.LEGACY)
+        config = self.config.mirror
+        if opts.mirror_dir: config.dir = opts.mirror_dir
+        if opts.log_dir: config.log_dir = opts.log_dir
+        if opts.data_categories:
+            config.data_categories = opts.data_categories
+        config.data_categories = self.get_config_values_as_list(config.data_categories)
+
         self.force_download = opts.force_download
         self.workflow_type = opts.workflow_type
+
+        if config.legacy:
+            # Legacy mode has been requested in config file, coerce to boolean
+            value = config.legacy.lower()
+            config.legacy = (value in ["1", "true", "on", "yes"])
+
+        # Allow command line flag to override config file
+        if opts.LEGACY:
+            config.legacy = opts.LEGACY
+
+        # Legacy mode has several effects:
+        #   1) Ensures that api requests are routed to the GDC legacy API
+        #   2) Ensuring that legacy program data are returned (e.g. TCGA HG19)
+        #   3) Turns OFF strict file processing: returned data files are thus
+        #      mirrored "as is," i.e. verbatim, regardless of file type (or
+        #      extension), with no UUID inserted into names of mirrored files
+        #   4) Prohibits subsequent processing, e.g. dicing: the GDCtools suite
+        #      ONLY supports MIRRORING of legacy, nothing else
+        api.set_legacy(config.legacy)
 
     def mirror(self):
 
@@ -134,7 +156,8 @@ class gdc_mirror(GDCtool):
 
         Files are uniquely identified by uuid.
         '''
-        savepath = meta.mirror_path(proj_root, file_d)
+        strict = not self.config.mirror.legacy
+        savepath = meta.mirror_path(proj_root, file_d, strict=strict)
         dirname, basename = os.path.split(savepath)
         logging.info("Mirroring file {0} | {1} of {2}".format(basename, n, total))
 
@@ -145,7 +168,7 @@ class gdc_mirror(GDCtool):
         md5path = savepath + ".md5"
 
         # Download if force is enabled or if the file is not on disk
-        if (self.force_download or not meta.md5_matches(file_d, md5path)
+        if (self.force_download or not meta.md5_matches(file_d, md5path, strict)
                 or not os.path.isfile(savepath)):
 
             # New file, mirror to this folder
@@ -177,19 +200,20 @@ class gdc_mirror(GDCtool):
 
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
+
         datestamp = self.datestamp
-
+        config = self.config.mirror
         logging.info("Mirroring started for {0} ({1})".format(project, program))
-        if self.options.data_categories is not None:
-            data_categories = self.options.data_categories
-        else:
-            logging.info("No data_categories specified, using GDC API to "
-                         + "discover available categories")
-            data_categories = api.get_data_categories(project)
-        logging.info("Found " + str(len(data_categories)) + " data categories: "
-                     + ",".join(data_categories))
 
-        proj_dir = os.path.join(self.config.mirror.dir, program, project)
+        data_categories = config.data_categories
+        if not data_categories:
+            logging.info("No data_categories specified, using GDC API to "
+                         + "discover ALL available categories")
+            data_categories = api.get_data_categories(project)
+
+        logging.info("Using " + str(len(data_categories)) + " data categories: "
+                     + ",".join(data_categories))
+        proj_dir = os.path.join(config.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
         # Read the previous metadata, if present
@@ -228,8 +252,9 @@ class gdc_mirror(GDCtool):
         datestamp = self.datestamp
         proj_dir = os.path.join(self.config.mirror.dir, program, project)
         cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
+        strict = not self.config.mirror.legacy
 
-        #Create data folder
+        # Create data folder
         if not os.path.isdir(cat_dir):
             logging.info("Creating folder: " + cat_dir)
             os.makedirs(cat_dir)
@@ -244,7 +269,8 @@ class gdc_mirror(GDCtool):
         # If we aren't forcing a full mirror, check the existing metadata
         # to see what files are new
         if not self.force_download:
-            new_metadata = meta.files_diff(proj_dir, file_metadata, prev_metadata)
+            new_metadata = meta.files_diff(proj_dir, file_metadata,
+                                                        prev_metadata,strict)
 
         num_files = len(new_metadata)
         logging.info("{0} new {1} files".format(num_files, category))
