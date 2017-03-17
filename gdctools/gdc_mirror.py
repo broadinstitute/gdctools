@@ -125,10 +125,9 @@ class gdc_mirror(GDCtool):
             projects = []
             for prgm in programs:
                 projects_for_this_program = api.get_projects(program=prgm)
-                logging.info("%d project(s) found for %s" % \
+                logging.info("%d project(s) found for %s: %s" % \
                              (len(projects_for_this_program),
-                              prgm + ": " + \
-                              ",".join(projects_for_this_program)))
+                              prgm, ",".join(projects_for_this_program)))
                 projects.extend(projects_for_this_program)
 
         # Make list of which projects belong to each program
@@ -207,12 +206,12 @@ class gdc_mirror(GDCtool):
 
         data_categories = config.data_categories
         if not data_categories:
-            logging.info("No data_categories specified, using GDC API to "
-                         + "discover ALL available categories")
+            logging.info("No data_categories specified, using GDC API to " + \
+                         "discover ALL available categories")
             data_categories = api.get_data_categories(project)
 
-        logging.info("Using " + str(len(data_categories)) + " data categories: "
-                     + ",".join(data_categories))
+        logging.info("Using %d data categories: %s" % \
+                     (len(data_categories), ",".join(data_categories)))
         proj_dir = os.path.join(config.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
@@ -249,7 +248,6 @@ class gdc_mirror(GDCtool):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
-        datestamp = self.datestamp
         proj_dir = os.path.join(self.config.mirror.dir, program, project)
         cat_dir = os.path.join(proj_dir, category.replace(' ', '_'))
         strict = not self.config.mirror.legacy
@@ -264,13 +262,23 @@ class gdc_mirror(GDCtool):
         cases = self.config.cases
         file_metadata = api.get_project_files(project, category,
                                               workflow_type, cases=cases)
+        
+        # Filter out extraneous cases from multi-case (e.g. MAF) file metadata
+        # if cases have been specified
+        if cases:
+            for idx, file_dict in enumerate(file_metadata):
+                if len(file_dict.get("cases", [])) > 1:
+                    file_metadata[idx]["cases"] = \
+                    [case for case in file_metadata[idx]["cases"] \
+                     if case["submitter_id"] in cases]
+
         new_metadata = file_metadata
 
         # If we aren't forcing a full mirror, check the existing metadata
         # to see what files are new
         if not self.force_download:
             new_metadata = meta.files_diff(proj_dir, file_metadata,
-                                                        prev_metadata,strict)
+                                           prev_metadata, strict)
 
         num_files = len(new_metadata)
         logging.info("{0} new {1} files".format(num_files, category))
@@ -285,7 +293,7 @@ class gdc_mirror(GDCtool):
         self.parse_args()
         try:
             self.mirror()
-        except Exception as e:
+        except:
             logging.exception("Mirroring FAILED:")
 
     def update_datestamps_file(self):
