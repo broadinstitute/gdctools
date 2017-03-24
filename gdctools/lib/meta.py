@@ -69,8 +69,7 @@ def extract_case_data(diced_metadata_file):
     possible_cases = cases_with_clinical | cases_with_biospecimen
     for c in possible_cases:
         proj_id = case_proj_map[c]
-        main_type = main_tumor_sample_type(proj_id)
-        _, main_type = tumor_code(main_type)
+        main_type = tumor_code(main_tumor_sample_type(proj_id)).symbol
         if c not in cases:
             # Have to create a new entry with the default sample type
             cases[c] = Case(proj_id, {main_type : set()})
