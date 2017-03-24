@@ -20,7 +20,8 @@ import csv
 import os
 import sys
 import gzip
-from pkg_resources import resource_filename #@UnresolvedImport
+from collections import defaultdict, Counter
+from pkg_resources import resource_filename
 
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
@@ -37,7 +38,7 @@ from GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.0")
+        super(gdc_dice, self).__init__(version="0.5.1")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -501,16 +502,19 @@ def _write_counts(case_data, proj_name, f):
     # { 'TP' : {'BCR' : 10, '...': 15, ...},
     #   'TR' : {'Clinical' : 10, '...': 15, ...},
     #           ...}
-    counts = dict()
-    for case in case_data:
-        c_dict = case_data[case]
+    rdt = REPORT_DATA_TYPES
+    counts = defaultdict(Counter)
+    totals = Counter()
+    for case in case_data.itervalues():
+        main_type = meta.tumor_code(meta.main_tumor_sample_type(case.proj_id)).symbol
+        c_dict = case.case_data
         for sample_type in c_dict:
-            counts[sample_type] = counts.get(sample_type, {})
             for report_type in c_dict[sample_type]:
-                counts[sample_type][report_type] = counts[sample_type].get(report_type, 0) + 1
+                counts[sample_type][report_type] += 1
+                if sample_type == main_type:
+                    totals[report_type] += 1
 
     # Now write the counts table
-    rdt = REPORT_DATA_TYPES
     with open(f, 'w') as out:
         # Write header
         out.write("Sample Type\t" + "\t".join(rdt) + '\n')
@@ -522,9 +526,7 @@ def _write_counts(case_data, proj_name, f):
             out.write(line)
 
         # Write totals. Totals is dependent on the main analyzed tumor type
-        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
-        tots = [str(counts.get(main_code,{}).get(t, 0)) for t in rdt]
-        out.write('Totals\t' + '\t'.join(tots) + "\n")
+        out.write('Totals\t' + '\t'.join(str(totals[t]) for t in rdt) + "\n")
 
 ## Converter mappings
 def converter(converter_name):
