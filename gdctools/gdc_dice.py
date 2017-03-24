@@ -20,7 +20,8 @@ import csv
 import os
 import sys
 import gzip
-from pkg_resources import resource_filename #@UnresolvedImport
+from collections import defaultdict, Counter
+from pkg_resources import resource_filename
 
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
@@ -37,7 +38,7 @@ from GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.0")
+        super(gdc_dice, self).__init__(version="0.5.1")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -188,7 +189,7 @@ class gdc_dice(GDCtool):
                 counts_file = ".".join([project, datestamp,
                                         "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
-                _write_counts(case_data, project, counts_file)
+                _write_counts(case_data, counts_file)
 
                 # keep track of aggregate case data
                 project_aggregates = cohort_agg_dict.get(project, [])
@@ -208,7 +209,7 @@ class gdc_dice(GDCtool):
                 logging.info("Generating aggregate counts for " + agg)
                 counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
-                _write_counts(ac_data, agg, counts_file)
+                _write_counts(ac_data, counts_file)
 
         logging.info("Dicing completed successfuly")
 
@@ -495,23 +496,26 @@ def filter_by_case(metadata, cases):
         metadata = filt_meta
     return metadata
 
-def _write_counts(case_data, proj_name, f):
+def _write_counts(case_data, counts_file):
     '''Write case data as counts '''
     # First, put the case data into an easier format:
     # { 'TP' : {'BCR' : 10, '...': 15, ...},
     #   'TR' : {'Clinical' : 10, '...': 15, ...},
     #           ...}
-    counts = dict()
-    for case in case_data:
-        c_dict = case_data[case]
+    rdt = REPORT_DATA_TYPES
+    counts = defaultdict(Counter)
+    totals = Counter()
+    for case in case_data.itervalues():
+        main_type = meta.tumor_code(meta.main_tumor_sample_type(case.proj_id)).symbol
+        c_dict = case.case_data
         for sample_type in c_dict:
-            counts[sample_type] = counts.get(sample_type, {})
             for report_type in c_dict[sample_type]:
-                counts[sample_type][report_type] = counts[sample_type].get(report_type, 0) + 1
+                counts[sample_type][report_type] += 1
+                if sample_type == main_type:
+                    totals[report_type] += 1
 
     # Now write the counts table
-    rdt = REPORT_DATA_TYPES
-    with open(f, 'w') as out:
+    with open(counts_file, 'w') as out:
         # Write header
         out.write("Sample Type\t" + "\t".join(rdt) + '\n')
         for code in counts:
@@ -522,9 +526,7 @@ def _write_counts(case_data, proj_name, f):
             out.write(line)
 
         # Write totals. Totals is dependent on the main analyzed tumor type
-        main_code = meta.tumor_code(meta.main_tumor_sample_type(proj_name))[1]
-        tots = [str(counts.get(main_code,{}).get(t, 0)) for t in rdt]
-        out.write('Totals\t' + '\t'.join(tots) + "\n")
+        out.write('Totals\t' + '\t'.join(str(totals[t]) for t in rdt) + "\n")
 
 ## Converter mappings
 def converter(converter_name):

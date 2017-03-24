@@ -4,6 +4,9 @@
 /gdc2fh.py
 /.settings/
 /GDCversion.py
-**/tests/sandbox/**
-**/tests/GDCtool/**
-**/tests/*.log
+/tests/sandbox/
+/tests/GDCtool/
+/tests/*.log
+/tests/gdctools_tmp/
+/tests/legacy/
+/tests/onlycases/
