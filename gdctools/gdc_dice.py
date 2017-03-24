@@ -189,7 +189,7 @@ class gdc_dice(GDCtool):
                 counts_file = ".".join([project, datestamp,
                                         "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
-                _write_counts(case_data, project, counts_file)
+                _write_counts(case_data, counts_file)
 
                 # keep track of aggregate case data
                 project_aggregates = cohort_agg_dict.get(project, [])
@@ -209,7 +209,7 @@ class gdc_dice(GDCtool):
                 logging.info("Generating aggregate counts for " + agg)
                 counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
-                _write_counts(ac_data, agg, counts_file)
+                _write_counts(ac_data, counts_file)
 
         logging.info("Dicing completed successfuly")
 
@@ -496,7 +496,7 @@ def filter_by_case(metadata, cases):
         metadata = filt_meta
     return metadata
 
-def _write_counts(case_data, proj_name, f):
+def _write_counts(case_data, counts_file):
     '''Write case data as counts '''
     # First, put the case data into an easier format:
     # { 'TP' : {'BCR' : 10, '...': 15, ...},
@@ -515,7 +515,7 @@ def _write_counts(case_data, proj_name, f):
                     totals[report_type] += 1
 
     # Now write the counts table
-    with open(f, 'w') as out:
+    with open(counts_file, 'w') as out:
         # Write header
         out.write("Sample Type\t" + "\t".join(rdt) + '\n')
         for code in counts:
