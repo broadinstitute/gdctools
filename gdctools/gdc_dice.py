@@ -22,6 +22,7 @@ import sys
 import gzip
 from collections import defaultdict, Counter
 from pkg_resources import resource_filename
+from glob import iglob
 
 from lib.convert import seg as gdac_seg
 from lib.convert import py_clinical as gdac_clin
@@ -81,7 +82,7 @@ class gdc_dice(GDCtool):
         logging.info("GDC Dicer Version: %s", self.cli.version)
         logging.info("Command: " + " ".join(sys.argv))
         trans_dict = build_translation_dict(resource_filename(__name__,
-                                                "lib/annotations_table.tsv"))
+                                  os.path.join("lib", "annotations_table.tsv")))
         config = self.config
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
@@ -104,6 +105,16 @@ class gdc_dice(GDCtool):
             datestamp = self.datestamp
 
             logging.info("Mirror date: " + datestamp)
+            
+            
+            diced_prog_metadata = os.path.join(diced_prog_root, 'metadata')
+            if not os.path.isdir(diced_prog_metadata):
+                os.makedirs(diced_prog_metadata)
+            all_counts_file = os.path.join(diced_prog_metadata,
+                                           '.'.join(['sample_counts', datestamp,
+                                                     'tsv']))
+            all_counts = defaultdict(Counter)
+            all_totals = Counter()
 
             agg_case_data = dict()
             for project in sorted(config.projects):
@@ -121,9 +132,8 @@ class gdc_dice(GDCtool):
                 # Sanity check, there must be saved metadata for each
                 # project in order to dice
                 if not os.path.exists(meta_file):
-                    _warning =  "No metadata found for " + project
-                    _warning += " on " + datestamp
-                    raise ValueError(_warning)
+                    raise ValueError("No metadata found for %s on %s" %
+                                     (project, datestamp))
 
                 # Read json metadata as a dict
                 with open(meta_file) as mf:
@@ -189,7 +199,13 @@ class gdc_dice(GDCtool):
                 counts_file = ".".join([project, datestamp,
                                         "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
-                _write_counts(case_data, counts_file)
+                counts, totals = _write_counts(case_data, counts_file)
+                cohort = project.split('-', 1)[-1]
+                all_counts.update((cohort + '-' + sample_type, count) for
+                                  (sample_type, count) in counts.iteritems())
+                all_counts[cohort] = totals
+                for data_type, count in totals.iteritems():
+                    all_totals[data_type] += count
 
                 # keep track of aggregate case data
                 project_aggregates = cohort_agg_dict.get(project, [])
@@ -209,8 +225,16 @@ class gdc_dice(GDCtool):
                 logging.info("Generating aggregate counts for " + agg)
                 counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
-                _write_counts(ac_data, counts_file)
+                counts, totals = _write_counts(ac_data, counts_file)
+                cohort = agg.split('-', 1)[-1]
+                all_counts.update((cohort + '-' + sample_type, count) for
+                                  (sample_type, count) in counts.iteritems())
+                all_counts[cohort] = totals
 
+            logging.info("Combining all sample counts into one file ...")
+            _write_combined_counts(all_counts_file, all_counts, all_totals)
+            _link_to_prog(all_counts_file, datestamp, diced_prog_root)
+        
         logging.info("Dicing completed successfuly")
 
     def execute(self):
@@ -497,7 +521,10 @@ def filter_by_case(metadata, cases):
     return metadata
 
 def _write_counts(case_data, counts_file):
-    '''Write case data as counts '''
+    '''
+    Write case data as counts, return counting data for use in generating
+    program counts.
+    '''
     # First, put the case data into an easier format:
     # { 'TP' : {'BCR' : 10, '...': 15, ...},
     #   'TR' : {'Clinical' : 10, '...': 15, ...},
@@ -527,7 +554,38 @@ def _write_counts(case_data, counts_file):
 
         # Write totals. Totals is dependent on the main analyzed tumor type
         out.write('Totals\t' + '\t'.join(str(totals[t]) for t in rdt) + "\n")
+    
+    return (counts, totals)
 
+def _write_combined_counts(all_counts_file, all_counts, all_totals):
+    '''
+    Create a program-wide counts file combining all cohorts, including
+    aggregates.
+    '''
+    all_annots = REPORT_DATA_TYPES
+    with open(all_counts_file, 'w') as f:
+        header = 'Cohort\t' + '\t'.join(all_annots) + '\n'
+        f.write(header)
+        # Write row of counts for each annot
+        for cohort in sorted(all_counts.iterkeys()):
+            row = [cohort] + [str(all_counts[cohort].get(a, 0)) for a in all_annots]
+            f.write('\t'.join(row) + '\n')
+
+        # Write totals
+        tot_row = ['Totals'] + [str(all_totals.get(a, 0)) for a in all_annots]
+        f.write('\t'.join(tot_row) + '\n')
+
+def _link_to_prog(prog_meta_file, datestamp, diced_prog_root):
+    '''Link the given program metadata file to the to diced program root dir'''
+    prog_meta_link = os.path.join(os.path.abspath(diced_prog_root),
+                                  os.path.basename(prog_meta_file))
+    
+    #remove old links
+    for old_link in iglob(prog_meta_link.replace(datestamp, '*')):
+        os.unlink(old_link)
+        
+    os.symlink(os.path.abspath(prog_meta_file), prog_meta_link)
+    
 ## Converter mappings
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''
