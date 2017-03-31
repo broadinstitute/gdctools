@@ -20,9 +20,9 @@ import os
 import csv
 from functools import cmp_to_key
 
-from lib import common
-from lib import meta
-from GDCtool import GDCtool
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.GDCtool import GDCtool
 
 class gdc_loadfile(GDCtool):
 

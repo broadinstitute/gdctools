@@ -24,17 +24,17 @@ from collections import defaultdict, Counter
 from pkg_resources import resource_filename
 from glob import iglob
 
-from lib.convert import seg as gdac_seg
-from lib.convert import py_clinical as gdac_clin
-from lib.convert import tsv2idtsv as gdac_tsv2idtsv
-from lib.convert import tsv2magetab as gdac_tsv2magetab
-from lib.convert import copy as gdac_copy
-from lib.convert import maf as mutect_maf
-from lib import common
-from lib import meta
-from lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
+from gdctools.lib.convert import seg as gdac_seg
+from gdctools.lib.convert import py_clinical as gdac_clin
+from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
+from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
+from gdctools.lib.convert import copy as gdac_copy
+from gdctools.lib.convert import maf as mutect_maf
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
-from GDCtool import GDCtool
+from gdctools.GDCtool import GDCtool
 
 class gdc_dice(GDCtool):
 
@@ -105,8 +105,8 @@ class gdc_dice(GDCtool):
             datestamp = self.datestamp
 
             logging.info("Mirror date: " + datestamp)
-            
-            
+
+
             diced_prog_metadata = os.path.join(diced_prog_root, 'metadata')
             if not os.path.isdir(diced_prog_metadata):
                 os.makedirs(diced_prog_metadata)
@@ -234,7 +234,7 @@ class gdc_dice(GDCtool):
             logging.info("Combining all sample counts into one file ...")
             _write_combined_counts(all_counts_file, all_counts, all_totals)
             _link_to_prog(all_counts_file, datestamp, diced_prog_root)
-        
+
         logging.info("Dicing completed successfuly")
 
     def execute(self):
@@ -554,7 +554,7 @@ def _write_counts(case_data, counts_file):
 
         # Write totals. Totals is dependent on the main analyzed tumor type
         out.write('Totals\t' + '\t'.join(str(totals[t]) for t in rdt) + "\n")
-    
+
     return (counts, totals)
 
 def _write_combined_counts(all_counts_file, all_counts, all_totals):
@@ -579,13 +579,13 @@ def _link_to_prog(prog_meta_file, datestamp, diced_prog_root):
     '''Link the given program metadata file to the to diced program root dir'''
     prog_meta_link = os.path.join(os.path.abspath(diced_prog_root),
                                   os.path.basename(prog_meta_file))
-    
+
     #remove old links
     for old_link in iglob(prog_meta_link.replace(datestamp, '*')):
         os.unlink(old_link)
-        
+
     os.symlink(os.path.abspath(prog_meta_file), prog_meta_link)
-    
+
 ## Converter mappings
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''

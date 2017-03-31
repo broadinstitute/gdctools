@@ -17,15 +17,15 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 import sys
 import os
 import traceback
-import ConfigParser
+import configparser
 import time
 import logging
 from pkg_resources import resource_filename
 
-from GDCcli import GDCcli
-from GDCcore import *
-from lib import common
-from lib import api
+from gdctools.GDCcli import GDCcli
+from gdctools.GDCcore import *
+from gdctools.lib import common
+from gdctools.lib import api
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
@@ -85,7 +85,7 @@ class GDCtool(object):
             cfg_default = resource_filename(__name__, "default.cfg")
             self.options.config = [open(cfg_default,"r")]
 
-        cfgparser = ConfigParser.SafeConfigParser()
+        cfgparser = configparser.SafeConfigParser()
         # Since we use argparse to ensure filenames, but config parser expects
         # filenames, convert them here
         cfgparser.read([f.name for f in self.options.config])

@@ -17,8 +17,8 @@ from __future__ import print_function
 import json
 from collections import defaultdict
 
-from GDCtool import GDCtool
-from lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as and_filter
+from gdctools.GDCtool import GDCtool
+from gdctools.lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as and_filter
 
 class gdc_list(GDCtool):
 

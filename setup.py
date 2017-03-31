@@ -47,6 +47,8 @@ setup(
     install_requires = [
         'requests',
         'fasteners',
-        'matplotlib'
+        'matplotlib',
+		'future',
+		'configparser'
     ],
 )

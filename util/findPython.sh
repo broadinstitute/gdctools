@@ -15,10 +15,14 @@ for dir in $BroadDirs ; do
 done
 
 if [ -z "$InstallDir" ] ; then
-    Python=`type -P python`
-    if [ -n "$Python" ] ; then
+    if [ ! -z "$VIRTUAL_ENV" ] ; then
+      InstallDir=$VIRTUAL_ENV
+    else
+      Python=`type -P python`
+      if [ -n "$Python" ]; then
         InstallDir=`dirname $Python`
         InstallDir=`dirname $InstallDir`
+      fi
     fi
 fi
 

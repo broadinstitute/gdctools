@@ -79,7 +79,7 @@ def safeMakeDirs(dir_name, permissions=None):
             curUmask = os.umask(0)
             os.makedirs(dir_name, permissions)
             os.umask(curUmask)
-    except OSError, value:
+    except OSError as value:
         error_num = value.errno
         # what is 183? don't know... came from legacy code.
         if  error_num==errno.EEXIST or error_num==183 or error_num==17:
@@ -95,7 +95,7 @@ def safe_make_hardlink(input_file_path,output_file_path):
     safeMakeDirs(output_file_dir)
     try:
         os.link(input_file_path,output_file_path)
-    except OSError,err:
+    except OSError as err:
         if err.errno == errno.EEXIST:
             # link already exists, check that it is identical to the one we are trying to put down
             if not os.path.samefile(input_file_path,output_file_path):

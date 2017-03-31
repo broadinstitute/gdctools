@@ -20,7 +20,7 @@ import json
 import sys
 import logging
 import csv
-from common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
+from gdctools.lib.common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
 from collections import namedtuple, defaultdict
 
 # Lightweight class to enable handling of aggregate projects
@@ -43,7 +43,7 @@ def extract_case_data(diced_metadata_file):
             case_id = row['case_id']
             proj_id = row['file_name'].split(os.path.sep)[-3]
             report_dtype = ANNOT_TO_DATATYPE[annot]
-            
+
             if case_id not in case_proj_map:
                 case_proj_map[case_id] = proj_id
 
