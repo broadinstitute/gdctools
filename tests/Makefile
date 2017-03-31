@@ -32,7 +32,7 @@ help:
 
 test: test_smoke echo_success
 test_all: test_smoke test_dice test_loadfile test_report test_legacy echo_success
-test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
+test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
 	@echo
@@ -121,14 +121,8 @@ test_legacy:
 	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | sort > ../../legacy-md5sums.txt
 	diff -b baselines/legacy-md5sums.txt legacy/.
 
-USE=/broad/tools/scripts/useuse
 test3: default
-	@# Python 3 compatibility
-	if [ -d $(USE) ] ; then \
-		. $(USE) && \
-		reuse -q Python-3.4 && \
-		$(MAKE) -e test ; \
-	fi
+	$(MAKE) -e PYTHON_VER=3 test
 
 VERTEST="import gdctools as g; print('Version: ' + g.GDCcore.GDCT_VERSION)"
 testl: default
@@ -144,6 +138,9 @@ testi:
 echo_success:
 	@echo
 	@echo Success!
+
+echo_ver:
+	@echo Using $(PYTHON_HOME)/bin/$(PYTHON_EXE) ...
 
 clean:
 	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
