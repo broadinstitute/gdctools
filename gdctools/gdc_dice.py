@@ -23,6 +23,7 @@ import gzip
 from collections import defaultdict, Counter
 from pkg_resources import resource_filename
 from glob import iglob
+from future.utils import iteritems
 
 from gdctools.lib.convert import seg as gdac_seg
 from gdctools.lib.convert import py_clinical as gdac_clin
@@ -178,7 +179,7 @@ class gdc_dice(GDCtool):
 
                     for tcga_id in tcga_lookup:
                         # Dice single sample files first
-                        for _, file_d in tcga_lookup[tcga_id].iteritems():
+                        for (_, file_d) in iteritems(tcga_lookup[tcga_id]):
                             dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
@@ -202,9 +203,9 @@ class gdc_dice(GDCtool):
                 counts, totals = _write_counts(case_data, counts_file)
                 cohort = project.split('-', 1)[-1]
                 all_counts.update((cohort + '-' + sample_type, count) for
-                                  (sample_type, count) in counts.iteritems())
+                                  (sample_type, count) in iteritems(counts))
                 all_counts[cohort] = totals
-                for data_type, count in totals.iteritems():
+                for (data_type, count) in iteritems(totals):
                     all_totals[data_type] += count
 
                 # keep track of aggregate case data
@@ -228,7 +229,7 @@ class gdc_dice(GDCtool):
                 counts, totals = _write_counts(ac_data, counts_file)
                 cohort = agg.split('-', 1)[-1]
                 all_counts.update((cohort + '-' + sample_type, count) for
-                                  (sample_type, count) in counts.iteritems())
+                                  (sample_type, count) in iteritems(counts))
                 all_counts[cohort] = totals
 
             logging.info("Combining all sample counts into one file ...")
@@ -249,7 +250,7 @@ class gdc_dice(GDCtool):
         '''Invert the Aggregate->Cohort dictionary to list all aggregates for
         a cohort.'''
         cohort_agg = dict()
-        for k, v in self.config.aggregates.iteritems():
+        for (k, v) in iteritems(self.config.aggregates):
             cohorts = v.split(',')
             for c in cohorts:
                 cohort_agg[c] = cohort_agg.get(c, []) + [k]
@@ -261,7 +262,7 @@ class gdc_dice(GDCtool):
         # has the same datestamp for the diced metadata
 
         aggregates = self.config.aggregates
-        for agg, cohorts in aggregates.iteritems():
+        for (agg, cohorts) in iteritems(aggregates):
             cohorts = sorted(cohorts.split(','))
             agg_meta_folder = os.path.join(prog_dir, agg, "metadata", datestamp)
             if not os.path.isdir(agg_meta_folder):
