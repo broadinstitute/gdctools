@@ -28,3 +28,5 @@ DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
 PYTHON=$(DEST)/bin/$(PYTHON_EXE)
 PIP=$(DEST)/bin/pip$(PYTHON_VER)
+
+ABORT_ON_ERROR=$(ROOT)/util/checkError.sh
