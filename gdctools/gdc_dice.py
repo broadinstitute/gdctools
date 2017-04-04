@@ -34,11 +34,8 @@ from gdctools.lib.convert import copy as gdac_copy
 from gdctools.lib.convert import maf as mutect_maf
 from gdctools.lib import common
 from gdctools.lib import meta
-from gdctools.lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from gdctools.GDCtool import GDCtool
-
-PY3 = sys.version_info > (3,)
 
 class gdc_dice(GDCtool):
 
@@ -465,7 +462,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         'annotation'   : annot,
         'center'       : meta.center(file_dict),
         'platform'     : meta.platform(file_dict),
-        'report_type'  : ANNOT_TO_DATATYPE[annot]
+        'report_type'  : common.ANNOT_TO_DATATYPE[annot]
     }
 
     if len(diced_paths) == 1:
@@ -533,7 +530,7 @@ def _write_counts(case_data, counts_file):
     # { 'TP' : {'BCR' : 10, '...': 15, ...},
     #   'TR' : {'Clinical' : 10, '...': 15, ...},
     #           ...}
-    rdt = REPORT_DATA_TYPES
+    rdt = common.REPORT_DATA_TYPES
     counts = defaultdict(Counter)
     totals = Counter()
     for case in itervalues(case_data):
@@ -566,7 +563,7 @@ def _write_combined_counts(all_counts_file, all_counts, all_totals):
     Create a program-wide counts file combining all cohorts, including
     aggregates.
     '''
-    all_annots = REPORT_DATA_TYPES
+    all_annots = common.REPORT_DATA_TYPES
     with open(all_counts_file, 'w') as f:
         header = 'Cohort\t' + '\t'.join(all_annots) + '\n'
         f.write(header)
@@ -596,17 +593,14 @@ def converter(converter_name):
 
     # Needed when the source files are compressed
     def _unzip(file_dict, mirror_path, dice_path, _converter):
-        # First unzip the mirror_path, which is a .gz
+        # First unzip the mirror_path, which points to a .gz
         if not mirror_path.endswith('.gz'):
             raise ValueError('Unexpected gzip filename: ' +
                              os.path.basename(mirror_path))
         uncompressed = mirror_path.rstrip('.gz')
-        if PY3:
-            with gzip.open(mirror_path, 'rt') as mf, open(uncompressed, 'w', newline='') as out:
+        with gzip.open(mirror_path, 'rt') as mf, open(uncompressed, 'w') as out:
                 out.write(mf.read())
-        else:
-            with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
-                out.write(mf.read())
+
         # Now dice extracted file
         diced = _converter(file_dict, uncompressed, dice_path)
         # Remove extracted file to save disk space
