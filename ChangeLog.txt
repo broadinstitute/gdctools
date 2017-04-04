@@ -1,0 +1,4 @@
+
+Version 0.2.0
+.   Re-establish usability with BOTH Python 2 and 3, motivated by
+    contributions from https://github.com/aswanipranjal
