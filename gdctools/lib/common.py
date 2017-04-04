@@ -12,8 +12,6 @@ import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 from fasteners import InterProcessLock
 
-PY3 = sys.version_info > (3,)
-
 # Helpful constants
 DATESTAMP_REGEX = re.compile("^\d{4}_[01]\d_[0-3]\d$")
 
@@ -36,6 +34,15 @@ ANNOT_TO_DATATYPE = {
     'SNV__mutect'               : 'MAF'
 }
 
+__PY3__ = sys.version_info > (3,)
+if __PY3__:
+    def safe_open(file, *args, **kwargs):
+        # Used to interpret newlines correctly: since CSV etc modules etc do
+        # their own/universal newline handling, it's safe to specify newline=''
+        kwargs['newline'] = ''
+        return open(file, *args, **kwargs)
+else:
+    safe_open = open
 
 def silent_rm(filename):
     try:
@@ -44,7 +51,6 @@ def silent_rm(filename):
         #ENOENT means file doesn't exist, ignore
         if e.errno != errno.ENOENT:
             raise
-
 
 def datestamp(timetuple=time.localtime()):
     '''Takes a time-tuple and converts it to the standard GDAC datestamp
@@ -131,13 +137,7 @@ def writeCsvFile(filename, data):
     """
     Write a row iterator's data to a csv file.
     """
-    if PY3:
-        # Required to interpret newlines correctly. Since the csv module does its
-        # own (universal) newline handling, safe to specify newline=''
-        kwopen = {'newline': ''}
-    else:
-        kwopen = {}
-    with open(filename, "w", **kwopen) as f:
+    with safe_open(filename, "w") as f:
         csvfile = csv.writer(f, dialect='excel-tab', lineterminator='\n')
         csvfile.writerows(data)
 
