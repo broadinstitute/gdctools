@@ -93,8 +93,9 @@ class gdc_report(GDCtool):
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
         try:
             p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            for line in iter(p.stdout.readline, ''):
+            for line in p.stdout:
                 logging.info(line.rstrip())
+                p.stdout.flush()
         except:
             logging.exception("Sample report generation FAILED:")
 

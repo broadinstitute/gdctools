@@ -12,7 +12,7 @@ def process(file_dict, infile, outdir, dialect='seg_broad'):
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
 
-    rawfile = open(infile, 'rb')
+    rawfile = open(infile, 'r')
     csvfile = csv.DictReader(rawfile, dialect='excel-tab')
 
     converter = find_converter(dialect)

@@ -38,17 +38,18 @@ setup(
 			'gdc_dice = gdctools.gdc_dice:main',
 			'gdc_list = gdctools.gdc_list:main',
 			'gdc_mirror = gdctools.gdc_mirror:main',
-            'gdc_loadfile = gdctools.gdc_loadfile:main',
-            'gdc_report = gdctools.gdc_report:main'
+    		'gdc_loadfile = gdctools.gdc_loadfile:main',
+    		'gdc_report = gdctools.gdc_report:main'
 		]
 	},
     package_data = {'gdctools':['lib/annot*.tsv', 'lib/GDCSampleReport.R', 'default.cfg' ]},
     test_suite   = 'nose.collector',
     install_requires = [
-        'requests',
-        'fasteners',
-        'matplotlib',
+    	'requests',
+    	'fasteners',
+    	'matplotlib',
 		'future',
-		'configparser'
+		'configparser',
+		'six'
     ],
 )

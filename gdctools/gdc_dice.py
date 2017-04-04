@@ -24,6 +24,7 @@ from collections import defaultdict, Counter
 from pkg_resources import resource_filename
 from glob import iglob
 from future.utils import iteritems
+from six import itervalues
 
 from gdctools.lib.convert import seg as gdac_seg
 from gdctools.lib.convert import py_clinical as gdac_clin
@@ -36,6 +37,8 @@ from gdctools.lib import meta
 from gdctools.lib.common import REPORT_DATA_TYPES, ANNOT_TO_DATATYPE
 
 from gdctools.GDCtool import GDCtool
+
+PY3 = sys.version_info > (3,)
 
 class gdc_dice(GDCtool):
 
@@ -291,7 +294,7 @@ class gdc_dice(GDCtool):
                 for meta_f in cohort_diced_tsvs:
                     with open(meta_f, 'r') as f_in:
                         if skip_header:
-                            f_in.next()
+                            next(f_in)
                         for line in f_in:
                             out.write(line)
                     skip_header = True
@@ -533,7 +536,7 @@ def _write_counts(case_data, counts_file):
     rdt = REPORT_DATA_TYPES
     counts = defaultdict(Counter)
     totals = Counter()
-    for case in case_data.itervalues():
+    for case in itervalues(case_data):
         main_type = meta.tumor_code(meta.main_tumor_sample_type(case.proj_id)).symbol
         c_dict = case.case_data
         for sample_type in c_dict:
@@ -568,7 +571,7 @@ def _write_combined_counts(all_counts_file, all_counts, all_totals):
         header = 'Cohort\t' + '\t'.join(all_annots) + '\n'
         f.write(header)
         # Write row of counts for each annot
-        for cohort in sorted(all_counts.iterkeys()):
+        for cohort in sorted(all_counts):
             row = [cohort] + [str(all_counts[cohort].get(a, 0)) for a in all_annots]
             f.write('\t'.join(row) + '\n')
 
@@ -598,8 +601,12 @@ def converter(converter_name):
             raise ValueError('Unexpected gzip filename: ' +
                              os.path.basename(mirror_path))
         uncompressed = mirror_path.rstrip('.gz')
-        with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
-            out.write(mf.read())
+        if PY3:
+            with gzip.open(mirror_path, 'rt') as mf, open(uncompressed, 'w', newline='') as out:
+                out.write(mf.read())
+        else:
+            with gzip.open(mirror_path, 'rb') as mf, open(uncompressed, 'w') as out:
+                out.write(mf.read())
         # Now dice extracted file
         diced = _converter(file_dict, uncompressed, dice_path)
         # Remove extracted file to save disk space

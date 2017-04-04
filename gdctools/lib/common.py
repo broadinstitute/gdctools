@@ -12,6 +12,7 @@ import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 from fasteners import InterProcessLock
 
+PY3 = sys.version_info > (3,)
 
 # Helpful constants
 DATESTAMP_REGEX = re.compile("^\d{4}_[01]\d_[0-3]\d$")
@@ -122,7 +123,7 @@ def map_blank_to_na(csvfile):
     and then yield each csv row with
     all blank fields replaced by NAs.
     """
-    yield csvfile.next()
+    yield next(csvfile)
     for row in csvfile:
         yield map(lambda f: f if f != '' else 'NA', row)
 
@@ -130,11 +131,15 @@ def writeCsvFile(filename, data):
     """
     Write a row iterator's data to a csv file.
     """
-    rawfile = open(filename, 'wb')
-    csvfile = csv.writer(rawfile, dialect='excel-tab', lineterminator='\n')
-    csvfile.writerows(data)
-    rawfile.close()
-
+    if PY3:
+        # Required to interpret newlines correctly. Since the csv module does its
+        # own (universal) newline handling, safe to specify newline=''
+        kwopen = {'newline': ''}
+    else:
+        kwopen = {}
+    with open(filename, "w", **kwopen) as f:
+        csvfile = csv.writer(f, dialect='excel-tab', lineterminator='\n')
+        csvfile.writerows(data)
 
 @contextlib.contextmanager
 def lock_context(path, name="gdctool"):

@@ -161,7 +161,7 @@ def md5_matches(file_dict, md5file, strict=True):
     if filename + ".md5" != md5_basename: return False
 
     with open(md5file) as md5f:
-        line = md5f.next()
+        line = next(md5f)
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
 
