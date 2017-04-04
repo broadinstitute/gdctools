@@ -216,7 +216,7 @@ def curl_exists():
         subprocess.check_call(['curl', '-V'],
                                stdout=DEV_NULL, stderr=subprocess.STDOUT)
         return True
-    except OSError, subprocess.CalledProcessError:
+    except (OSError, subprocess.CalledProcessError):
         return False
 
 def py_download_file(uuid, file_name, chunk_size=4096):

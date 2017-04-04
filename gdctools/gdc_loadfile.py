@@ -20,9 +20,9 @@ import os
 import csv
 from functools import cmp_to_key
 
-from lib import common
-from lib import meta
-from GDCtool import GDCtool
+from gdctools.lib import common
+from gdctools.lib import meta
+from gdctools.GDCtool import GDCtool
 
 class gdc_loadfile(GDCtool):
 
@@ -277,16 +277,16 @@ class gdc_loadfile(GDCtool):
                     proj_samples = projname + ".Sample.loadfile.txt"
                     proj_samples = os.path.join(loadfile_root, proj_samples)
                     with open(proj_samples) as ps:
-                         # Skip header, and copy the rest of the file
-                        ps.next()
+                        # Skip header, and copy the rest of the file
+                        next(ps)
                         for line in ps:
                             aslfp.write(line)
 
                 proj_sset = projname + ".Sample_Set.loadfile.txt"
                 proj_sset = os.path.join(loadfile_root, proj_sset)
                 with open(proj_sset) as psset:
-                     # Skip header, and copy the rest of the file
-                    psset.next()
+                    # Skip header, and copy the rest of the file
+                    next(psset)
                     for line in psset:
                         sslfp.write(line)
 
@@ -297,7 +297,7 @@ class gdc_loadfile(GDCtool):
                     proj_filtered = os.path.join(loadfile_root, proj_filtered)
                     with open(proj_filtered) as pf:
                         # skip header, copy the rest
-                        pf.next()
+                        next(pf)
                         for line in pf:
                             fflfp.write(line)
 

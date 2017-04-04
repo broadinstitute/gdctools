@@ -21,11 +21,11 @@ import os
 from pkg_resources import resource_filename
 from glob import iglob
 
-from lib.heatmap import draw_heatmaps
-from lib.meta import extract_case_data
-from lib.common import silent_rm
+from gdctools.lib.heatmap import draw_heatmaps
+from gdctools.lib.meta import extract_case_data
+from gdctools.lib.common import silent_rm
 
-from GDCtool import GDCtool
+from gdctools.GDCtool import GDCtool
 
 class gdc_report(GDCtool):
 
@@ -69,7 +69,7 @@ class gdc_report(GDCtool):
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
             self.write_aggregate_definitions()
-            
+
         logging.info("Linking combined sample counts ...")
         all_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
         link_metadata_file(os.path.join(diced_prog_root, 'metadata'),
@@ -93,8 +93,9 @@ class gdc_report(GDCtool):
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
         try:
             p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            for line in iter(p.stdout.readline, ''):
+            for line in p.stdout:
                 logging.info(line.rstrip())
+                p.stdout.flush()
         except:
             logging.exception("Sample report generation FAILED:")
 
@@ -125,7 +126,7 @@ def get_diced_metadata(diced_prog_root, report_dir, datestamp):
         # Link the diced metadata TSV
         diced_meta = '.'.join([project, datestamp, 'diced_metadata', 'tsv'])
         link_metadata_file(meta_dir, report_dir, diced_meta)
-        
+
         # Create high and low res heatmaps in the report dir
         logging.info("Generating heatmaps for " + project)
         case_data = extract_case_data(os.path.join(meta_dir, diced_meta))

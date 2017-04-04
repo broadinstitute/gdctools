@@ -7,21 +7,21 @@ help:
 	@echo
 	@echo "Targets:"
 	@echo
-	@echo  "1. test                     Exercise tests for this package"
+	@echo  "1. test | test3             Exercise tests for this package"
 	@echo  "2. install                  Install locally, using pip"
 	@echo  "3. uninstall                Remove local install, using pip"
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
 install:
-	pip install --upgrade .
+	$(PIP) install --upgrade .
 
 reinstall:
 	$(MAKE) uninstall
 	$(MAKE) install
 
 uninstall:
-	pip uninstall -y gdctools
+	$(PIP) uninstall -y gdctools
 
 publish:
 	$(PYTHON) setup.py sdist upload && \
@@ -36,5 +36,8 @@ rclean: clean
 
 test:
 	cd tests && $(MAKE) test
+
+test3:
+	cd tests && $(MAKE) -e PYTHON_VER=3 test
 
 .PHONY: help test install release publish clean

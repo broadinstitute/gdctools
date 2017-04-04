@@ -12,7 +12,6 @@ import contextlib
 from argparse import RawDescriptionHelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE
 from fasteners import InterProcessLock
 
-
 # Helpful constants
 DATESTAMP_REGEX = re.compile("^\d{4}_[01]\d_[0-3]\d$")
 
@@ -35,6 +34,15 @@ ANNOT_TO_DATATYPE = {
     'SNV__mutect'               : 'MAF'
 }
 
+__PY3__ = sys.version_info > (3,)
+if __PY3__:
+    def safe_open(file, *args, **kwargs):
+        # Used to interpret newlines correctly: since CSV etc modules etc do
+        # their own/universal newline handling, it's safe to specify newline=''
+        kwargs['newline'] = ''
+        return open(file, *args, **kwargs)
+else:
+    safe_open = open
 
 def silent_rm(filename):
     try:
@@ -43,7 +51,6 @@ def silent_rm(filename):
         #ENOENT means file doesn't exist, ignore
         if e.errno != errno.ENOENT:
             raise
-
 
 def datestamp(timetuple=time.localtime()):
     '''Takes a time-tuple and converts it to the standard GDAC datestamp
@@ -79,7 +86,7 @@ def safeMakeDirs(dir_name, permissions=None):
             curUmask = os.umask(0)
             os.makedirs(dir_name, permissions)
             os.umask(curUmask)
-    except OSError, value:
+    except OSError as value:
         error_num = value.errno
         # what is 183? don't know... came from legacy code.
         if  error_num==errno.EEXIST or error_num==183 or error_num==17:
@@ -95,7 +102,7 @@ def safe_make_hardlink(input_file_path,output_file_path):
     safeMakeDirs(output_file_dir)
     try:
         os.link(input_file_path,output_file_path)
-    except OSError,err:
+    except OSError as err:
         if err.errno == errno.EEXIST:
             # link already exists, check that it is identical to the one we are trying to put down
             if not os.path.samefile(input_file_path,output_file_path):
@@ -122,7 +129,7 @@ def map_blank_to_na(csvfile):
     and then yield each csv row with
     all blank fields replaced by NAs.
     """
-    yield csvfile.next()
+    yield next(csvfile)
     for row in csvfile:
         yield map(lambda f: f if f != '' else 'NA', row)
 
@@ -130,11 +137,9 @@ def writeCsvFile(filename, data):
     """
     Write a row iterator's data to a csv file.
     """
-    rawfile = open(filename, 'wb')
-    csvfile = csv.writer(rawfile, dialect='excel-tab', lineterminator='\n')
-    csvfile.writerows(data)
-    rawfile.close()
-
+    with safe_open(filename, "w") as f:
+        csvfile = csv.writer(f, dialect='excel-tab', lineterminator='\n')
+        csvfile.writerows(data)
 
 @contextlib.contextmanager
 def lock_context(path, name="gdctool"):

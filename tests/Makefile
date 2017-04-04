@@ -32,7 +32,7 @@ help:
 
 test: test_smoke echo_success
 test_all: test_smoke test_dice test_loadfile test_report test_legacy echo_success
-test_smoke: test_invoke test_mirror test_redo_mirror test_badcfg test_cases
+test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
 	@echo
@@ -45,6 +45,7 @@ test_mirror:
 	@echo
 	@echo "Test mirror: download small set of data, compare to baselines"
 	@$(PERFORM_MIRROR) 2>&1 | tee $@.log | egrep "GDC|Mirroring data|Mirroring start"
+	$(ABORT_ON_ERROR) $@.log
 
 	@# Now see that the named set of mirrored files matches what we expect
 	$(FIND_MIRROR_FILES) | sort > $(TEST_ROOT)/mirror-files.txt
@@ -75,6 +76,7 @@ test_dice:
 	@echo
 	@echo Test dice: on subset of cohorts, to show CLI args override config file
 	$(PERFORM_DICE) 2>&1 | tee $@.log  | grep "Dicing TCGA"
+	$(ABORT_ON_ERROR) $@.log
 	$(FIND_DICE_FILES) | sort > $(TEST_ROOT)/dice-files.txt
 	diff -b baselines/dice-files.txt $(TEST_ROOT)/.
 
@@ -86,6 +88,7 @@ test_loadfile:
 	@echo
 	@echo "Test loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
+	$(ABORT_ON_ERROR) $@.log
 	$(FIND_LOAD_FILES) | sort > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
 	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/load-md5sums.txt
@@ -95,6 +98,7 @@ test_report:
 	@echo
 	@echo "Test sample report generation ..."
 	@$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
+	$(ABORT_ON_ERROR) $@.log
 	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | sort > $(TEST_ROOT)/report-files.txt
 	diff -b baselines/report-files.txt $(TEST_ROOT)/.
 
@@ -105,6 +109,7 @@ test_cases:
 					--cases TCGA-EE-A3J8 \
 					--data-categories Biospecimen 2>&1 | tee $@.log | \
 					egrep "GDC|Mirroring data|Mirroring start"
+	$(ABORT_ON_ERROR) $@.log
 	@cd onlycases/mirror/TCGA && find TCGA-* \
 					-name '*.*' -a ! -name '*.json' | \
 					sort > ../../onlycases-files.txt
@@ -116,19 +121,14 @@ test_legacy:
 	@$(PYTHON) ../gdctools/gdc_mirror.py --config legacy.cfg  2>&1 | \
 					tee $@.log | \
 					egrep "GDC|Mirroring data|Mirroring start"
+	$(ABORT_ON_ERROR) $@.log
 	$(FIND_LEGACY_FILES) | sort > ../../legacy-files.txt
 	diff -b baselines/legacy-files.txt legacy/.
 	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | sort > ../../legacy-md5sums.txt
 	diff -b baselines/legacy-md5sums.txt legacy/.
 
-USE=/broad/tools/scripts/useuse
 test3: default
-	@# Python 3 compatibility
-	if [ -d $(USE) ] ; then \
-		. $(USE) && \
-		reuse -q Python-3.4 && \
-		$(MAKE) -e test ; \
-	fi
+	$(MAKE) -e PYTHON_VER=3 test
 
 VERTEST="import gdctools as g; print('Version: ' + g.GDCcore.GDCT_VERSION)"
 testl: default
@@ -144,6 +144,9 @@ testi:
 echo_success:
 	@echo
 	@echo Success!
+
+echo_ver:
+	@echo Using $(PYTHON_HOME)/bin/$(PYTHON_EXE) ...
 
 clean:
 	rm -rf build dist *.egg-info *~ test_*.log bad.cfg

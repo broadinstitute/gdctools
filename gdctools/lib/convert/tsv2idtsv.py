@@ -8,7 +8,7 @@ def process(file_dict, infile, outdir):
     # Should only produce one file
     filepath = diced_file_paths(outdir, file_dict)[0]
     _tcga_id = tcga_id(file_dict)
-    rawfile = open(infile, 'rb')
+    rawfile = open(infile, 'r')
     csvfile = csv.reader(rawfile, dialect='excel-tab')
 
     csvfile_with_ids = tsv2idtsv(csvfile, _tcga_id)
@@ -20,7 +20,7 @@ def process(file_dict, infile, outdir):
     rawfile.close()
 
 def tsv2idtsv(csvfile, sampleName):
-    header = csvfile.next()
+    header = next(csvfile)
     yield ['SampleId'] + header
 
     for row in csvfile:

@@ -13,9 +13,20 @@ REPO_HASH=$(shell $(GIT) log -n 1 --pretty=%H | cut -c 1-24)
 VERSION = $(shell cat $(ROOT)/VERSION)
 LONGVERSION=$(VERSION) ($(TIMESTAMP) $(REPO_HASH))
 
-PYTHON_HOME=$(shell $(ROOT)/util/findPython.sh)
+# Simple way to use Python3, e.g. for install, tests etc:
+#               make -e PYTHON_VER=3 install test
+# This will automatically adjust pip to Python3, too
+
+PYTHON_VER=
+PYTHON_EXE=python$(PYTHON_VER)
+PYTHON_HOME=$(shell $(ROOT)/util/findPython.sh $(PYTHON_EXE))
+ifeq ($(PYTHON_HOME),)
+$(error Unable to continue, no $(PYTHON_EXE) found)
+endif
 MD5=$(ROOT)/util/checkMD5.sh
 DEST=$(PYTHON_HOME)
 BIN_DIR=$(DEST)/bin					# Python virtual environment here
-PYTHON=$(DEST)/bin/python
-PIP=$(DEST)/bin/pip
+PYTHON=$(DEST)/bin/$(PYTHON_EXE)
+PIP=$(DEST)/bin/pip$(PYTHON_VER)
+
+ABORT_ON_ERROR=$(ROOT)/util/checkError.sh
