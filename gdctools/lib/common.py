@@ -72,12 +72,12 @@ def immediate_subdirs(path):
             if os.path.isdir(os.path.join(path, d))]
     return sorted(subdirs)
 
-#===============================================================================
-# Makes directory structure, or ends gracefully if directory already exists.
-# If permissions passed, then honor them, however os.makedirs ignores the
-# sticky bit. Use changeMod if this matters.
-#===============================================================================
 def safeMakeDirs(dir_name, permissions=None):
+    """
+    Makes directory structure, or ends gracefully if directory already exists.
+    If permissions passed, then honor them, however os.makedirs ignores the
+    sticky bit. Use changeMod if this matters.
+    """
     try:
         if permissions is None:
             os.makedirs(dir_name)

@@ -23,8 +23,7 @@ import gzip
 from collections import defaultdict, Counter
 from pkg_resources import resource_filename
 from glob import iglob
-from future.utils import iteritems
-from six import itervalues
+from future.utils import viewitems, viewvalues
 
 from gdctools.lib.convert import seg as gdac_seg
 from gdctools.lib.convert import py_clinical as gdac_clin
@@ -40,7 +39,7 @@ from gdctools.GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.1")
+        super(gdc_dice, self).__init__(version="0.5.2")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -114,7 +113,7 @@ class gdc_dice(GDCtool):
             all_counts_file = os.path.join(diced_prog_metadata,
                                            '.'.join(['sample_counts', datestamp,
                                                      'tsv']))
-            all_counts = defaultdict(Counter)
+            all_counts = dict()
             all_totals = Counter()
 
             agg_case_data = dict()
@@ -179,7 +178,7 @@ class gdc_dice(GDCtool):
 
                     for tcga_id in tcga_lookup:
                         # Dice single sample files first
-                        for (_, file_d) in iteritems(tcga_lookup[tcga_id]):
+                        for file_d in viewvalues(tcga_lookup[tcga_id]):
                             dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
@@ -203,9 +202,9 @@ class gdc_dice(GDCtool):
                 counts, totals = _write_counts(case_data, counts_file)
                 cohort = project.split('-', 1)[-1]
                 all_counts.update((cohort + '-' + sample_type, count) for
-                                  (sample_type, count) in iteritems(counts))
+                                  (sample_type, count) in viewitems(counts))
                 all_counts[cohort] = totals
-                for (data_type, count) in iteritems(totals):
+                for (data_type, count) in viewitems(totals):
                     all_totals[data_type] += count
 
                 # keep track of aggregate case data
@@ -229,7 +228,7 @@ class gdc_dice(GDCtool):
                 counts, totals = _write_counts(ac_data, counts_file)
                 cohort = agg.split('-', 1)[-1]
                 all_counts.update((cohort + '-' + sample_type, count) for
-                                  (sample_type, count) in iteritems(counts))
+                                  (sample_type, count) in viewitems(counts))
                 all_counts[cohort] = totals
 
             logging.info("Combining all sample counts into one file ...")
@@ -250,7 +249,7 @@ class gdc_dice(GDCtool):
         '''Invert the Aggregate->Cohort dictionary to list all aggregates for
         a cohort.'''
         cohort_agg = dict()
-        for (k, v) in iteritems(self.config.aggregates):
+        for (k, v) in viewitems(self.config.aggregates):
             cohorts = v.split(',')
             for c in cohorts:
                 cohort_agg[c] = cohort_agg.get(c, []) + [k]
@@ -262,7 +261,7 @@ class gdc_dice(GDCtool):
         # has the same datestamp for the diced metadata
 
         aggregates = self.config.aggregates
-        for (agg, cohorts) in iteritems(aggregates):
+        for (agg, cohorts) in viewitems(aggregates):
             cohorts = sorted(cohorts.split(','))
             agg_meta_folder = os.path.join(prog_dir, agg, "metadata", datestamp)
             if not os.path.isdir(agg_meta_folder):
@@ -533,7 +532,7 @@ def _write_counts(case_data, counts_file):
     rdt = common.REPORT_DATA_TYPES
     counts = defaultdict(Counter)
     totals = Counter()
-    for case in itervalues(case_data):
+    for case in viewvalues(case_data):
         main_type = meta.tumor_code(meta.main_tumor_sample_type(case.proj_id)).symbol
         c_dict = case.case_data
         for sample_type in c_dict:

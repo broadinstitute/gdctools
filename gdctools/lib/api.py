@@ -311,12 +311,6 @@ def set_legacy(legacy=False):
     __legacy = True if legacy else False
     return previous_value
 
-def set_legacy(legacy=False):
-    global __legacy
-    previous_value = __legacy
-    __legacy = True if legacy else False
-    return previous_value
-
 def get_legacy():
     return __legacy
 

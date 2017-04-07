@@ -165,7 +165,7 @@ def md5_matches(file_dict, md5file, strict=True):
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
 
-__SUPPORTED_FILE_TYPES__ = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
+_SUPPORTED_FILE_TYPES = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
 
 def file_basename(file_dict, strict=True):
     '''Generate a filename based on the file dict.
@@ -200,7 +200,7 @@ def file_basename(file_dict, strict=True):
     namelist = name.split('.')
     try:
         for i in range(len(namelist) + 1):
-            if namelist[i] in __SUPPORTED_FILE_TYPES__:
+            if namelist[i] in _SUPPORTED_FILE_TYPES:
                 break
     except IndexError:
         if strict or True:
@@ -405,32 +405,32 @@ def main_tumor_sample_type(proj_id):
 #TODO: This should come from a config file
 # Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type
 Tumor_IDs = namedtuple('Tumor_IDs', ['code', 'symbol'])
+_TUMOR_CODES = {
+    "Additional - New Primary" : Tumor_IDs('05', 'TAP'),
+    "Additional Metastatic" : Tumor_IDs('07', 'TAM'),
+    "Blood Derived Normal" : Tumor_IDs('10', 'NB'),
+    "Bone Marrow Normal" : Tumor_IDs('14', 'NBM'),
+    "Buccal Cell Normal" : Tumor_IDs('12', 'NBC'),
+    "Cell Line Derived Xenograft Tissue" : Tumor_IDs('61', 'XCL'),
+    "Cell Lines" : Tumor_IDs('50', 'CELL'),
+    "Control Analyte" : Tumor_IDs('20', 'CELLC'),
+    "EBV Immortalized Normal" : Tumor_IDs('13', 'NEBV'),
+    "Human Tumor Original Cells" : Tumor_IDs('08', 'THOC'),
+    "Metastatic" : Tumor_IDs('06', 'TM'),
+    "Primary Blood Derived Cancer - Bone Marrow" : Tumor_IDs('09', 'TBM'),
+    "Primary Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('03', 'TB'),
+    "Primary Xenograft Tissue" : Tumor_IDs('60', 'XP'),
+    "Primary Tumor" : Tumor_IDs('01', 'TP'),
+    "Recurrent Blood Derived Cancer - Bone Marrow" : Tumor_IDs('04', 'TRBM'),
+    "Recurrent Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('40', 'TRB'),
+    "Recurrent Solid Tumor" : Tumor_IDs('02', 'TR'),
+    "Recurrent Tumor" : Tumor_IDs('02', 'TR'), # GDC had new name for this
+    "Solid Tissue Normal" : Tumor_IDs('11', 'NT'),
+    # FIXME: Hack, Some late TCGA submissions include this new type
+    "FFPE Scrolls" : Tumor_IDs('01', 'TP')
+}
 def tumor_code(tumor_type):
-    lookup = {
-        "Additional - New Primary" : Tumor_IDs('05', 'TAP'),
-        "Additional Metastatic" : Tumor_IDs('07', 'TAM'),
-        "Blood Derived Normal" : Tumor_IDs('10', 'NB'),
-        "Bone Marrow Normal" : Tumor_IDs('14', 'NBM'),
-        "Buccal Cell Normal" : Tumor_IDs('12', 'NBC'),
-        "Cell Line Derived Xenograft Tissue" : Tumor_IDs('61', 'XCL'),
-        "Cell Lines" : Tumor_IDs('50', 'CELL'),
-        "Control Analyte" : Tumor_IDs('20', 'CELLC'),
-        "EBV Immortalized Normal" : Tumor_IDs('13', 'NEBV'),
-        "Human Tumor Original Cells" : Tumor_IDs('08', 'THOC'),
-        "Metastatic" : Tumor_IDs('06', 'TM'),
-        "Primary Blood Derived Cancer - Bone Marrow" : Tumor_IDs('09', 'TBM'),
-        "Primary Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('03', 'TB'),
-        "Primary Xenograft Tissue" : Tumor_IDs('60', 'XP'),
-        "Primary Tumor" : Tumor_IDs('01', 'TP'),
-        "Recurrent Blood Derived Cancer - Bone Marrow" : Tumor_IDs('04', 'TRBM'),
-        "Recurrent Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('40', 'TRB'),
-        "Recurrent Solid Tumor" : Tumor_IDs('02', 'TR'),
-        "Recurrent Tumor" : Tumor_IDs('02', 'TR'), # GDC had new name for this
-        "Solid Tissue Normal" : Tumor_IDs('11', 'NT'),
-        # FIXME: Hack, Some late TCGA submissions include this new type
-        "FFPE Scrolls" : Tumor_IDs('01', 'TP')
-    }
-    return lookup[tumor_type]
+    return _TUMOR_CODES[tumor_type]
 
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
