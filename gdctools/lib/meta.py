@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # encoding: utf-8
 
@@ -13,11 +12,8 @@ meta.py: Functions for working with gdc metadata
 '''
 
 # }}}
-from __future__ import print_function
-
 import os
 import json
-import sys
 import logging
 import csv
 from gdctools.lib.common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
@@ -270,7 +266,7 @@ def aliquot_id(file_dict):
         _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0],
                                'aliquots')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
@@ -293,7 +289,7 @@ def case_id(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['submitter_id']
@@ -305,7 +301,7 @@ def sample_type(file_dict):
         _check_dict_array_size(file_dict, 'cases')
         _check_dict_array_size(file_dict['cases'][0], 'samples')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['samples'][0]["sample_type"]
@@ -315,7 +311,7 @@ def is_ffpe(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0].get('samples', [{}])[0].get("is_ffpe", False)
@@ -326,7 +322,7 @@ def project_id(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict, indent=2))
         raise
     return file_dict['cases'][0]['project']['project_id']
 
@@ -342,7 +338,7 @@ def tcga_id(file_dict):
         try:
             return aliquot_id(file_dict)
         except:
-            print(json.dumps(file_dict, indent=2))
+            logging.exception(json.dumps(file_dict, indent=2))
             raise
 
 def center(file_dict):
@@ -367,11 +363,11 @@ def has_sample(file_dict):
 def samples(file_dict, tumor_only=False):
     '''Returns a list of samples in this file. Useful for file_dicts such as
     MAFs which encompass multiple samples'''
-    samples = []
+    samples = list()
     for case in file_dict['cases']:
         samples.extend(case['samples'])
     if tumor_only:
-        samples = filter(lambda s: "Normal" not in s['sample_type'], samples)
+        return [s for s in samples if "Normal" not in s['sample_type']]
     return samples
 
 def dice_extension(file_dict):

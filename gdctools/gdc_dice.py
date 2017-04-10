@@ -456,6 +456,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
 
     meta_file_writer must be a csv.DictWriter
     '''
+    
     # These fields will be shared regardless of the number of diced files
     rowdict = {
         'annotation'   : annot,
@@ -464,7 +465,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         'report_type'  : common.ANNOT_TO_DATATYPE[annot]
     }
 
-    if len(diced_paths) == 1:
+    if len(diced_paths) == 1 and not meta.has_multiple_samples(file_dict):
         # Easy case, one file for this case or sample
         diced_path = diced_paths[0]
         sample_type = None

@@ -6,7 +6,7 @@ SRC=../gdctools
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
-PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM -- latest
+PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV -- latest
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
