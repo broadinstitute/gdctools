@@ -50,6 +50,5 @@ setup(
     	'matplotlib',
 		'future',
 		'configparser',
-		'six'
     ],
 )
