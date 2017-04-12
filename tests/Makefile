@@ -16,6 +16,7 @@ PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
 PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
+SORT=env LC_COLLATE=C sort
 
 help:
 	@echo
@@ -47,11 +48,11 @@ test_mirror:
 	$(ABORT_ON_ERROR) $@.log
 
 	@# Now see that the named set of mirrored files matches what we expect
-	$(FIND_MIRROR_FILES) | sort > $(TEST_ROOT)/mirror-files.txt
+	$(FIND_MIRROR_FILES) | $(SORT) > $(TEST_ROOT)/mirror-files.txt
 	diff -b baselines/mirror-files.txt $(TEST_ROOT)/.
 
 	@# Verify integrity (but using our stored MD5s, not those just downloaded)
-	$(FIND_MIRROR_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/mirror-md5sums.txt
+	$(FIND_MIRROR_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/mirror-md5sums.txt
 	diff -b baselines/mirror-md5sums.txt $(TEST_ROOT)/.
 
 test_redo_mirror:
@@ -76,11 +77,11 @@ test_dice:
 	@echo Test dice: on subset of cohorts, to show CLI args override config file
 	$(PERFORM_DICE) 2>&1 | tee $@.log  | grep "Dicing TCGA"
 	$(ABORT_ON_ERROR) $@.log
-	$(FIND_DICE_FILES) | sort > $(TEST_ROOT)/dice-files.txt
+	$(FIND_DICE_FILES) | $(SORT) > $(TEST_ROOT)/dice-files.txt
 	diff -b baselines/dice-files.txt $(TEST_ROOT)/.
 
 	@# Verify integrity (but using our stored MD5s, not those just downloaded)
-	$(FIND_DICE_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/dice-md5sums.txt
+	$(FIND_DICE_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/dice-md5sums.txt
 	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
 test_loadfile:
@@ -88,9 +89,9 @@ test_loadfile:
 	@echo "Test loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
-	$(FIND_LOAD_FILES) | sort > $(TEST_ROOT)/load-files.txt
+	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
-	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | sort > $(TEST_ROOT)/load-md5sums.txt
+	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/load-md5sums.txt
 	diff -b baselines/load-md5sums.txt $(TEST_ROOT)/.
 
 test_report:
@@ -98,7 +99,7 @@ test_report:
 	@echo "Test sample report generation ..."
 	@$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
-	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | sort > $(TEST_ROOT)/report-files.txt
+	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | $(SORT) > $(TEST_ROOT)/report-files.txt
 	diff -b baselines/report-files.txt $(TEST_ROOT)/.
 
 test_cases:
@@ -111,7 +112,7 @@ test_cases:
 	$(ABORT_ON_ERROR) $@.log
 	@cd onlycases/mirror/TCGA && find TCGA-* \
 					-name '*.*' -a ! -name '*.json' | \
-					sort > ../../onlycases-files.txt
+					$(SORT) > ../../onlycases-files.txt
 	diff -b baselines/onlycases-files.txt onlycases/.
 
 test_legacy:
@@ -121,9 +122,9 @@ test_legacy:
 					tee $@.log | \
 					egrep "GDC|Mirroring data|Mirroring start"
 	$(ABORT_ON_ERROR) $@.log
-	$(FIND_LEGACY_FILES) | sort > ../../legacy-files.txt
+	$(FIND_LEGACY_FILES) | $(SORT) > ../../legacy-files.txt
 	diff -b baselines/legacy-files.txt legacy/.
-	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | sort > ../../legacy-md5sums.txt
+	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | $(SORT) > ../../legacy-md5sums.txt
 	diff -b baselines/legacy-md5sums.txt legacy/.
 
 test3: default
