@@ -22,7 +22,7 @@ from matplotlib.colors import ListedColormap, NoNorm
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import font_manager
 
-from common import REPORT_DATA_TYPES
+from gdctools.lib.common import REPORT_DATA_TYPES
 
 
 def draw_heatmaps(case_data, project, timestamp, diced_meta_dir):
@@ -81,14 +81,14 @@ def _build_heatmap_matrix(case_data):
     rownames = REPORT_DATA_TYPES
     annot_sample_data = dict()
     for case in case_data:
-        c_dict = case_data[case]
+        c_dict = case_data[case].case_data
         # Flatten case_data[case_id][sample_type] = set(Data types)
         # into annot_sample_data[case_id] = set(Data types)
         # for simpler heatmap
         data_types = {dt for st in c_dict for dt in c_dict[st]}
         annot_sample_data[case] = data_types
 
-    matrix = [[] for row in rownames]
+    matrix = [[] for _ in rownames]
     # Now iterate over samples, inserting a 1 if data is presente
     for r in range(len(rownames)):
         for cid in sorted(annot_sample_data.keys()):

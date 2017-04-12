@@ -4,6 +4,66 @@
 /gdc2fh.py
 /.settings/
 /GDCversion.py
-**/tests/sandbox/**
-**/tests/GDCtool/**
-**/tests/*.log
+/tests/sandbox/
+/tests/GDCtool/
+/tests/*.log
+/tests/gdctools_tmp/
+/tests/legacy/
+/tests/onlycases/
+# Distribution / packaging
+.Python
+env/
+build/
+tests/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx documentation
+docs/_build/
+
+# pyenv
+.python-version
+
+# dotenv
+.env
+
+# virtualenv
+.venv
+venv/
+ENV/
+

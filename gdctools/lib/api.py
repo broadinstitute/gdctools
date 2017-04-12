@@ -216,7 +216,7 @@ def curl_exists():
         subprocess.check_call(['curl', '-V'],
                                stdout=DEV_NULL, stderr=subprocess.STDOUT)
         return True
-    except OSError, subprocess.CalledProcessError:
+    except (OSError, subprocess.CalledProcessError):
         return False
 
 def py_download_file(uuid, file_name, chunk_size=4096):
@@ -304,12 +304,6 @@ def _decode_json(request):
         emsg = "No JSON object could be decoded from response. Content:\n"
         emsg += request.text
         raise ValueError(emsg)
-
-def set_legacy(legacy=False):
-    global __legacy
-    previous_value = __legacy
-    __legacy = True if legacy else False
-    return previous_value
 
 def set_legacy(legacy=False):
     global __legacy

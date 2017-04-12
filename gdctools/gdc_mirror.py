@@ -20,11 +20,11 @@ import logging
 import time
 import json
 
-from GDCcore import *
-from GDCtool import GDCtool
-import lib.api as api
-import lib.meta as meta
-import lib.common as common
+from gdctools.GDCcore import *
+from gdctools.GDCtool import GDCtool
+import gdctools.lib.api as api
+import gdctools.lib.meta as meta
+import gdctools.lib.common as common
 
 class gdc_mirror(GDCtool):
 
@@ -171,9 +171,10 @@ class gdc_mirror(GDCtool):
                 or not os.path.isfile(savepath)):
 
             # New file, mirror to this folder
-            while retries > 0:
+            time = 180
+            retry = 0
+            while retry <= retries:
                 try:
-                    time = 180
                     #Download file
                     uuid = file_d['file_id']
                     if self.has_cURL:
@@ -182,13 +183,16 @@ class gdc_mirror(GDCtool):
                         api.py_download_file(uuid, savepath)
                     break
                 except Exception as e:
-                    logging.warning("Download failed: " + str(e) +'\nRetrying...')
-                    retries = retries - 1
+                    logging.warning("Download failed: " + str(e) + '\nRetrying...')
+                    retry += 1
                     # Give some more time, in case the file is large...
                     # TODO: is this worth it?
                     time += 180
 
-            if retries == 0:
+            if retry > retries:
+                # A partially downloaded file will interfere with subsequent
+                # mirrors
+                common.silent_rm(savepath)
                 logging.error("Error downloading file {0}, too many retries ({1})".format(savepath, retries))
             else:
                 #Save md5 checksum on success
@@ -262,7 +266,7 @@ class gdc_mirror(GDCtool):
         cases = self.config.cases
         file_metadata = api.get_project_files(project, category,
                                               workflow_type, cases=cases)
-        
+
         # Filter out extraneous cases from multi-case (e.g. MAF) file metadata
         # if cases have been specified
         if cases:

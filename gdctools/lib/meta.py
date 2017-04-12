@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # encoding: utf-8
 
@@ -13,24 +12,24 @@ meta.py: Functions for working with gdc metadata
 '''
 
 # }}}
-from __future__ import print_function
-
 import os
 import json
-import sys
 import logging
 import csv
-from common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
+from gdctools.lib.common import DATESTAMP_REGEX, ANNOT_TO_DATATYPE
+from collections import namedtuple, defaultdict
+
+# Lightweight class to enable handling of aggregate projects
+Case = namedtuple('Case', ['proj_id', 'case_data'])
 
 def extract_case_data(diced_metadata_file):
     '''Create a case-based lookup of available data types'''
     # Use a case-based dictionary to count each data type on a case/sample basis
     # cases[<case_id>][<sample_type>] = set([REPORT_DATA_TYPE, ...])
     cases = dict()
+    case_proj_map = dict()
     cases_with_clinical = set()
     cases_with_biospecimen = set()
-
-    projname = os.path.basename(diced_metadata_file).split('.')[0]
 
     with open(diced_metadata_file, 'r') as dmf:
         reader = csv.DictReader(dmf, delimiter='\t')
@@ -38,7 +37,11 @@ def extract_case_data(diced_metadata_file):
         for row in reader:
             annot = row['annotation']
             case_id = row['case_id']
+            proj_id = row['file_name'].split(os.path.sep)[-3]
             report_dtype = ANNOT_TO_DATATYPE[annot]
+
+            if case_id not in case_proj_map:
+                case_proj_map[case_id] = proj_id
 
             if report_dtype == 'BCR':
                 cases_with_biospecimen.add(case_id)
@@ -53,30 +56,29 @@ def extract_case_data(diced_metadata_file):
                 # Filter out ffpe samples into a separate sample_type
                 if row['is_ffpe'] == 'True':
                     sample_type = 'FFPE'
-                case_dict = cases.get(case_id, {})
-                case_dict[sample_type] = case_dict.get(sample_type, set())
-                case_dict[sample_type].add(report_dtype)
-                cases[case_id] = case_dict
+                case = cases.get(case_id, Case(proj_id, defaultdict(set)))
+                case.case_data[sample_type].add(report_dtype)
+                cases[case_id] = case
 
     # Now go back through and add BCR & Clinical to all sample_types, but first,
     # we must insert cases in for samples who only have clinical data
     possible_cases = cases_with_clinical | cases_with_biospecimen
-    main_type = main_tumor_sample_type(projname)
-    _, main_type = tumor_code(main_type)
     for c in possible_cases:
+        proj_id = case_proj_map[c]
+        main_type = tumor_code(main_tumor_sample_type(proj_id)).symbol
         if c not in cases:
             # Have to create a new entry with the default sample type
-            cases[c] = {main_type : set()}
-        elif main_type not in cases[c]:
+            cases[c] = Case(proj_id, {main_type : set()})
+        elif main_type not in cases[c].case_data:
             # Each sample must have an entry for the main tumor type
-            cases[c][main_type] = set()
+            cases[c].case_data[main_type] = set()
 
     for c in cases:
-        for st in cases[c]:
+        for st in cases[c].case_data:
             if c in cases_with_clinical:
-                cases[c][st].add('Clinical')
+                cases[c].case_data[st].add('Clinical')
             if c in cases_with_biospecimen:
-                cases[c][st].add('BCR')
+                cases[c].case_data[st].add('BCR')
     return cases
 
 def append_metadata(file_dicts, metafile):
@@ -155,11 +157,11 @@ def md5_matches(file_dict, md5file, strict=True):
     if filename + ".md5" != md5_basename: return False
 
     with open(md5file) as md5f:
-        line = md5f.next()
+        line = next(md5f)
         md5value, fname = line.strip().split('  ')
         return fname == filename and md5value == file_dict['md5sum']
 
-__SUPPORTED_FILE_TYPES__ = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
+_SUPPORTED_FILE_TYPES = {'xml', 'txt', 'tar', 'gz', 'md5', 'xlsx', 'xls'}
 
 def file_basename(file_dict, strict=True):
     '''Generate a filename based on the file dict.
@@ -194,7 +196,7 @@ def file_basename(file_dict, strict=True):
     namelist = name.split('.')
     try:
         for i in range(len(namelist) + 1):
-            if namelist[i] in __SUPPORTED_FILE_TYPES__:
+            if namelist[i] in _SUPPORTED_FILE_TYPES:
                 break
     except IndexError:
         if strict or True:
@@ -264,7 +266,7 @@ def aliquot_id(file_dict):
         _check_dict_array_size(file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0],
                                'aliquots')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['samples'][0]['portions'][0]['analytes'][0]['aliquots'][0]['submitter_id']
@@ -287,7 +289,7 @@ def case_id(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['submitter_id']
@@ -299,7 +301,7 @@ def sample_type(file_dict):
         _check_dict_array_size(file_dict, 'cases')
         _check_dict_array_size(file_dict['cases'][0], 'samples')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0]['samples'][0]["sample_type"]
@@ -309,7 +311,7 @@ def is_ffpe(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
         raise
 
     return file_dict['cases'][0].get('samples', [{}])[0].get("is_ffpe", False)
@@ -320,7 +322,7 @@ def project_id(file_dict):
     try:
         _check_dict_array_size(file_dict, 'cases')
     except:
-        print(json.dumps(file_dict['cases'], indent=2), file=sys.stderr)
+        logging.exception(json.dumps(file_dict, indent=2))
         raise
     return file_dict['cases'][0]['project']['project_id']
 
@@ -336,7 +338,7 @@ def tcga_id(file_dict):
         try:
             return aliquot_id(file_dict)
         except:
-            print(json.dumps(file_dict, indent=2))
+            logging.exception(json.dumps(file_dict, indent=2))
             raise
 
 def center(file_dict):
@@ -361,11 +363,11 @@ def has_sample(file_dict):
 def samples(file_dict, tumor_only=False):
     '''Returns a list of samples in this file. Useful for file_dicts such as
     MAFs which encompass multiple samples'''
-    samples = []
+    samples = list()
     for case in file_dict['cases']:
         samples.extend(case['samples'])
     if tumor_only:
-        samples = filter(lambda s: "Normal" not in s['sample_type'], samples)
+        return [s for s in samples if "Normal" not in s['sample_type']]
     return samples
 
 def dice_extension(file_dict):
@@ -398,32 +400,33 @@ def main_tumor_sample_type(proj_id):
 
 #TODO: This should come from a config file
 # Currently copied from https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20Type
+Tumor_IDs = namedtuple('Tumor_IDs', ['code', 'symbol'])
+_TUMOR_CODES = {
+    "Additional - New Primary" : Tumor_IDs('05', 'TAP'),
+    "Additional Metastatic" : Tumor_IDs('07', 'TAM'),
+    "Blood Derived Normal" : Tumor_IDs('10', 'NB'),
+    "Bone Marrow Normal" : Tumor_IDs('14', 'NBM'),
+    "Buccal Cell Normal" : Tumor_IDs('12', 'NBC'),
+    "Cell Line Derived Xenograft Tissue" : Tumor_IDs('61', 'XCL'),
+    "Cell Lines" : Tumor_IDs('50', 'CELL'),
+    "Control Analyte" : Tumor_IDs('20', 'CELLC'),
+    "EBV Immortalized Normal" : Tumor_IDs('13', 'NEBV'),
+    "Human Tumor Original Cells" : Tumor_IDs('08', 'THOC'),
+    "Metastatic" : Tumor_IDs('06', 'TM'),
+    "Primary Blood Derived Cancer - Bone Marrow" : Tumor_IDs('09', 'TBM'),
+    "Primary Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('03', 'TB'),
+    "Primary Xenograft Tissue" : Tumor_IDs('60', 'XP'),
+    "Primary Tumor" : Tumor_IDs('01', 'TP'),
+    "Recurrent Blood Derived Cancer - Bone Marrow" : Tumor_IDs('04', 'TRBM'),
+    "Recurrent Blood Derived Cancer - Peripheral Blood" : Tumor_IDs('40', 'TRB'),
+    "Recurrent Solid Tumor" : Tumor_IDs('02', 'TR'),
+    "Recurrent Tumor" : Tumor_IDs('02', 'TR'), # GDC had new name for this
+    "Solid Tissue Normal" : Tumor_IDs('11', 'NT'),
+    # FIXME: Hack, Some late TCGA submissions include this new type
+    "FFPE Scrolls" : Tumor_IDs('01', 'TP')
+}
 def tumor_code(tumor_type):
-    lookup = {
-        "Additional - New Primary" : ('05', 'TAP'),
-        "Additional Metastatic" : ('07', 'TAM'),
-        "Blood Derived Normal" : ('10', 'NB'),
-        "Bone Marrow Normal" : ('14', 'NBM'),
-        "Buccal Cell Normal" : ('12', 'NBC'),
-        "Cell Line Derived Xenograft Tissue" : ('61', 'XCL'),
-        "Cell Lines" : ('50', 'CELL'),
-        "Control Analyte" : ('20', 'CELLC'),
-        "EBV Immortalized Normal" : ('13', 'NEBV'),
-        "Human Tumor Original Cells" : ('08', 'THOC'),
-        "Metastatic" : ('06', 'TM'),
-        "Primary Blood Derived Cancer - Bone Marrow" : ('09', 'TBM'),
-        "Primary Blood Derived Cancer - Peripheral Blood" : ('03', 'TB'),
-        "Primary Xenograft Tissue" : ('60', 'XP'),
-        "Primary Tumor" : ('01', 'TP'),
-        "Recurrent Blood Derived Cancer - Bone Marrow" : ('04', 'TRBM'),
-        "Recurrent Blood Derived Cancer - Peripheral Blood" : ('40', 'TRB'),
-        "Recurrent Solid Tumor" : ('02', 'TR'),
-        "Recurrent Tumor" : ('02', 'TR'), # GDC had new name for this
-        "Solid Tissue Normal" : ('11', 'NT'),
-        # FIXME: Hack, Some late TCGA submissions include this new type
-        "FFPE Scrolls" : ('01', 'TP')
-    }
-    return lookup[tumor_type]
+    return _TUMOR_CODES[tumor_type]
 
 def _check_dict_array_size(d, name, size=1):
     assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)

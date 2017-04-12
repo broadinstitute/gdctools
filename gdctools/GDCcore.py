@@ -37,7 +37,7 @@ import re
 import sys
 import inspect
 import requests
-import __builtin__
+import builtins
 from pkg_resources import get_distribution, DistributionNotFound
 
 __interactive__ = os.isatty(sys.stdout.fileno())
@@ -89,8 +89,7 @@ class attrdict(dict):
         return self.__getitem__(item)
 
     def __setattr__(self, item, value):
-        if self.__dict__.has_key(item):
+        if item in self.__dict__:
             dict.__setattr__(self, item, value)
         else:
             self.__setitem__(item, value)
-

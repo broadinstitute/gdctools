@@ -14,7 +14,7 @@ def process(file_dict, infile, outdir, fpkm=False):
 
     hdr1, hdr2 = generate_headers(infile, _tcga_id, fpkm)
 
-    rawfile = open(infile, 'rb')
+    rawfile = open(infile, 'r')
     csvfile = csv.reader(fpkm_reader(rawfile) if fpkm else rawfile,
                          dialect='excel-tab')
 
@@ -54,6 +54,6 @@ def change_header__generator(csvfile, header1, header2=None):
     if header2:
         yield header2
 
-    csvfile.next()
+    next(csvfile)
     for row in csvfile:
         yield row

@@ -2,9 +2,10 @@ import csv
 import logging
 import gzip
 import os
+import sys
 
 from .. import meta
-from ..common import safeMakeDirs
+from ..common import safeMakeDirs, safe_open
 
 _TUMOR_SAMPLE_COLNAME_LC    = 'Tumor_Sample_Barcode'
 _TUMOR_SAMPLE_COLNAME_UC    = 'TUMOR_SAMPLE_ID'
@@ -27,7 +28,7 @@ def process(file_dict, mafFile, outdir, is_compressed=True):
     if is_compressed:
         tmpMAF = file_dict['file_id'] + ".maf.txt"
         tmpMAF = os.path.join(outdir, tmpMAF)
-        with open(tmpMAF, 'w') as mafout, gzip.open(mafFile) as cmaf:
+        with safe_open(tmpMAF, 'w') as mafout, gzip.open(mafFile, 'rt') as cmaf:
             mafout.write(cmaf.read())
         mafFile = tmpMAF
     tumor_samples = meta.samples(file_dict, tumor_only=True)
@@ -44,10 +45,9 @@ def process(file_dict, mafFile, outdir, is_compressed=True):
         sample_maf_filename = ".".join([sample_id, maf_uuid, "maf.txt"])
         logging.info("Writing sample MAF: " + sample_maf_filename)
         sample_maf_filename = os.path.join(outdir, sample_maf_filename)
-        with open(sample_maf_filename, 'w') as smf:
+        with safe_open(sample_maf_filename, 'w') as smf:
             outwriter = csv.writer(smf, delimiter='\t')
             outwriter.writerows(tcgaSampleIdToMafLinesMap[sample_id])
-
 
 
 #===============================================================================
@@ -125,11 +125,11 @@ def map_sample_ids_to_MAF_lines(mafFilename, sample_ids):
     # Open MAF file for reading
     mafFile   = open(mafFilename)
     mafReader = csv.reader(mafFile,dialect='excel-tab')
-    header    = mafReader.next()
+    header    = next(mafReader)
 
     # Ignore leading comments (i.e. #version 2.2) in MAF file
     while header[0].startswith('#'):
-        header = mafReader.next()
+        header = next(mafReader)
 
     ### TODO: reintroduce column removal later...
     # # Determine indices of unwanted columns for removal

@@ -18,14 +18,14 @@ from __future__ import print_function
 import subprocess
 import logging
 import os
-import csv
 from pkg_resources import resource_filename
+from glob import iglob
 
-from lib.heatmap import draw_heatmaps
-from lib.meta import extract_case_data
-from lib.common import silent_rm
+from gdctools.lib.heatmap import draw_heatmaps
+from gdctools.lib.meta import extract_case_data
+from gdctools.lib.common import silent_rm
 
-from GDCtool import GDCtool
+from gdctools.GDCtool import GDCtool
 
 class gdc_report(GDCtool):
 
@@ -69,9 +69,11 @@ class gdc_report(GDCtool):
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
             self.write_aggregate_definitions()
-            
-        logging.info("Combining all sample counts into one file ...")
-        self.write_combined_counts(diced_prog_root, datestamp)
+
+        logging.info("Linking combined sample counts ...")
+        all_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
+        link_metadata_file(os.path.join(diced_prog_root, 'metadata'),
+                           self.config.reports.dir, all_counts_file)
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
@@ -91,65 +93,11 @@ class gdc_report(GDCtool):
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
         try:
             p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            for line in iter(p.stdout.readline, ''):
+            for line in p.stdout:
                 logging.info(line.rstrip())
+                p.stdout.flush()
         except:
             logging.exception("Sample report generation FAILED:")
-
-    def write_combined_counts(self, diced_prog_root, datestamp):
-        '''Create a program-wide counts file combining all cohorts, including aggregates'''
-        # FIXME: TCGA hardcoded here
-        aggregate_cohorts = self.config.aggregates.keys()
-        aggregate_cohorts = [ag.replace('TCGA-', '') for ag in aggregate_cohorts]
-        agg_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
-        agg_counts_file = os.path.join(self.config.reports.dir, agg_counts_file)
-
-        agg_annots = set()
-        agg_counts = dict()
-        agg_totals = dict()
-        # NOTE: There is a lot of similarity between this inspection and
-        # inspect_data in create_loadfile
-        for cf in _counts_files(diced_prog_root, datestamp):
-            # Filename is <project>
-            cf_base = os.path.basename(cf)
-            cohort = cf_base.split('.')[0].replace('TCGA-', '')
-            with open(cf, 'r') as cfp:
-                d_reader = csv.DictReader(cfp, delimiter='\t')
-                annots = list(d_reader.fieldnames)
-                annots.remove('Sample Type')
-                agg_annots.update(annots)
-
-                for row in d_reader:
-                    sample_type = row['Sample Type']
-                    cohort_type = cohort
-
-                    if sample_type != 'Totals':
-                        cohort_type += '-' + sample_type
-                    agg_counts[cohort_type] = dict()
-                    for a in annots:
-                        count = int(row[a])
-                        agg_counts[cohort_type][a] = count
-                        # Update totals, but only for base cohorts, not aggregates
-                        if row['Sample Type'] == 'Totals' and cohort not in aggregate_cohorts:
-                            agg_totals[a] = agg_totals.get(a,0) + count
-
-        # Now write the resulting aggregate counts file
-        agg_annots = sorted(agg_annots)
-        with open(agg_counts_file, 'w') as f:
-            header = 'Cohort\t' + '\t'.join(agg_annots) + '\n'
-            f.write(header)
-            # Write row of counts for each annot
-            for cohort in sorted(agg_counts):
-                row = [cohort] + [str(agg_counts[cohort].get(a, 0)) for a in agg_annots]
-                row = '\t'.join(row) + '\n'
-                f.write(row)
-
-            # Write totals
-            tot_row = ['Totals'] + [str(agg_totals.get(a, 0)) for a in agg_annots]
-            tot_row = '\t'.join(tot_row) + '\n'
-            f.write(tot_row)
-
-        return agg_counts_file
 
     def write_aggregate_definitions(self):
         '''Creates an aggregates.txt file in the reports directory. aggregates
@@ -162,38 +110,14 @@ class gdc_report(GDCtool):
             for agg in sorted(aggregates.keys()):
                 f.write(agg + '\t' + aggregates[agg] + '\n')
 
-def _counts_files(diced_prog_root, datestamp):
-    '''Generate the counts files for each project in a program'''
-    # 'dirs' will be the diced project names
-    root, dirs, _ = os.walk(diced_prog_root).next()
-
-    for project in dirs:
-        meta_dir = os.path.join(root, project, 'metadata')
-
-        # Find the appropriate datestamp to use for the latest counts.
-        # The correct file is the one with the latest datestamp that is
-        # earlier than the given datestamp
-        meta_dirs = [d for d in os.listdir(meta_dir) if d <= datestamp]
-
-        # If no such meta_dir exists, then there was no data for this project
-        # as of the provided date
-        if len(meta_dirs) > 0:
-            latest_tstamp = sorted(meta_dirs)[-1]
-            count_f = '.'.join([project, latest_tstamp, 'sample_counts','tsv'])
-            count_f = os.path.join(meta_dir, latest_tstamp, count_f)
-
-            # Final sanity check, file must exist
-            if os.path.isfile(count_f):
-                yield count_f
-
 def get_diced_metadata(diced_prog_root, report_dir, datestamp):
     '''
     Create heatmaps and symlinks to dicing metadata in
     <reports_dir>/report_<datestamp>.
     '''
-    root, dirs, _ = os.walk(diced_prog_root).next()
-    for project in dirs:
-        meta_dir = os.path.join(root, project, 'metadata', datestamp)
+    for meta_dir in iglob(os.path.join(diced_prog_root, '*', 'metadata',
+                                       datestamp)):
+        project = meta_dir.split(os.path.sep)[-3]
 
         #Link project-level sample counts
         samp_counts = '.'.join([project, datestamp, 'sample_counts', 'tsv'])
@@ -202,7 +126,7 @@ def get_diced_metadata(diced_prog_root, report_dir, datestamp):
         # Link the diced metadata TSV
         diced_meta = '.'.join([project, datestamp, 'diced_metadata', 'tsv'])
         link_metadata_file(meta_dir, report_dir, diced_meta)
-        
+
         # Create high and low res heatmaps in the report dir
         logging.info("Generating heatmaps for " + project)
         case_data = extract_case_data(os.path.join(meta_dir, diced_meta))

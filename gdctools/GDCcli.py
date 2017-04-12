@@ -16,7 +16,7 @@ SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 import sys
 import argparse
-from GDCcore import *
+from gdctools.GDCcore import *
 
 # Stop Python from complaining when I/O pipes are closed
 from signal import signal, SIGPIPE, SIG_DFL
@@ -39,13 +39,14 @@ class GDCcli(argparse.ArgumentParser):
             descrip += 'GDAC, as part of the The Cancer Genome Atlast.\n'
 
         version = version + " (GDCtools: " + GDCT_VERSION + ")"
-        super(GDCcli,self).__init__(description=descrip,
+        self.version = version
+        super(GDCcli, self).__init__(description=descrip,
                 formatter_class=argparse.RawDescriptionHelpFormatter)
 
         # Note that args with nargs=+ will be instantiated as lists
         self.add_argument('--verbose', dest='verbose', action='count', help=\
                 'Each time specified, increment verbosity level [%(default)s]')
-        self.add_argument('--version',action='version',version=self.version)
+        self.add_argument('--version',action='version', version=version)
         self.add_argument('-c','--config', nargs='+', type=argparse.FileType('r'),
                             help='One or more configuration files')
 
@@ -60,7 +61,6 @@ class GDCcli(argparse.ArgumentParser):
         self.add_argument('datestamp', nargs='?', help='Use GDC data for a'
                           ' specific date. If omitted, the latest available'
                           ' data will be used.')
-        self.version = version
 
     def parse_args(self):
         return super(GDCcli,self).parse_args()
