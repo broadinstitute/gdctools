@@ -38,6 +38,7 @@ import sys
 import inspect
 import requests
 import builtins
+import logging
 from pkg_resources import get_distribution, DistributionNotFound
 
 __interactive__ = os.isatty(sys.stdout.fileno())
@@ -63,8 +64,11 @@ def gprint(*args, **kwargs):
         print('gdctools: ', file=sys.stdout, end='')
     print(*args, file=sys.stdout, **kwargs)
 
-def gabort(errCode=1, *args, **kwargs):
+def gabort(errCode, *args, **kwargs):
     gprint(*args, **kwargs)
+    # This purpose of this method is to abort with a short, easily comprehended
+    # message; so, disable logging to stop it from printing exception stacktrace
+    logging.disable(logging.CRITICAL)
     sys.exit(errCode)
 
 class attrdict(dict):

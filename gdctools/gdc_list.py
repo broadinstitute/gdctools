@@ -23,10 +23,8 @@ from gdctools.lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as a
 class gdc_list(GDCtool):
 
     def __init__(self):
-        super(gdc_list, self).__init__(version="0.1.1", logging=False)
-        cli = self.cli
 
-        cli.description = 'List metadata available from toplevel endpoints:\n\n'\
+        description = 'List metadata available from toplevel endpoints:\n\n'\
             '\tprojects | cases | files | annotations | submission | programs'\
             '\n\nEndpoints will be converted to lowercase before the API call '\
             '\nis issued to GDC. Note that "submission" and "programs" are\n'\
@@ -37,21 +35,18 @@ class gdc_list(GDCtool):
             'is that "programs" is a subset of "submission," indicating '\
             'which\nsubmissions have actually been exposed for public download.'
 
+        super(gdc_list, self).__init__("0.1.1",description,configureAble=False)
+        cli = self.cli
         cli.add_argument('-e', '--expand', nargs='+',
-                         help='Expand these nested fields')
+            help='Expand these nested fields')
         cli.add_argument('-f', '--fields', nargs='+')
-
         cli.add_argument('-n', '--num-results', default=-1, type=int,
-                         help='return at most this many results')
-
+            help='return at most this many results')
         cli.add_argument('-s', '--page-size', default=500, type=int,
-                         help='Server page size')
-
-        #Optional overrides of config file
+            help='Server page size')
         cli.add_argument('endpoint', help='Which endpoint to query/list')
-
         cli.add_argument('filters', nargs='*', metavar='filter',
-                         help="Search filters as 'key=value' pairs. E.g. project_id=TCGA-UVM")
+            help="Search filters as key=value pairs, e.g. project_id=TCGA-UVM")
 
     def build_params(self):
         '''Construct request parameters from the expand, fields, and filters arguments'''

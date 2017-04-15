@@ -27,13 +27,15 @@ from gdctools.GDCtool import GDCtool
 class gdc_loadfile(GDCtool):
 
     def __init__(self):
-        super(gdc_loadfile, self).__init__(version="0.3.1")
+        description = 'Create a Firehose-style loadfile from diced GDC data'
+        super(gdc_loadfile, self).__init__("0.3.1", description)
         cli = self.cli
-        cli.description = 'Create a Firehose-style loadfile from diced GDC data'
         cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
-                        ' referenced in loadfile [defaults to value of dice_dir]')
-        cli.add_argument('-d', '--dice-dir', help='Dir from which diced data will be read')
-        cli.add_argument('-o', '--load-dir', help='Where generated loadfiles will be placed')
+                ' referenced in loadfile [defaults to value of dice_dir]')
+        cli.add_argument('-d', '--dice-dir',
+                help='Dir from which diced data will be read')
+        cli.add_argument('-o', '--load-dir',
+                help='Where generated loadfiles will be placed')
 
         self.program = None
 

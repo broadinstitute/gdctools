@@ -31,9 +31,7 @@ from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
 from gdctools.lib.convert import copy as gdac_copy
 from gdctools.lib.convert import maf as mutect_maf
-from gdctools.lib import common
-from gdctools.lib import meta
-
+from gdctools.lib import common, meta
 from gdctools.GDCtool import GDCtool
 
 class gdc_dice(GDCtool):
@@ -44,16 +42,13 @@ class gdc_dice(GDCtool):
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
         cli.description = desc
-
-        cli.add_argument('-m', '--mirror-dir',
-                         help='Root folder of mirrored GDC data')
-        cli.add_argument('-d', '--dice-dir',
-                         help='Root of diced data tree')
+        cli.add_argument('-d', '--dice-dir', help='Root of diced data tree')
         cli.add_argument('--dry-run', action='store_true',
-                         help="Show expected operations, but don't perform dicing")
-        fd_help = "Skip detection of already diced files, and redice everything"
-        cli.add_argument('-f', '--force-dice',
-                         action='store_true', help=fd_help)
+               help="Show expected operations, but don't perform dicing")
+        cli.add_argument('-f', '--force', action='store_true',
+                help="Force dicing of all files, even those already diced")
+        cli.add_argument('-m', '--mirror-dir',
+               help='Root folder of mirrored GDC data')
 
     def parse_args(self):
         '''Parse CLI args, potentially overriding config file settings'''
@@ -65,7 +60,7 @@ class gdc_dice(GDCtool):
         if opts.programs: config.programs = opts.programs
         if opts.projects: config.projects = opts.projects
         if opts.cases:    config.cases = opts.cases
-        self.force_dice = opts.force_dice
+        self.force = opts.force
 
         # # If undefined, discover which GDC program(s) data to dice
         if not config.programs:
@@ -182,14 +177,14 @@ class gdc_dice(GDCtool):
                             dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
-                                     force=self.force_dice)
+                                     force=self.force)
 
                     #Then dice the multi_sample_files
                     for file_d in multi_sample_files:
                         dice_one(file_d, trans_dict, raw_project_root,
                                  diced_project_root, mfw,
                                  dry_run=self.options.dry_run,
-                                 force=self.force_dice)
+                                 force=self.force)
 
                 # Bookkeeping code -- write some useful tables
                 # and figures needed for downstream sample reports.
@@ -399,7 +394,7 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
             expected_paths = [os.path.abspath(p) for p in expected_paths]
 
             if not dry_run:
-                # Dice if force_dice is enabled or not all expected files exist
+                # Dice if force is enabled or not all expected files exist
                 already_diced = all(os.path.isfile(p) for p in expected_paths)
                 if force or not already_diced:
                     logging.info("Dicing file " + mirror_path)
