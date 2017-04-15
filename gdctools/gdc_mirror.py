@@ -29,24 +29,20 @@ import gdctools.lib.common as common
 class gdc_mirror(GDCtool):
 
     def __init__(self):
-        super(gdc_mirror, self).__init__(version="0.9.1")
+
+        description = 'Create local mirror of the data from arbitrary '\
+                'programs and projects warehoused\nat the Genomic Data Commons'\
+                ' (GDC). Note that --date has no effect here.'
+        super(gdc_mirror, self).__init__("0.9.1", description)
         cli = self.cli
-        cli.description = 'Create local mirror of the data from arbitrary '\
-                        'programs and projects\nwarehoused at the Genomic Data'\
-                        ' Commons (GDC)\n'
         cli.add_argument('-m', '--mirror-dir',
-                        help='Root of mirrored data folder tree')
-        cli.add_argument('-d', '--data-categories',nargs='+',metavar='category',
-                        help='Mirror only these data categories. Many data '+
-                        'categories have spaces, use quotes to delimit')
-        cli.add_argument('-L', '--LEGACY', default=False, action='store_true',
-                        help='Retrieve legacy data (e.g. TCGA HG19), '\
-                        'instead of data harmonized at the GDC (the default)')
-        cli.add_argument('-w', '--workflow-type',
-                        help='Mirror only data of thisworkflow type')
+                help='Root of mirrored data folder tree')
+        cli.add_argument('-l', '--legacy', default=False, action='store_true',
+                help='Retrieve legacy data (e.g. TCGA HG19), instead of '
+                'data harmonized at the GDC (the default)')
         cli.add_argument('-f', '--force-download', action='store_true',
-                        help='Download files even if already mirrored locally.'+
-                             ' (DO NOT use during incremental mirroring)')
+                help='Download files even if already mirrored locally.'+
+                ' (DO NOT use during incremental mirroring)')
 
         # detect if we have curl installed
         self.has_cURL = api.curl_exists()
@@ -57,12 +53,12 @@ class gdc_mirror(GDCtool):
         config = self.config.mirror
         if opts.mirror_dir: config.dir = opts.mirror_dir
         if opts.log_dir: config.log_dir = opts.log_dir
-        if opts.data_categories:
-            config.data_categories = opts.data_categories
-        config.data_categories = self.get_config_values_as_list(config.data_categories)
+        if opts.categories:
+            config.categories = opts.categories
+        config.categories = self.get_config_values_as_list(config.categories)
 
         self.force_download = opts.force_download
-        self.workflow_type = opts.workflow_type
+        self.workflow = opts.workflow
 
         if config.legacy:
             # Legacy mode has been requested in config file, coerce to boolean
@@ -70,8 +66,8 @@ class gdc_mirror(GDCtool):
             config.legacy = (value in ["1", "true", "on", "yes"])
 
         # Allow command line flag to override config file
-        if opts.LEGACY:
-            config.legacy = opts.LEGACY
+        if opts.legacy:
+            config.legacy = opts.legacy
 
         # Legacy mode has several effects:
         #   1) Ensures that api requests are routed to the GDC legacy API
@@ -110,7 +106,7 @@ class gdc_mirror(GDCtool):
         # other tools do not need to be this stringent, because they can
         # infer programs/projects/cases from mirror or derivatives of it
         if not (programs or projects):
-            gabort(0, "Cannot determine programs or projects from config "+
+            gabort(1, "Cannot determine programs or projects from config "+
                       "file or command line flags")
 
         # Everything has validated, so let's get mirroring started
@@ -208,14 +204,14 @@ class gdc_mirror(GDCtool):
         config = self.config.mirror
         logging.info("Mirroring started for {0} ({1})".format(project, program))
 
-        data_categories = config.data_categories
-        if not data_categories:
-            logging.info("No data_categories specified, using GDC API to " + \
+        categories = config.categories
+        if not categories:
+            logging.info("No categories specified, using GDC API to " + \
                          "discover ALL available categories")
-            data_categories = api.get_data_categories(project)
+            categories = api.get_categories(project)
 
         logging.info("Using %d data categories: %s" % \
-                     (len(data_categories), ",".join(data_categories)))
+                     (len(categories), ",".join(categories)))
         proj_dir = os.path.join(config.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
@@ -228,9 +224,9 @@ class gdc_mirror(GDCtool):
 
         # Mirror each category separately, recording metadata (file dicts)
         file_metadata = []
-        for cat in sorted(data_categories):
+        for cat in sorted(categories):
             cat_data = self.mirror_category(program, project, cat,
-                                            self.workflow_type,
+                                            self.workflow,
                                             prev_metadata)
             file_metadata.extend(cat_data)
 
@@ -248,7 +244,7 @@ class gdc_mirror(GDCtool):
             json.dump(file_metadata, jf, indent=2)
 
     def mirror_category(self, program, project, category,
-                        workflow_type, prev_metadata):
+                        workflow, prev_metadata):
         '''Mirror one category of data in a particular project.
         Return the mirrored file metadata.
         '''
@@ -265,7 +261,7 @@ class gdc_mirror(GDCtool):
         # otherwise all files from the category will be
         cases = self.config.cases
         file_metadata = api.get_project_files(project, category,
-                                              workflow_type, cases=cases)
+                                              workflow, cases=cases)
 
         # Filter out extraneous cases from multi-case (e.g. MAF) file metadata
         # if cases have been specified

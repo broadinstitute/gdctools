@@ -161,7 +161,7 @@ def get_project_from_cases(cases, program=None):
     projects = [p['project']['project_id'] for p in query.get()]
     return sorted(set(projects))
 
-def get_data_categories(project):
+def get_categories(project):
     query = GDCQuery('projects')
     query.add_eq_filter('project_id', project)
     query.add_fields('summary.data_categories.data_category')

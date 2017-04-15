@@ -21,22 +21,63 @@ import configparser
 import time
 import logging
 from pkg_resources import resource_filename
-
 from gdctools.GDCcli import GDCcli
 from gdctools.GDCcore import *
 from gdctools.lib import common
 from gdctools.lib import api
+from signal import signal, SIGPIPE, SIG_DFL
+import argparse
+
+# Stop Python from complaining when I/O pipes are closed
+signal(SIGPIPE, SIG_DFL)
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version="", logging=True):
-        self.cli = GDCcli(version=version)
-        self.perform_logging = logging
-        # Derived classes can/should add custom options/description/version &
-        # behavior in their respective __init__()/execute() implementations
+    def __init__(self, version="", description=None, configureAble=True):
+        self.configureAble = configureAble
+        self.version = version + " (GDCtools: " + GDCT_VERSION + ")"
+        self.cli = argparse.ArgumentParser(version=self.version,
+                    description=description,
+                    formatter_class=argparse.RawDescriptionHelpFormatter)
+
+        # If caller supports use of config file, add corresponding CLI args
+        if configureAble:
+            self.addConfigurableArgs()
+
+        self.cli.add_argument('-V', '--verbose', dest='verbose',
+                action='count', help=\
+                'Each time specified, increment verbosity level [%(default)s]')
+        # Derived classes should add custom options & behavior in their
+        # respective __init__()/execute() implementations
+
+    def addConfigurableArgs(self):
+        # Note that args with nargs=+ will be instantiated as lists
+        cli = self.cli
+        cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
+                            help='One or more configuration files')
+        cli.add_argument('--date', nargs='?', dest='datestamp',
+                    help='Use data from a given dated mirror (snapshot) of '
+                    'GDC data, specified in YYYY_MM_DD form.  If omitted, '
+                    'the latest downloaded snapshot will be used.')
+        cli.add_argument('--cases', nargs='+', metavar='case_id',
+                    help='Process data only from these GDC cases')
+        cli.add_argument('--categories',nargs='+',metavar='category',
+                help='Mirror data only from these GDC data categories. '
+                'Note that many category names contain spaces, so use '
+                'quotes to delimit (e.g. \'Copy Number Variation\')')
+        cli.add_argument('-L', '--log-dir',
+                    help='Directory where logfiles will be written')
+        cli.add_argument('--programs', nargs='+', metavar='program',
+                    help='Process data only from these GDC programs')
+        cli.add_argument('--projects', nargs='+', metavar='project',
+                    help='Process data only from these GDC projects')
+        cli.add_argument('--workflow',
+                help='Process data only from this GDC workflow type')
 
     def execute(self):
         self.options = self.cli.parse_args()
+        if not self.configureAble:
+            return
         self.parse_config()
         self.reconcile_config()
 
@@ -86,8 +127,8 @@ class GDCtool(object):
             self.options.config = [open(cfg_default,"r")]
 
         cfgparser = configparser.SafeConfigParser()
-        # Since we use argparse to ensure filenames, but config parser expects
-        # filenames, convert them here
+        # The argparse module turns CLI config file args into file handles,
+        # but config parser expects file names, so convert them here
         cfgparser.read([f.name for f in self.options.config])
         config = self.config
 
@@ -142,6 +183,8 @@ class GDCtool(object):
         if opts.programs: config.programs = opts.programs
         if opts.projects: config.projects = opts.projects
         if opts.cases: config.cases = opts.cases
+        if opts.log_dir : config.log_dir = opts.log_dir
+        if opts.workflow : config.workflow = opts.workflow
 
         # If a list of individual cases has been specified then it completely
         # defines the projects & programs to be queried, and takes precedence
@@ -181,24 +224,27 @@ class GDCtool(object):
                 return sorted(raw.split('\n'))
 
     def init_logging(self):
-        if not self.perform_logging:
+
+        if not self.config:
             return
 
-        datestamp = self.datestamp
         log_dir = self.config.log_dir
-        if not log_dir:
-            log_dir = "."
-
+        datestamp = self.datestamp
         tool_name = self.__class__.__name__
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
         log_formatter = logging.Formatter('%(asctime)s[%(levelname)s]: %(message)s')
 
         # Write logging data to file
-        if log_dir is not None and datestamp is not None:
+        if log_dir and datestamp is not None:
             log_dir = os.path.join(log_dir, tool_name)
             if not os.path.isdir(log_dir):
-                os.makedirs(log_dir)
+                try:
+                    os.makedirs(log_dir)
+                except:
+                    logging.info(" could not create logging dir: " + log_dir)
+                    return
+
             logfile = os.path.join(log_dir, ".".join([tool_name, datestamp, "log"]))
             logfile = common.increment_file(logfile)
 
