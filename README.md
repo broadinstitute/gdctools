@@ -15,7 +15,7 @@ This should take only a minute or two, and may install [requests](http://docs.py
 ```
 or just one category of data for that patient
 ```
-    gdc_mirror --cases TCGA-EE-A3J8 --data-categories Copy_Number_Variation
+    gdc_mirror --cases TCGA-EE-A3J8 --categories "Copy Number Variation"
 ```
 or perform other operations such as seeing which NIH/NCI programs have exposed data for download
 ```
