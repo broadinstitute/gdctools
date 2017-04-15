@@ -1,12 +1,12 @@
 
 include ../Makefile.inc
 
-PYTHON := set -o pipefail && $(PYTHON)
 SRC=../gdctools
+PYTHON := set -o pipefail && env PYTHONPATH=.. $(PYTHON)
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
-PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV -- latest
+PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
@@ -30,8 +30,7 @@ help:
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
-
-test: test_smoke test_dice test_loadfile test_report test_legacy echo_success
+test: test_smoke test_dice test_loadfile test_legacy test_report echo_success
 test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
@@ -94,20 +93,26 @@ test_loadfile:
 	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/load-md5sums.txt
 	diff -b baselines/load-md5sums.txt $(TEST_ROOT)/.
 
+Rscript=$(shell type -P Rscript 2>/dev/null)
 test_report:
 	@echo
-	@echo "Test sample report generation ..."
-	@$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating
-	$(ABORT_ON_ERROR) $@.log
-	cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | $(SORT) > $(TEST_ROOT)/report-files.txt
-	diff -b baselines/report-files.txt $(TEST_ROOT)/.
+	@if [ -z "$(Rscript)" ] ; then \
+		echo "R / Rscript not installed on your system, skipping test_report" ;\
+	else \
+		echo "Test sample report generation ..." ; \
+		$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating ; \
+		$(ABORT_ON_ERROR) $@.log ; \
+		(cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | \
+									$(SORT) > $(TEST_ROOT)/report-files.txt) ; \
+		diff -b baselines/report-files.txt $(TEST_ROOT)/. ; \
+	fi
 
 test_cases:
 	@echo
 	@echo "Test fine-grained retrieval of 1 case (and 1 data category)"
 	@$(PYTHON) $(SRC)/gdc_mirror.py --config onlycases.cfg \
 					--cases TCGA-EE-A3J8 \
-					--data-categories Biospecimen 2>&1 | tee $@.log | \
+					--categories Biospecimen 2>&1 | tee $@.log | \
 					egrep "GDC|Mirroring data|Mirroring start"
 	$(ABORT_ON_ERROR) $@.log
 	@cd onlycases/mirror/TCGA && find TCGA-* \
