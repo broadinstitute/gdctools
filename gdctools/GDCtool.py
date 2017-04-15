@@ -21,7 +21,6 @@ import configparser
 import time
 import logging
 from pkg_resources import resource_filename
-from gdctools.GDCcli import GDCcli
 from gdctools.GDCcore import *
 from gdctools.lib import common
 from gdctools.lib import api

@@ -36,7 +36,7 @@ test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_c
 test_invoke:
 	@echo
 	@echo Test runnability: invoke some tools to show nothing thrown to stderr
-	@$(PYTHON) $(SRC)/GDCcli.py >/dev/null
+	@$(PYTHON) $(SRC)/GDCcore.py >/dev/null
 	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
 	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
 
