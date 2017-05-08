@@ -226,8 +226,8 @@ class gdc_loadfile(GDCtool):
 
         # ... then the rows (samples) for each cohort (project) in cohorts list
         for samples_in_this_cohort in cohorts:
-            write_samples(samples_lfp, filtered_lfp,
-                          headers, samples_in_this_cohort)
+            write_samples(samples_lfp, filtered_lfp, headers,
+                        samples_in_this_cohort, self.config.missing_file_value)
 
         # Second: now the sample set loadfile, derived from the samples loadfile
         sset_loadfile = projname + ".Sample_Set.loadfile.txt"
@@ -441,7 +441,7 @@ def choose_file(files):
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored
 
-def write_samples(samples_fp, filtered_fp, headers, samples):
+def write_samples(samples_fp, filtered_fp, headers, samples, missing_file_value):
     '''Loop over sample ids, filling in annotation columns for each'''
     for sample_id in sorted(samples):
         sample = samples[sample_id]
@@ -455,8 +455,11 @@ def write_samples(samples_fp, filtered_fp, headers, samples):
         filtered_rows = []
         for annot in headers[4:]:
             files = sample.get(annot, None)
+            # The missing_file_value is anlogous to NA values as used in R,
+            # a placeholder so that a given cell in the table is not empty
+            # This value can be configured in the [DEFAULT] config section
             if files is None:
-                annot_columns.append("__DELETE__")
+                annot_columns.append(missing_file_value)
             else:
                 # If >1 file is a candidate for this annotation (column),
                 # pick the most appropriate and record the remainder of

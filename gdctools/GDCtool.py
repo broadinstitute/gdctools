@@ -150,6 +150,9 @@ class GDCtool(object):
         if not config.datestamps:
             config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
 
+        if not config.missing_file_value:
+            config.missing_file_value = "__DELETE__"
+
         # Ensure programs,projects,cases,data_categories config state are lists
         config.programs = self.get_config_values_as_list(config.programs)
         config.projects = self.get_config_values_as_list(config.projects)
