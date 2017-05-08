@@ -1,8 +1,11 @@
 
 include ../Makefile.inc
 
+# -------------------------- Variable definitions --------------------------
+
 SRC=../gdctools
 PYTHON := set -o pipefail && env PYTHONPATH=.. $(PYTHON)
+SORT=env LC_COLLATE=C sort
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
 CONFIG_FLAG=--config $(CONFIG_FILE)
@@ -10,13 +13,24 @@ PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
-FIND_LOAD_FILES=cd $(TEST_ROOT)/loadfiles/TCGA/latest && find . -name 'TCGA-*.txt'
 FIND_LEGACY_FILES=cd legacy/mirror/TCGA && find TCGA-* -name '*.*' -a ! -name '*.json'
 PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
 PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
 PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
-SORT=env LC_COLLATE=C sort
+
+ifeq ($(LOADFILE_TYPE),google)
+   # We generate Google-bucketized loadfiles with an additional config file
+   CONFIG_FLAG := --config $(CONFIG_FILE) ../config/google.cfg
+   LOADFILE_SUBDIR=google/
+   LOADFILE_MD5=load-md5sums-google.txt
+else
+   LOADFILE_SUBDIR=
+   LOADFILE_MD5=load-md5sums.txt
+endif
+FIND_LOAD_FILES=cd $(TEST_ROOT)/loadfiles/$(LOADFILE_SUBDIR)TCGA/latest && find . -name 'TCGA-*.txt'
+
+# --------------------------- Target definitions ---------------------------
 
 help:
 	@echo
@@ -30,7 +44,7 @@ help:
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
-test: test_smoke test_dice test_loadfile test_legacy test_report echo_success
+test: test_smoke test_dice test_loadfiles test_legacy test_report echo_success
 test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_cases
 
 test_invoke:
@@ -83,15 +97,20 @@ test_dice:
 	$(FIND_DICE_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/dice-md5sums.txt
 	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
+test_loadfiles:
+	$(EMAKE) test_loadfile
+	@echo
+	$(EMAKE) test_loadfile LOADFILE_TYPE=google
+
 test_loadfile:
 	@echo
-	@echo "Test loadfile generation ..."
+	@echo "Test $(LOADFILE_TYPE) loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
 	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
-	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/load-md5sums.txt
-	diff -b baselines/load-md5sums.txt $(TEST_ROOT)/.
+	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/$(LOADFILE_MD5)
+	diff -b baselines/$(LOADFILE_MD5) $(TEST_ROOT)/.
 
 Rscript=$(shell type -P Rscript 2>/dev/null)
 test_report:
