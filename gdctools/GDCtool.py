@@ -75,6 +75,7 @@ class GDCtool(object):
 
     def execute(self):
         self.options = self.cli.parse_args()
+        api.set_verbosity(self.options.verbose)
         if not self.configureAble:
             return
         self.parse_config()
@@ -198,9 +199,6 @@ class GDCtool(object):
             # Simiarly, if projects is specified then the programs corresponding
             # to those projects takes precedence over config & CLI values
             config.programs = api.get_programs(config.projects)
-
-        if opts.verbose:
-            api.set_verbosity(opts.verbose)
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
