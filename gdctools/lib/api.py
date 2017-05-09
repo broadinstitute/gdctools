@@ -52,7 +52,7 @@ class GDCQuery(object):
         self._fields.extend(fields)
         return self
 
-    def expand(self, *fields):
+    def add_expansions(self, *fields):
         self._expand.extend(fields)
         return self
 
@@ -206,7 +206,7 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
     if data_category == "Clinical":
         query.add_eq_filter("data_format", "BCR XML")
 
-    query.expand('cases', 'annotations', 'cases.samples')
+    query.add_expansions('cases', 'annotations', 'cases.samples')
     return query.get(page_size=page_size)
 
 def curl_exists():
