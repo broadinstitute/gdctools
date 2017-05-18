@@ -133,6 +133,19 @@ def map_blank_to_na(csvfile):
     for row in csvfile:
         yield map(lambda f: f if f != '' else 'NA', row)
 
+def rearrange_columns(csvfile, col_order):
+    """
+    csvfile : iterable of list
+    col_order : list of int
+        E.g.: col_order = [0, 2, 3, 1] will cause column 1 of the input to be column 3 of the output.
+    """
+    min_expected = max(col_order) + 1
+    for row in csvfile:
+        if len(row) < min_expected:
+            raise ValueError('Unexpected number of columns, expected at least %d but found %d' % (min_expected, len(row)))
+        new_row = [row[i] for i in col_order]
+        yield new_row
+
 def writeCsvFile(filename, data):
     """
     Write a row iterator's data to a csv file.
