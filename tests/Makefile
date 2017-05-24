@@ -45,7 +45,8 @@ help:
 	@echo
 
 test: test_smoke test_dice test_loadfiles test_legacy test_report echo_success
-test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg test_cases
+test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg \
+			test_cases test_choose
 
 test_invoke:
 	@echo
@@ -84,6 +85,11 @@ test_badcfg:
 		echo "Error: returned $$Result status, but should've returned non-zero" ; \
 		false ; \
 	fi
+
+test_choose:
+	@echo
+	@echo Test that replicate filter is choosing the appropriate aliquots
+	@$(PYTHON) testchoose.py
 
 test_dice:
 	@echo
