@@ -418,7 +418,7 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
     elif analyte1 == "H":
         # Prefer H over R and T
-        return 1
+        return -1
     elif analyte1 == "R":
         # Prefer R over T
         return -1 if analyte2 == "T" else 1
@@ -435,8 +435,13 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
 
 def choose_file(files):
-    # Remove path from filenames, to promote robustness in comparator
+    # The files param is a list, but we first remove the path from each file to
+    # promote robustness in comparator (only sample ID value should be compared)
     files = [os.path.basename(f) for f in files]
+    # Example files value, drawn from TCGA-LUAD CNV__snp6 data:
+    #  ['TCGA-44-2668-01A-01D-1549-01.6a5b9b87-ff2c-4596-b399-5a80299e50f8.txt',
+    #   'TCGA-44-2668-01A-01D-A273-01.ed7bdfbc-a87a-4772-b38a-de9ed547d6db.txt',
+    #   'TCGA-44-2668-01A-01D-0944-01.06a3821c-ce0c-405a-ad7e-61cb960651d9.txt']
     preferred_order = sorted(files, key=cmp_to_key(diced_file_comparator))
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored
