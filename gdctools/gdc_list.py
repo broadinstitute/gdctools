@@ -5,98 +5,142 @@
 '''
 Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
 
-gdc_list: List data available in the GDC
+gdc_list: List/query operational features of GDCtools, EITHER from a
+          a local instance or the remote GDC server.
 
-@author: Timothy DeFreitas, Michael S. Noble
-@date:  2016_10_19
+@author: Michael S. Noble, Timothy DeFreitas
+@date:  2017_05_08
 '''
-
-# }}}
 
 from __future__ import print_function
 import json
+import types
 from collections import defaultdict
-
 from gdctools.GDCtool import GDCtool
+from gdctools.GDCcore import *
 from gdctools.lib.api import GDCQuery, _eq_filter as eq_filter, _and_filter as and_filter
+
+# }}}
+
+features = defaultdict(lambda:None)
+
+def features_identify():
+    for name,sym in globals().items():
+        if name.startswith("feature_") and isinstance(sym, types.FunctionType):
+            features[name[8:]] = sym
+
+def feature_what(args):
+    ''' Display entire set of GDCtools features that may be queried'''
+    for name in sorted(features.keys()):
+        print("%-12s %s" % (name, features[name].func_doc))
+
+def feature_submitted(args):
+    ' List the names of programs which have submitted data to the GDC.\n'\
+    '\t      The difference between this and \'programs\' is that the latter\n'\
+    '\t      is a subset of \'submitted,\' indicating which submissions have\n'\
+    '\t      been processed by GDC and exposed for public download.'
+    call_gdc_api("submission", args)
+
+def feature_annotations(args):
+    ''' List annotations attached to patient cases at the GDC'''
+    call_gdc_api("annotations", args)
+
+def feature_cases(args):
+    ''' List the patient cases across all projects/programs at the GDC'''
+    def walk(results_list):
+        print("feature_cases: length(results) = %d" % len(results_list))
+        print("Submitter_Case_ID\tDisease_Type\tSubmitter_Sample_ID\tGDC_Sample_ID")
+        for case in sorted(results_list, key=lambda case: case["disease_type"]):
+            case = attrdict(case)
+            if not case.sample_ids:
+                case.sample_ids = case.submitter_sample_ids = [None]
+            for i in xrange(len(case.sample_ids)):
+                print("%s\t%s\t%s\t%s" % ( case.submitter_id, case.disease_type,
+                            case.submitter_sample_ids[i], case.sample_ids[i]))
+    call_gdc_api("cases", args, walk)
+
+def feature_files(args):
+    ''' List the files in all projects/programs at the GDC'''
+    call_gdc_api("files", args)
+
+def feature_projects(args):
+    ''' Give name/disease/site (in TSV form) of projects stored at GDC'''
+
+    def walk(results_list):
+        print("Project_ID\tDisease\tPrimary_Site")
+        for p in sorted(results_list, key=lambda proj: proj["project_id"]):
+            p = attrdict(p)
+            print("%s\t%s\t%s" % (p.project_id, p.name, p.primary_site[0]))
+
+    call_gdc_api("projects", args, walk)
+
+def feature_programs(args):
+    ''' List the names of all programs (data sets) warehoused at the GDC'''
+    call_gdc_api("programs", args)
+
+def call_gdc_api(feature, args, callback=None):
+    ''' Issue GDC API call, first parsing filters/fields/expand args from CLI'''
+
+    query = GDCQuery(feature)
+
+    # Ask that result set be pruned, by applying KEY=VALUE filters
+    for filt in args.filters:
+        key, value = filt.split("=")
+        query.add_eq_filter(key, value)
+
+    # Additional fields to include in each item of result set
+    #if args.fields:
+    #    query.add_fields(*(tuple(args.fields)))
+
+    # See GDC docs for meaning of expand
+    #if args.expand:
+    #    query.add_expansions(*(tuple(args.expand)))
+
+    results = query.get()
+    if not callback or args.raw:
+        print(json.dumps(results, indent=2))
+    else:
+        callback(results)
 
 class gdc_list(GDCtool):
 
     def __init__(self):
-        super(gdc_list, self).__init__(version="0.1.1", logging=False)
+
+        description = 'List/query operational features of GDCtools, EITHER '\
+            'from a local instance\n(e.g. what projects or files have been '\
+            'mirrored or diced?) OR from\nmetadata available at toplevel '\
+            'GDC endpoints.'
+
+        super(gdc_list, self).__init__("0.1.1",description,configureAble=False)
         cli = self.cli
-
-        cli.description = 'List metadata available from toplevel endpoints:\n\n'\
-            '\tprojects | cases | files | annotations | submission | programs'\
-            '\n\nEndpoints will be converted to lowercase before the API call '\
-            '\nis issued to GDC. Note that "submission" and "programs" are\n'\
-            'related, but only "submission" is an actual GDC endpoint. The\n'\
-            'Broad Institute has requested that a "programs" endpoint be\n'\
-            'added, but at present it is only implemented as a convenience\n'\
-            'function in the GDCtools package.  The difference between them\n'\
-            'is that "programs" is a subset of "submission," indicating '\
-            'which\nsubmissions have actually been exposed for public download.'
-
-        cli.add_argument('-e', '--expand', nargs='+',
-                         help='Expand these nested fields')
-        cli.add_argument('-f', '--fields', nargs='+')
-
+        #cli.add_argument('-e', '--expand', nargs='+',
+        #    help='Expand these nested fields')
+        #cli.add_argument('-f', '--fields', nargs='+')
         cli.add_argument('-n', '--num-results', default=-1, type=int,
-                         help='return at most this many results')
-
+            help='return at most this many results')
+        cli.add_argument('-r', '--raw', action='store_true',
+            help='Some features process the payload returned by the GDC API '\
+                 'to simplify interpretion; this flag turns that off, '\
+                 'permitting direct inspection of the raw payload')
         cli.add_argument('-s', '--page-size', default=500, type=int,
-                         help='Server page size')
-
-        #Optional overrides of config file
-        cli.add_argument('endpoint', help='Which endpoint to query/list')
-
+            help='Server page size')
+        cli.add_argument('feature',
+            help='Which feature to query/list (case insensitive). The special '\
+                 'feature of \'what\' may be given here, to display the names '\
+                 'of all features that may be queried')
         cli.add_argument('filters', nargs='*', metavar='filter',
-                         help="Search filters as 'key=value' pairs. E.g. project_id=TCGA-UVM")
+            help="Prune with key=value filters, e.g. program.name=TCGA")
 
-    def build_params(self):
-        '''Construct request parameters from the expand, fields, and filters arguments'''
-        params = defaultdict(lambda:None)
-
-        # Add search filters
-        if len(self.options.filters) > 1:
-            filters = filter_params(self.options.filters)
-            params['filters'] = json.dumps(filters)
-
-        # Add expansions
-        if self.options.expand is not None:
-            params['expand'] = ','.join(self.options.expand)
-
-        if self.options.fields is not None:
-            params['fields'] = ','.join(self.options.fields)
-
-        return params
+        features_identify()
 
     def execute(self):
         super(gdc_list, self).execute()
-        params = self.build_params()
-        query = GDCQuery(self.options.endpoint,
-                         filters=params['filters'],
-                         fields=params['fields'],
-                         expand=params['expand'])
-        print(json.dumps(query.get(), indent=2))
-
-def filter_params(filters):
-    '''Builds a dictionary of filters passed as 'key=value' pairs'''
-    # TODO: make more intelligent expansion of key=value pairs?
-    # E.g. project_id --> cases.samples.project_id for the cases endpoint
-    if filters is None: return dict()
-    eq_filters = []
-
-    #Build individual equals filters
-    for filt in filters:
-        key, value = filt.split("=")
-        eq_filters.append(eq_filter(key, value))
-
-    # If there is only one, return it, otherwise 'and' them together
-    if len(eq_filters) == 1:
-        return eq_filters[0]
-    else:
-        return and_filter(eq_filters)
+        args = self.options
+        feature = features[args.feature]
+        if feature:
+            feature(args)
+        else:
+            gabort(1, "Unsupported feature: " + args.feature)
 
 def main():
     gdc_list().execute()

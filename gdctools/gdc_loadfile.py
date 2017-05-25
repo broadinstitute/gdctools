@@ -27,13 +27,15 @@ from gdctools.GDCtool import GDCtool
 class gdc_loadfile(GDCtool):
 
     def __init__(self):
-        super(gdc_loadfile, self).__init__(version="0.3.1")
+        description = 'Create a Firehose-style loadfile from diced GDC data'
+        super(gdc_loadfile, self).__init__("0.3.1", description)
         cli = self.cli
-        cli.description = 'Create a Firehose-style loadfile from diced GDC data'
         cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
-                        ' referenced in loadfile [defaults to value of dice_dir]')
-        cli.add_argument('-d', '--dice-dir', help='Dir from which diced data will be read')
-        cli.add_argument('-o', '--load-dir', help='Where generated loadfiles will be placed')
+                ' referenced in loadfile [defaults to value of dice_dir]')
+        cli.add_argument('-d', '--dice-dir',
+                help='Dir from which diced data will be read')
+        cli.add_argument('-o', '--load-dir',
+                help='Where generated loadfiles will be placed')
 
         self.program = None
 
@@ -224,8 +226,8 @@ class gdc_loadfile(GDCtool):
 
         # ... then the rows (samples) for each cohort (project) in cohorts list
         for samples_in_this_cohort in cohorts:
-            write_samples(samples_lfp, filtered_lfp,
-                          headers, samples_in_this_cohort)
+            write_samples(samples_lfp, filtered_lfp, headers,
+                        samples_in_this_cohort, self.config.missing_file_value)
 
         # Second: now the sample set loadfile, derived from the samples loadfile
         sset_loadfile = projname + ".Sample_Set.loadfile.txt"
@@ -416,7 +418,7 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
     elif analyte1 == "H":
         # Prefer H over R and T
-        return 1
+        return -1
     elif analyte1 == "R":
         # Prefer R over T
         return -1 if analyte2 == "T" else 1
@@ -433,13 +435,18 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
 
 def choose_file(files):
-    # Remove path from filenames, to promote robustness in comparator
+    # The files param is a list, but we first remove the path from each file to
+    # promote robustness in comparator (only sample ID value should be compared)
     files = [os.path.basename(f) for f in files]
+    # Example files value, drawn from TCGA-LUAD CNV__snp6 data:
+    #  ['TCGA-44-2668-01A-01D-1549-01.6a5b9b87-ff2c-4596-b399-5a80299e50f8.txt',
+    #   'TCGA-44-2668-01A-01D-A273-01.ed7bdfbc-a87a-4772-b38a-de9ed547d6db.txt',
+    #   'TCGA-44-2668-01A-01D-0944-01.06a3821c-ce0c-405a-ad7e-61cb960651d9.txt']
     preferred_order = sorted(files, key=cmp_to_key(diced_file_comparator))
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored
 
-def write_samples(samples_fp, filtered_fp, headers, samples):
+def write_samples(samples_fp, filtered_fp, headers, samples, missing_file_value):
     '''Loop over sample ids, filling in annotation columns for each'''
     for sample_id in sorted(samples):
         sample = samples[sample_id]
@@ -453,8 +460,11 @@ def write_samples(samples_fp, filtered_fp, headers, samples):
         filtered_rows = []
         for annot in headers[4:]:
             files = sample.get(annot, None)
+            # The missing_file_value is anlogous to NA values as used in R,
+            # a placeholder so that a given cell in the table is not empty
+            # This value can be configured in the [DEFAULT] config section
             if files is None:
-                annot_columns.append("__DELETE__")
+                annot_columns.append(missing_file_value)
             else:
                 # If >1 file is a candidate for this annotation (column),
                 # pick the most appropriate and record the remainder of
