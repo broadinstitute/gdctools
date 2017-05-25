@@ -113,7 +113,7 @@ class gdc_mirror(GDCtool):
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
-        logging.info("GDC Mirror Version: %s", self.cli.version)
+        logging.info("GDC Mirror Version: %s", self.version)
         logging.info("Command: " + " ".join(sys.argv))
 
         if not projects:

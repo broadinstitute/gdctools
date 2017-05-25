@@ -157,11 +157,11 @@ test_legacy:
 	$(FIND_LEGACY_FILES) -exec $(MD5) {} \; | $(SORT) > ../../legacy-md5sums.txt
 	diff -b baselines/legacy-md5sums.txt legacy/.
 
-test3: default
+test3:
 	$(MAKE) -e PYTHON_VER=3 test
 
 VERTEST="import gdctools as g; print('Version: ' + g.GDCcore.GDCT_VERSION)"
-testl: default
+testl:
 	@# Test the package locally, as if it were installed
 	@$(PYTHON) -c  $(VERTEST)
 

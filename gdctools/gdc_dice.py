@@ -74,7 +74,7 @@ class gdc_dice(GDCtool):
             config.projects = common.immediate_subdirs(mirror_prog_root)
 
     def dice(self):
-        logging.info("GDC Dicer Version: %s", self.cli.version)
+        logging.info("GDC Dicer Version: %s", self.version)
         logging.info("Command: " + " ".join(sys.argv))
         trans_dict = build_translation_dict(resource_filename(__name__,
                                   os.path.join("lib", "annotations_table.tsv")))

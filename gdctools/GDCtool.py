@@ -35,14 +35,14 @@ class GDCtool(object):
     def __init__(self, version="", description=None, configureAble=True):
         self.configureAble = configureAble
         self.version = version + " (GDCtools: " + GDCT_VERSION + ")"
-        self.cli = argparse.ArgumentParser(version=self.version,
-                    description=description,
+        self.cli = argparse.ArgumentParser( description=description,
                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
         # If caller supports use of config file, add corresponding CLI args
         if configureAble:
             self.addConfigurableArgs()
 
+        self.cli.add_argument('--version', action='version', version=self.version)
         self.cli.add_argument('-V', '--verbose', dest='verbose',
                 action='count', help=\
                 'Each time specified, increment verbosity level [%(default)s]')
@@ -270,7 +270,7 @@ class GDCtool(object):
         # Emit system info (as header comments suitable for TSV, etc) ...
         gprint('#')  # @UndefinedVariable
         gprint('# %-22s = %s' % (self.__class__.__name__ + ' version ',  # @UndefinedVariable
-                                 self.cli.version))
+                                 self.version))
         gprint('#')  # @UndefinedVariable
 
 if __name__ == "__main__":
