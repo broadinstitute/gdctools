@@ -116,7 +116,7 @@ class gdc_dice(GDCtool):
             all_counts = dict()
             all_totals = Counter()
 
-            agg_case_data = dict()
+            agg_case_data = defaultdict(dict)
             for project in sorted(config.projects):
                 # Load metadata from mirror, getting the latest metadata
                 # earlier than the given datestamp
@@ -208,9 +208,8 @@ class gdc_dice(GDCtool):
                     all_totals[data_type] += count
 
                 # keep track of aggregate case data
-                project_aggregates = cohort_agg_dict.get(project, [])
+                project_aggregates = cohort_agg_dict[project]
                 for agg in project_aggregates:
-                    agg_case_data[agg] = agg_case_data.get(agg, {})
                     agg_case_data[agg].update(case_data)
 
             # Create aggregate diced_metadata.tsvs
@@ -248,11 +247,10 @@ class gdc_dice(GDCtool):
     def cohort_aggregates(self):
         '''Invert the Aggregate->Cohort dictionary to list all aggregates for
         a cohort.'''
-        cohort_agg = dict()
-        for (k, v) in viewitems(self.config.aggregates):
-            cohorts = v.split(',')
-            for c in cohorts:
-                cohort_agg[c] = cohort_agg.get(c, []) + [k]
+        cohort_agg = defaultdict(list)
+        for (agg, cohorts) in viewitems(self.config.aggregates):
+            for c in cohorts.split(','):
+                cohort_agg[c].append(agg)
         return cohort_agg
 
     def aggregate_diced_metadata(self, prog_dir, datestamp):
@@ -326,19 +324,19 @@ def _tcgaid_file_lookup(metadata, translation_dict):
     stratified by annotation type. This enables the dicer to ensure one diced
     file per sample or case. However, certain files (MAFs, e.g.) have more
     than one case per file, and must be treated separately.'''
-    single_barcode_lookup = dict()
+    single_barcode_lookup = defaultdict(dict)
     multi_barcode_files = []
     for file_dict in metadata:
         if not meta.has_multiple_samples(file_dict):
             # Normal file, one barcode per sample/annotation
             tcga_id = meta.tcga_id(file_dict)
             annot, _ = get_annotation_converter(file_dict, translation_dict)
-            single_barcode_lookup[tcga_id] = single_barcode_lookup.get(tcga_id, dict())
             # Note that this overwrites any previous value.
             # FIXME: More sophisticated reasoning
             if annot in single_barcode_lookup[tcga_id]:
-                logging.warning("Multiple files found for " + tcga_id + " " + annot)
-            single_barcode_lookup[tcga_id][annot] =  file_dict
+                logging.warning("Multiple files found for %s %s" %(tcga_id,
+                                                                   annot))
+            single_barcode_lookup[tcga_id][annot] = file_dict
         else:
             # Multiple barcode file, return separately
             multi_barcode_files.append(file_dict)
@@ -518,7 +516,7 @@ def filter_by_case(metadata, cases):
             # then this file should be included, since one of it's cases was provided
             if cases & fd_cases:
                 filt_meta.append(fd)
-        metadata = filt_meta
+        return filt_meta
     return metadata
 
 def _write_counts(case_data, counts_file):
@@ -549,7 +547,7 @@ def _write_counts(case_data, counts_file):
         for code in counts:
             line = code + "\t"
             # Headers can use abbreviated data types
-            line += "\t".join([str(counts[code].get(t, 0)) for t in rdt]) + "\n"
+            line += "\t".join([str(counts[code][t]) for t in rdt]) + "\n"
 
             out.write(line)
 
