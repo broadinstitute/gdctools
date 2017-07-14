@@ -1,4 +1,7 @@
 
+Version 0.2.1
+.   Changed paginated queries to begin at page=0 instead of page=1; apparently
+    in v1.9.0 the GDC api changed from 1-based to 0-based page indexing?
 Version 0.2.0
 .   Re-establish usability with BOTH Python 2 and 3, motivated by
     contributions from https://github.com/aswanipranjal

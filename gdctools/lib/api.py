@@ -25,7 +25,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 class GDCQuery(object):
     # Class variables
     ENDPOINTS = ('cases', 'files', 'programs', 'projects', 'submission')
-    GDC_ROOT = 'https://gdc-api.nci.nih.gov/'
+    GDC_ROOT = 'https://api.gdc.cancer.gov/'
 
     # Queries returning more than this many results will log a warning
     WARN_RESULT_CT = 5000
@@ -81,7 +81,7 @@ class GDCQuery(object):
                 params['filters'] = json.dumps(_and_filter(self._filters))
         return params
 
-    def _query_paginator(self, page_size=500, from_idx=1, to_idx=-1):
+    def _query_paginator(self, page_size=500, from_idx=0, to_idx=-1):
         '''Returns list of hits, iterating over server paging'''
         endpoint = self._base_url()
         p = self._params()
@@ -250,7 +250,7 @@ def get_program(project):
     query.add_fields('program.name')
     projects = query.get()
 
-    #Sanity check
+    # Sanity check
     if len(projects) > 1:
         raise ValueError("More than one project matched '" + project + "'")
     elif len(projects) == 0:

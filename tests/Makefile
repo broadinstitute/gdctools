@@ -8,20 +8,21 @@ PYTHON := set -o pipefail && env PYTHONPATH=.. $(PYTHON)
 SORT=env LC_COLLATE=C sort
 TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
 CONFIG_FILE=tcgaSmoketest.cfg
-CONFIG_FLAG=--config $(CONFIG_FILE)
+#VERBOSITY=-V
+CONFIG=--config $(CONFIG_FILE) $(VERBOSITY)
 PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
 FIND_LEGACY_FILES=cd legacy/mirror/TCGA && find TCGA-* -name '*.*' -a ! -name '*.json'
-PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG_FLAG)
-PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
-PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
-PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG_FLAG) $(PROJECT_SUBSET)
+PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG)
+PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG) $(PROJECT_SUBSET)
+PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG) $(PROJECT_SUBSET)
+PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG) $(PROJECT_SUBSET)
 
 ifeq ($(LOADFILE_TYPE),google)
    # We generate Google-bucketized loadfiles with an additional config file
-   CONFIG_FLAG := --config $(CONFIG_FILE) ../config/google.cfg
+   CONFIG := --config $(CONFIG_FILE) ../config/google.cfg $(VERBOSITY)
    LOADFILE_SUBDIR=google/
    LOADFILE_MD5=load-md5sums-google.txt
 else
