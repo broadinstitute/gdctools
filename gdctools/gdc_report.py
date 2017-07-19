@@ -36,32 +36,33 @@ class gdc_report(GDCtool):
 
         # FIXME: add options for each config setting
 
-    def parse_args(self):
-        config = self.config
-
+    def config_customize(self):
         # Ensure tool has sufficient configuration info to run
         mandatory_config  =  ["dice.dir", "loadfiles.dir", "reference_dir"]
-        mandatory_config +=  ["reports.dir", "reports.blacklist"]
+        mandatory_config +=  ["report.dir", "report.blacklist"]
         self.validate_config(mandatory_config)
 
-        #FIXME: Hardcoded to just TCGA for now...
+    def execute(self):
+        super(gdc_report, self).execute()
+
+        config = self.config
+        # FIXME: remove TCGA hardcode
         diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
         datestamp = self.datestamp
-
-        latest = os.path.join(config.reports.dir, 'latest')
-        config.reports.dir = os.path.join(config.reports.dir,
+        latest = os.path.join(config.report.dir, 'latest')
+        config.report.dir = os.path.join(config.report.dir,
                                           'report_' + datestamp)
-        if not os.path.isdir(config.reports.dir):
-            os.makedirs(config.reports.dir)
+        if not os.path.isdir(config.report.dir):
+            os.makedirs(config.report.dir)
             silent_rm(latest)
-            os.symlink(os.path.abspath(config.reports.dir), latest)
+            os.symlink(os.path.abspath(config.report.dir), latest)
 
         # Now infer certain values from the diced data directory
         logging.info("Obtaining diced metadata...")
-        get_diced_metadata(diced_prog_root, config.reports.dir, datestamp)
+        get_diced_metadata(diced_prog_root, config.report.dir, datestamp)
 
         #FIXME: only works for TCGA
-        link_loadfile_metadata(config.loadfiles.dir, "TCGA", config.reports.dir,
+        link_loadfile_metadata(config.loadfiles.dir, "TCGA", config.report.dir,
                                datestamp)
 
         if config.aggregates:
@@ -71,21 +72,18 @@ class gdc_report(GDCtool):
         logging.info("Linking combined sample counts ...")
         all_counts_file = '.'.join(['sample_counts', datestamp, 'tsv'])
         link_metadata_file(os.path.join(diced_prog_root, 'metadata'),
-                           self.config.reports.dir, all_counts_file)
+                           self.config.report.dir, all_counts_file)
 
         # Command line arguments for report generation
         self.cmdArgs = ["Rscript", "--vanilla"]
         report_script = resource_filename(__name__, "lib/GDCSampleReport.R")
         self.cmdArgs.extend([ report_script,            # From gdctools pkg
                               datestamp,                # Specified from cli
-                              config.reports.dir,
+                              config.report.dir,
                               config.reference_dir,
-                              config.reports.blacklist
+                              config.report.blacklist
                             ])
 
-    def execute(self):
-        super(gdc_report, self).execute()
-        self.parse_args()
         # TODO: better error handling
         logging.info("Running GDCSampleReport.R ")
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
@@ -102,7 +100,7 @@ class gdc_report(GDCtool):
         information is read from the [aggregates] section of the config file.
         '''
         aggregates = self.config.aggregates
-        ag_file = os.path.join(self.config.reports.dir, 'aggregates.txt')
+        ag_file = os.path.join(self.config.report.dir, 'aggregates.txt')
         with open(ag_file, 'w') as f:
             f.write('Aggregate Name\tTumor Types\n')
             for agg in sorted(aggregates.keys()):

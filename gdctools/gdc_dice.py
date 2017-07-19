@@ -50,19 +50,14 @@ class gdc_dice(GDCtool):
         cli.add_argument('-m', '--mirror-dir',
                help='Root folder of mirrored GDC data')
 
-    def parse_args(self):
-        '''Parse CLI args, potentially overriding config file settings'''
+    def config_customize(self):
         opts = self.options
         config = self.config
-        if opts.log_dir: config.dice.log_dir = opts.log_dir
         if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
         if opts.dice_dir: config.dice.dir = opts.dice_dir
-        if opts.programs: config.programs = opts.programs
-        if opts.projects: config.projects = opts.projects
-        if opts.cases:    config.cases = opts.cases
         self.force = opts.force
 
-        # # If undefined, discover which GDC program(s) data to dice
+        # If undefined, discover which GDC program(s) data to dice
         if not config.programs:
             config.programs = common.immediate_subdirs(config.mirror.dir)
 
@@ -94,7 +89,8 @@ class gdc_dice(GDCtool):
         with common.lock_context(diced_prog_root, "dice"), \
              common.lock_context(mirror_prog_root, "mirror"):
 
-            logging.info("Dicing " + program)
+            logging.info("Dicing : " + program)
+            logging.info("Projects: {0}".format(config.projects))
 
             # datestamp set by GDCtool base class
             datestamp = self.datestamp
@@ -202,7 +198,7 @@ class gdc_dice(GDCtool):
                 for (data_type, count) in viewitems(totals):
                     all_totals[data_type] += count
 
-                # keep track of aggregate case data
+                # Keep track of aggregate case data
                 project_aggregates = cohort_agg_dict[project]
                 for agg in project_aggregates:
                     agg_case_data[agg].update(case_data)
@@ -233,7 +229,6 @@ class gdc_dice(GDCtool):
 
     def execute(self):
         super(gdc_dice, self).execute()
-        self.parse_args()
         try:
             self.dice()
         except:
@@ -297,6 +292,7 @@ class gdc_dice(GDCtool):
         if len(config.programs) != 1:
             logging.error("Dicer only supports dicing a single program but "
                           + str(len(config.programs)) + " were provided.")
+            logging.error(str(config.programs))
             sys.exit(1)
 
         possible_programs = common.immediate_subdirs(config.mirror.dir)

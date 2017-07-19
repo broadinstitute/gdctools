@@ -54,6 +54,7 @@ test_invoke:
 	@echo Test runnability: invoke some tools to show nothing thrown to stderr
 	@$(PYTHON) $(SRC)/GDCcore.py >/dev/null
 	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
+	@$(PYTHON) $(SRC)/gdc_mirror.py --help >/dev/null
 	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
 
 test_mirror:
@@ -133,13 +134,13 @@ test_report:
 		diff -b baselines/report-files.txt $(TEST_ROOT)/. ; \
 	fi
 
+
 test_cases:
 	@echo
 	@echo "Test fine-grained retrieval of 1 case (and 1 data category)"
-	@$(PYTHON) $(SRC)/gdc_mirror.py --config onlycases.cfg \
-					--cases TCGA-EE-A3J8 \
-					--categories Biospecimen 2>&1 | tee $@.log | \
-					egrep "GDC|Mirroring data|Mirroring start"
+	@$(PYTHON) $(SRC)/gdc_mirror.py --config onlycases.cfg 2>&1 \
+					--categories Biospecimen | tee $@.log | \
+					egrep "GDC|Mirroring data|Mirroring start|categorie"
 	$(ABORT_ON_ERROR) $@.log
 	@cd onlycases/mirror/TCGA && find TCGA-* \
 					-name '*.*' -a ! -name '*.json' | \

@@ -111,7 +111,7 @@ class gdc_list(GDCtool):
             'mirrored or diced?) OR from\nmetadata available at toplevel '\
             'GDC endpoints.'
 
-        super(gdc_list, self).__init__("0.1.1",description,configureAble=False)
+        super(gdc_list, self).__init__("0.1.1", description)
         cli = self.cli
         #cli.add_argument('-e', '--expand', nargs='+',
         #    help='Expand these nested fields')
@@ -141,6 +141,9 @@ class gdc_list(GDCtool):
             feature(args)
         else:
             gabort(1, "Unsupported feature: " + args.feature)
+
+    def config_supported(self):
+        return False
 
 def main():
     gdc_list().execute()

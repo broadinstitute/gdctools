@@ -47,16 +47,10 @@ class gdc_mirror(GDCtool):
         # detect if we have curl installed
         self.has_cURL = api.curl_exists()
 
-    def parse_args(self):
-        '''Parse CLI args, potentially overriding config file settings'''
+    def config_customize(self):
         opts = self.options
         config = self.config.mirror
         if opts.mirror_dir: config.dir = opts.mirror_dir
-        if opts.log_dir: config.log_dir = opts.log_dir
-        if opts.categories:
-            config.categories = opts.categories
-        config.categories = self.get_config_values_as_list(config.categories)
-
         self.force_download = opts.force_download
         self.workflow = opts.workflow
 
@@ -201,7 +195,7 @@ class gdc_mirror(GDCtool):
         '''Mirror one project folder'''
 
         datestamp = self.datestamp
-        config = self.config.mirror
+        config = self.config
         logging.info("Mirroring started for {0} ({1})".format(project, program))
 
         categories = config.categories
@@ -212,7 +206,7 @@ class gdc_mirror(GDCtool):
 
         logging.info("Using %d data categories: %s" % \
                      (len(categories), ",".join(categories)))
-        proj_dir = os.path.join(config.dir, program, project)
+        proj_dir = os.path.join(config.mirror.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
         # Read the previous metadata, if present
@@ -290,7 +284,6 @@ class gdc_mirror(GDCtool):
 
     def execute(self):
         super(gdc_mirror, self).execute()
-        self.parse_args()
         try:
             self.mirror()
         except:

@@ -32,54 +32,30 @@ signal(SIGPIPE, SIG_DFL)
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version="", description=None, configureAble=True):
-        self.configureAble = configureAble
+    def __init__(self, version="", description=None):
         self.version = version + " (GDCtools: " + GDCT_VERSION + ")"
         self.cli = argparse.ArgumentParser( description=description,
                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
-        # If caller supports use of config file, add corresponding CLI args
-        if configureAble:
-            self.addConfigurableArgs()
-
+        self.config_add_args()
         self.cli.add_argument('--version', action='version', version=self.version)
         self.cli.add_argument('-V', '--verbose', dest='verbose',
                 action='count', help=\
                 'Each time specified, increment verbosity level [%(default)s]')
-        # Derived classes should add custom options & behavior in their
-        # respective __init__()/execute() implementations
 
-    def addConfigurableArgs(self):
-        # Note that args with nargs=+ will be instantiated as lists
-        cli = self.cli
-        cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
-                            help='One or more configuration files')
-        cli.add_argument('--date', nargs='?', dest='datestamp',
-                    help='Use data from a given dated mirror (snapshot) of '
-                    'GDC data, specified in YYYY_MM_DD form.  If omitted, '
-                    'the latest downloaded snapshot will be used.')
-        cli.add_argument('--cases', nargs='+', metavar='case_id',
-                    help='Process data only from these GDC cases')
-        cli.add_argument('--categories',nargs='+',metavar='category',
-                help='Mirror data only from these GDC data categories. '
-                'Note that many category names contain spaces, so use '
-                'quotes to delimit (e.g. \'Copy Number Variation\')')
-        cli.add_argument('-L', '--log-dir',
-                    help='Directory where logfiles will be written')
-        cli.add_argument('--programs', nargs='+', metavar='program',
-                    help='Process data only from these GDC programs')
-        cli.add_argument('--projects', nargs='+', metavar='project',
-                    help='Process data only from these GDC projects')
-        cli.add_argument('--workflow',
-                help='Process data only from this GDC workflow type')
+        # Derived classes should add custom options & behavior in their
+        # respective __init__/config_customize/execute implementations
 
     def execute(self):
         self.options = self.cli.parse_args()
         api.set_verbosity(self.options.verbose)
-        if not self.configureAble:
+
+        if not self.config_supported():
             return
-        self.parse_config()
-        self.reconcile_config()
+
+        self.config_initialize()
+        self.config_customize()
+        self.config_finalize()
 
         # Get today's datestamp, the default value
         datestamp = time.strftime('%Y_%m_%d', time.localtime())
@@ -113,7 +89,38 @@ class GDCtool(object):
         else:
             return [ ]
 
-    def parse_config(self):
+    def config_supported(self):
+        return True
+
+    def config_add_args(self):
+        ''' If tool supports config file (i.e. a named [TOOL] section), then
+        reflect config file vars that are common across all tools as CLI args,
+        too.  Note that args with nargs=+ will be instantiated as lists.'''
+        if not self.config_supported():
+            return
+        cli = self.cli
+        cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
+                            help='One or more configuration files')
+        cli.add_argument('--date', nargs='?', dest='datestamp',
+                    help='Use data from a given dated mirror (snapshot) of '
+                    'GDC data, specified in YYYY_MM_DD form.  If omitted, '
+                    'the latest downloaded snapshot will be used.')
+        cli.add_argument('--cases', nargs='+', metavar='case_id',
+                    help='Process data only from these GDC cases')
+        cli.add_argument('--categories',nargs='+',metavar='category',
+                help='Mirror data only from these GDC data categories. '
+                'Note that many category names contain spaces, so use '
+                'quotes to delimit (e.g. \'Copy Number Variation\')')
+        cli.add_argument('-L', '--log-dir',
+                    help='Directory where logfiles will be written')
+        cli.add_argument('--programs', nargs='+', metavar='program',
+                    help='Process data only from these GDC programs')
+        cli.add_argument('--projects', nargs='+', metavar='project',
+                    help='Process data only from these GDC projects')
+        cli.add_argument('--workflow',
+                help='Process data only from this GDC workflow type')
+
+    def config_initialize(self):
         '''
         Read initial configuration state from one or more config files; store
         this state within .config member, a nested dict whose keys may also be
@@ -138,6 +145,8 @@ class GDCtool(object):
             config[keyval[0]] = keyval[1]
 
         for section in cfgparser.sections():
+            # Note that tool-specific sections should be named to match the
+            # tool name, i.e. [toolname] for each gdc_<toolname> tool
             config[section] = attrdict()
             for option in cfgparser.options(section):
                 # DEFAULT vars ALSO behave as though they were defined in every
@@ -146,18 +155,12 @@ class GDCtool(object):
                 if not config[option]:
                     config[section][option] = cfgparser.get(section, option)
 
-        # FIXME: should this check for more config variables?
         self.validate_config(["root_dir"], UnsetValue={})
         if not config.datestamps:
             config.datestamps = os.path.join(config.root_dir, "datestamps.txt")
 
         if not config.missing_file_value:
             config.missing_file_value = "__DELETE__"
-
-        # Ensure programs,projects,cases,data_categories config state are lists
-        config.programs = self.get_config_values_as_list(config.programs)
-        config.projects = self.get_config_values_as_list(config.projects)
-        config.cases    = self.get_config_values_as_list(config.cases)
 
         # Ensure that aggregate cohort names (if present) are in uppercase
         # (necessary because ConfigParser returns option names in lowercase)
@@ -169,36 +172,78 @@ class GDCtool(object):
         else:
             config.aggregates = {}
 
-    def reconcile_config(self):
-        # The runtime configuration of each GDCtool comes from several sources
+    def config_customize(self):
+        pass
+
+    def config_finalize(self):
+        # Here we define & enforce precedence in runtime/configuration state:
+        #   1) amongst the SCOPES (sources) from which that state is gathered
+        #   2) and for the specificity of terms within that state
+        #
+        # The runtime configuration of each GDCtool comes from several SCOPES
         #   - built in defaults
         #   - configuration files
         #   - command line flags
-        # in order of increasing precedence (i.e. cmd line flags are highest).
-        # We enforce that precedence with this method, because it cannot be
-        # done simply by parsing the CLI args after reading the config file,
-        # as --config is also a cmd line flag.  So we have to give --config
-        # CLI flag "a chance" to be utilized in parse_config(), then override
-        # the config variables here if they were ALSO set at the command line
+        # in order of increasing precedence (CLI flags highest).  We enforce
+        # that precedence here, noting the unavoidable chicken/egg problem: it
+        # cannot be enforced simply by parsing the CLI args after reading the
+        # config file, because --config is ALSO a CLI flag. So we have to give
+        # the --config CLI flag a chance to be utilized in config_initialize(),
+        # then override the config file variables (as given in named sections)
+        # here if they were ALSO set as CLI flags.
+        #
+        # Specificity precedence means that WITHIN A SCOPE more specific terms,
+        # such as case, have precedence over less specific terms like project.
+        # Querying by case(s) thus defines the project(s) & program(s) to be
+        # queried, with INTERSECTION used to disambiguate; so that if a project
+        # is specified but is not among the projects covered by any case that
+        # has been specified (e.g. project=TARGET-NBL, case=TCGA-XXXX), then
+        # that project is ignored.  In the future UNION semantics may be added.
+        #
+        # Finally, note that SCOPE supersedes SPECIFICITY: e.g. terms given at
+        # the CLI always supersede those given in config files. So, if case(s)
+        # are specified in a config file but projects are specified at the CLI,
+        # then the cases term is effectively erased by the projects term. Again,
+        # this may be relaxed in the future when/if UNION semantics are added,
+        # but most of this discussion is academic & given here only for clarity
+        # & completeness: because if you abide by KISS and maintain your runtime
+        # configuration in as clean and organized a manner as possible, none of
+        # these precedence concerns should ever have much impact upon you.
 
-        opts = self.options
+        def enforce_precedence(From, To, highest):
+            if From.log_dir:    To.log_dir    = From.log_dir
+            if From.workflow:   To.workflow   = From.workflow
+            if From.categories: To.categories = From.categories
+            if From.programs:
+                To.programs   = From.programs
+                if highest: To.projects = To.cases = []
+            if From.projects:
+                To.projects   = From.projects
+                if highest: To.cases = []
+            if From.cases:
+                To.cases      = From.cases
+
         config = self.config
-        if opts.programs: config.programs = opts.programs
-        if opts.projects: config.projects = opts.projects
-        if opts.cases: config.cases = opts.cases
-        if opts.log_dir : config.log_dir = opts.log_dir
-        if opts.workflow : config.workflow = opts.workflow
+        toolname = self.__class__.__name__.split('gdc_')[-1]
+        enforce_precedence(config[toolname], config, False)
+        enforce_precedence(self.options, config, True)
 
-        # If a list of individual cases has been specified then it completely
-        # defines the projects & programs to be queried, and takes precedence
-        # over any other configuration file settings or command line flags
+        # Ensure cases,categories,projects,programs config state are lists
+        config.cases      = self.get_config_values_as_list(config.cases)
+        config.categories = self.get_config_values_as_list(config.categories)
+
+        # If individual cases have been specified then they completely define
+        # the projects & programs to be queried, and have precedence
         if config.cases:
             config.projects = api.get_project_from_cases(config.cases)
+
+        # Simiarly, if projects is specified then it completely defines
+        # the programs to be queried, and has precedence
+        if config.projects:
             config.programs = api.get_programs(config.projects)
-        elif config.projects:
-            # Simiarly, if projects is specified then the programs corresponding
-            # to those projects takes precedence over config & CLI values
-            config.programs = api.get_programs(config.projects)
+
+        config.projects   = self.get_config_values_as_list(config.projects)
+        config.programs   = self.get_config_values_as_list(config.programs)
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
@@ -274,6 +319,11 @@ class GDCtool(object):
         gprint('#')  # @UndefinedVariable
 
 if __name__ == "__main__":
-    tool = GDCtool()
+
+    class ToolExample(GDCtool):
+        def config_supported (self):
+            return False
+
+    tool = ToolExample()
     tool.execute()
     tool.status()

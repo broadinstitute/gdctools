@@ -39,15 +39,15 @@ class gdc_loadfile(GDCtool):
 
         self.program = None
 
-    def parse_args(self):
+    def config_customize(self):
         '''Parse CLI args, potentially overriding config file settings'''
         opts = self.options
         config = self.config
         if opts.dice_dir: config.dice.dir = opts.dice_dir
-        if opts.load_dir: config.loadfiles.dir = opts.load_dir
-        if opts.file_prefix: config.loadfiles.file_prefix = opts.file_prefix
+        if opts.load_dir: config.loadfile.dir = opts.load_dir
+        if opts.file_prefix: config.loadfile.file_prefix = opts.file_prefix
         if opts.projects: config.projects = opts.projects
-        self.validate_config(["dice.dir","loadfiles.dir"])
+        self.validate_config(["dice.dir", "loadfile.dir"])
 
     def inspect_data(self):
 
@@ -76,7 +76,7 @@ class gdc_loadfile(GDCtool):
 
         projects = dict()
         dice_dir = self.config.dice.dir
-        file_prefix = self.config.loadfiles.file_prefix
+        file_prefix = self.config.loadfile.file_prefix
 
         # FIXME: this should respect PROGRAM setting(s) from config file or CLI
         for program in common.immediate_subdirs(dice_dir):
@@ -196,7 +196,7 @@ class gdc_loadfile(GDCtool):
         datestamp = self.datestamp
 
         logging.info("Generating loadfile for {0}".format(projname))
-        loadfile_root = os.path.abspath(self.config.loadfiles.dir)
+        loadfile_root = os.path.abspath(self.config.loadfile.dir)
         latest = os.path.join(loadfile_root, program, "latest")
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
@@ -242,7 +242,7 @@ class gdc_loadfile(GDCtool):
         datestamp = self.datestamp
 
         logging.info("Generating master loadfiles for {0}".format(program))
-        loadfile_root = os.path.abspath(self.config.loadfiles.dir)
+        loadfile_root = os.path.abspath(self.config.loadfile.dir)
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
@@ -306,7 +306,6 @@ class gdc_loadfile(GDCtool):
     def execute(self):
 
         super(gdc_loadfile, self).execute()
-        self.parse_args()
         opts = self.options
 
         try:
