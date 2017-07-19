@@ -81,7 +81,7 @@ class GDCtool(object):
         self.datestamp = datestamp
         self.init_logging()
 
-    def get_config_values_as_list(self, values):
+    def get_values_as_list(self, values):
         if values:
             if type(values) is list:
                 return values
@@ -172,6 +172,9 @@ class GDCtool(object):
         else:
             config.aggregates = {}
 
+        for var in ["cases", "categories", "projects", "programs"]:
+            config[var] = self.get_values_as_list(config[var])
+
     def config_customize(self):
         pass
 
@@ -229,8 +232,8 @@ class GDCtool(object):
         enforce_precedence(self.options, config, True)
 
         # Ensure cases,categories,projects,programs config state are lists
-        config.cases      = self.get_config_values_as_list(config.cases)
-        config.categories = self.get_config_values_as_list(config.categories)
+        config.cases      = self.get_values_as_list(config.cases)
+        config.categories = self.get_values_as_list(config.categories)
 
         # If individual cases have been specified then they completely define
         # the projects & programs to be queried, and have precedence
@@ -242,8 +245,8 @@ class GDCtool(object):
         if config.projects:
             config.programs = api.get_programs(config.projects)
 
-        config.projects   = self.get_config_values_as_list(config.projects)
-        config.programs   = self.get_config_values_as_list(config.programs)
+        config.projects   = self.get_values_as_list(config.projects)
+        config.programs   = self.get_values_as_list(config.programs)
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''

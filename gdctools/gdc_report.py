@@ -32,13 +32,13 @@ class gdc_report(GDCtool):
     def __init__(self):
         description = 'Generate a sample report for a snapshot of data ' + \
                 'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
-        super(gdc_report, self).__init__("0.3.1", description)
+        super(gdc_report, self).__init__("0.3.2", description)
 
         # FIXME: add options for each config setting
 
     def config_customize(self):
         # Ensure tool has sufficient configuration info to run
-        mandatory_config  =  ["dice.dir", "loadfiles.dir", "reference_dir"]
+        mandatory_config  =  ["dice.dir", "loadfile.dir", "reference_dir"]
         mandatory_config +=  ["report.dir", "report.blacklist"]
         self.validate_config(mandatory_config)
 
@@ -61,8 +61,8 @@ class gdc_report(GDCtool):
         logging.info("Obtaining diced metadata...")
         get_diced_metadata(diced_prog_root, config.report.dir, datestamp)
 
-        #FIXME: only works for TCGA
-        link_loadfile_metadata(config.loadfiles.dir, "TCGA", config.report.dir,
+        # FIXME: remove TCGA hardcode
+        link_loadfile_metadata(config.loadfile.dir, "TCGA", config.report.dir,
                                datestamp)
 
         if config.aggregates:

@@ -28,7 +28,7 @@ class gdc_loadfile(GDCtool):
 
     def __init__(self):
         description = 'Create a Firehose-style loadfile from diced GDC data'
-        super(gdc_loadfile, self).__init__("0.3.1", description)
+        super(gdc_loadfile, self).__init__("0.3.2", description)
         cli = self.cli
         cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
                 ' referenced in loadfile [defaults to value of dice_dir]')
@@ -96,6 +96,11 @@ class gdc_loadfile(GDCtool):
                 projnames = common.immediate_subdirs(program_dir)
 
             for projname in sorted(projnames):
+
+                # Ignore metadata stored by GDCtools about program/projects
+                if projname.lower() == "metadata":
+                    continue
+
                 # Each project dict contains all the loadfile rows for the
                 # given project/cohort.  Keys are the entity_ids, values are
                 # dictionaries for the columns in a loadfile
