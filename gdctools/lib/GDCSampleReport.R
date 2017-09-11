@@ -96,7 +96,9 @@ main <- function(...) {
                                     sep = "\t", stringsAsFactors=FALSE)
 
   # Remove sample type rows (i.e. SKCM-TP, SKCM-NT, SKCM-FFPE, etc.)
-  sampleCountsTableRaw <- subset(sampleCountsTableRaw, !(grepl("-", sampleCountsTableRaw$Cohort)))
+  sampleCountsTableRaw <- subset(sampleCountsTableRaw,
+                                  !(grepl("-[[:upper:]]*-",
+                                        sampleCountsTableRaw$Cohort)))
   rownames(sampleCountsTableRaw) <- sampleCountsTableRaw$Cohort
 
   sampleCountsTable <- generateSampleCountsTable(sampleCountsPath,
@@ -335,15 +337,15 @@ generateHeatmapFigure <- function(heatmapsDir, tumorType, datestamp) {
 generateIntroduction <- function() {
     introduction = newParagraph(
         "This is a summary of data mirrored from the Genomic Data Commons ",
-		"(GDC) and processed by the GDCtools package.  Note that some ",
-		"sample data will be filtered as unsuitable for downstream ",
-		"pipelines, through one of three mechanisms: redactions, replicate ",
-		"filtering, and blacklisting. The report lists the counts and types ",
-		"of the sample data, in both hyperlinked tables and heatmap images; ",
-		"describes the three filtering mechanisms; lists the samples removed ",
-		"by filtering, why they were ",
-		"removed; and (eventually will) catalog how the data have been ",
-		"annotated by the respective projects that submitted them to the GDC."
+        "(GDC) and processed by the GDCtools package.  Note that some ",
+        "sample data will be filtered as unsuitable for downstream ",
+        "pipelines, through one of three mechanisms: redactions, replicate ",
+        "filtering, and blacklisting. The report lists the counts and types ",
+        "of the sample data, in both hyperlinked tables and heatmap images; ",
+        "describes the three filtering mechanisms; lists the samples removed ",
+        "by filtering, why they were ",
+        "removed; and (eventually will) catalog how the data have been ",
+        "annotated by the respective projects that submitted them to the GDC."
     )
     return(introduction)
 }
@@ -591,10 +593,8 @@ generateSampleCountsTable <- function(sampleCountsPath, sampleCountsTableRaw,
 
     # Update row for this cohort  with link to cohort report
     # FIXME: TCGA-Hard coded here
-    tcga.cohort <- unlist(strsplit(tumorType, split='-'))[2]
-    row = which(sampleCountsTableRaw$Cohort == tcga.cohort)
-    sampleCountsTableRaw[row,1] = asLink(url, tcga.cohort)
-
+    row = which(sampleCountsTableRaw$Cohort == tumorType)
+    sampleCountsTableRaw[row,1] = asLink(url, tumorType)
   }
 
 ###    # Add links to sample counts summary table
@@ -641,7 +641,7 @@ generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, tumor
     for (c in 2:ncol(tumorTable.df)) {
           dataType   = colnames(tumorTable.df)[c]
           if (tumorTable.df[r,c] > 0 ) {
-	      # Set sampleType to the full name
+          # Set sampleType to the full name
               samplesSubsection <-
                   generateSamplesSubsection(tumorType, sampleTypeLong, dataType,
                                             tumorMeta.df)
@@ -965,9 +965,9 @@ addToMethodsSection <- function(report) {
     methodsP1 = newParagraph(
         "NOT IMPLEMENTED YET: redactions are not yet exposed at the GDC. For ",
         "examples of the annotation-based filtering performed in the past by ",
-		"the Broad GDAC Firehose pipeline, explore this ",
-		asLink(url="http://gdac.broadinstitute.org/runs/stddata__2016_01_28/samples_report",
-		"legacy GDAC Firehose sample report"))
+        "the Broad GDAC Firehose pipeline, explore this ",
+        asLink(url="http://gdac.broadinstitute.org/runs/stddata__2016_01_28/samples_report",
+        "legacy GDAC Firehose sample report"))
 
     redactionsSubSection = addTo(redactionsSubSection, methodsP1)
 
