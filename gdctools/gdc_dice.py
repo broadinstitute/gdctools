@@ -191,10 +191,9 @@ class gdc_dice(GDCtool):
                                         "sample_counts.tsv"])
                 counts_file = os.path.join(diced_meta_dir, counts_file)
                 counts, totals = _write_counts(case_data, counts_file)
-                cohort = project.split('-', 1)[-1]
-                all_counts.update((cohort + '-' + sample_type, count) for
+                all_counts.update((project + '-' + sample_type, count) for
                                   (sample_type, count) in viewitems(counts))
-                all_counts[cohort] = totals
+                all_counts[project] = totals
                 for (data_type, count) in viewitems(totals):
                     all_totals[data_type] += count
 
@@ -216,10 +215,9 @@ class gdc_dice(GDCtool):
                 counts_file = ".".join([agg, datestamp, "sample_counts.tsv"])
                 counts_file = os.path.join(meta_dir, counts_file)
                 counts, totals = _write_counts(ac_data, counts_file)
-                cohort = agg.split('-', 1)[-1]
-                all_counts.update((cohort + '-' + sample_type, count) for
+                all_counts.update((agg + '-' + sample_type, count) for
                                   (sample_type, count) in viewitems(counts))
-                all_counts[cohort] = totals
+                all_counts[agg] = totals
 
             logging.info("Combining all sample counts into one file ...")
             _write_combined_counts(all_counts_file, all_counts, all_totals)

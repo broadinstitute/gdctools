@@ -18,8 +18,8 @@ TCGA-ACC/Simple_Nucleotide_Variation/Masked_Somatic_Mutation/TCGA.ACC.varscan.2f
 TCGA-ACC/Transcriptome_Profiling/Gene_Expression_Quantification/26ac18a6-1e88-4a29-a514-05c2e0078aec.FPKM-UQ.1cf80958-0f98-445b-b91c-eae101b8fb38.txt.gz
 TCGA-ACC/Transcriptome_Profiling/Gene_Expression_Quantification/26ac18a6-1e88-4a29-a514-05c2e0078aec.FPKM.cc530ddb-02c2-47aa-9f3e-a5c39af69c5c.txt.gz
 TCGA-ACC/Transcriptome_Profiling/Gene_Expression_Quantification/26ac18a6-1e88-4a29-a514-05c2e0078aec.htseq.counts.76bfb639-1e16-4cf0-b280-a17305da2e13.gz
-TCGA-ACC/Transcriptome_Profiling/Isoform_Expression_Quantification/isoforms.quantification.fc0b1adf-e2df-4313-b206-cd4c91dae430.txt
-TCGA-ACC/Transcriptome_Profiling/miRNA_Expression_Quantification/mirnas.quantification.c376d315-7de9-493e-a84f-5a475b9be31e.txt
+TCGA-ACC/Transcriptome_Profiling/Isoform_Expression_Quantification/af888ab0-960e-4a7d-a950-dc5f46d3742a.mirbase21.isoforms.quantification.bd4a4c2d-a65f-4a70-8913-b9ce5cdf3708.txt
+TCGA-ACC/Transcriptome_Profiling/miRNA_Expression_Quantification/af888ab0-960e-4a7d-a950-dc5f46d3742a.mirbase21.mirnas.quantification.c2264cc3-ffa7-41d4-85c8-f127677b5a6a.txt
 TCGA-LAML/Biospecimen/Biospecimen_Supplement/genome.wustl.edu_biospecimen.TCGA-AB-2850.b4eb4ea4-73d4-4251-a2d8-8743de531dbf.xml
 TCGA-LAML/Biospecimen/Biospecimen_Supplement/genome.wustl.edu_biospecimen.TCGA-AB-2959.2a69a436-a351-49c1-8c61-c70fa95f171b.xml
 TCGA-LAML/Clinical/Clinical_Supplement/genome.wustl.edu_clinical.TCGA-AB-2850.0583920c-278c-42db-a4cb-f75c0b2a6306.xml
@@ -37,8 +37,8 @@ TCGA-LAML/Simple_Nucleotide_Variation/Masked_Somatic_Mutation/TCGA.LAML.varscan.
 TCGA-LAML/Transcriptome_Profiling/Gene_Expression_Quantification/ee84e537-c13b-403a-8cd9-a8ab39012c53.FPKM-UQ.d76ee50c-fde5-4719-ae88-0fe90931170c.txt.gz
 TCGA-LAML/Transcriptome_Profiling/Gene_Expression_Quantification/ee84e537-c13b-403a-8cd9-a8ab39012c53.FPKM.099fa9f6-096b-408d-8f2f-6b8aebcdc708.txt.gz
 TCGA-LAML/Transcriptome_Profiling/Gene_Expression_Quantification/ee84e537-c13b-403a-8cd9-a8ab39012c53.htseq.counts.b3e9baff-615a-49d3-b58c-607cf3a091de.gz
-TCGA-LAML/Transcriptome_Profiling/Isoform_Expression_Quantification/isoforms.quantification.7573cd9d-b79d-4326-9c36-b70c895d5fee.txt
-TCGA-LAML/Transcriptome_Profiling/miRNA_Expression_Quantification/mirnas.quantification.b13777be-623f-438d-8a6c-cdd3add7610d.txt
+TCGA-LAML/Transcriptome_Profiling/Isoform_Expression_Quantification/6e56ce6c-3fd4-4211-b471-dd2edbe71d08.mirbase21.isoforms.quantification.8cd55e72-e253-4cf5-b59c-2743f6a636dc.txt
+TCGA-LAML/Transcriptome_Profiling/miRNA_Expression_Quantification/6e56ce6c-3fd4-4211-b471-dd2edbe71d08.mirbase21.mirnas.quantification.43b62e24-6f1d-4629-a7ef-240a71fb620f.txt
 TCGA-OV/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-24-2295.d0d21f38-9356-49a9-ae92-55edb4063058.xml
 TCGA-OV/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-72-4233.d30800f0-fbfd-4237-8e4b-92abd18757bc.xml
 TCGA-OV/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-24-2295.588467d3-b8bc-479e-a953-8b8d914cbbc3.xml
@@ -76,7 +76,7 @@ TCGA-SKCM/Transcriptome_Profiling/Gene_Expression_Quantification/2b485559-2b76-4
 TCGA-SKCM/Transcriptome_Profiling/Gene_Expression_Quantification/664c6432-ca75-401f-bbb0-4b26656acf87.FPKM-UQ.c7992525-cdee-49fe-9b24-78db03a6c58d.txt.gz
 TCGA-SKCM/Transcriptome_Profiling/Gene_Expression_Quantification/664c6432-ca75-401f-bbb0-4b26656acf87.FPKM.28cec425-f067-4008-9aa0-1a5cd689ff4f.txt.gz
 TCGA-SKCM/Transcriptome_Profiling/Gene_Expression_Quantification/664c6432-ca75-401f-bbb0-4b26656acf87.htseq.counts.778eed3d-02ad-43c3-8308-0c4823922c39.gz
-TCGA-SKCM/Transcriptome_Profiling/Isoform_Expression_Quantification/isoforms.quantification.1f884b90-738e-4c86-8574-d9372d0bd070.txt
-TCGA-SKCM/Transcriptome_Profiling/Isoform_Expression_Quantification/isoforms.quantification.2ed535ab-cc10-4947-aa63-aa707d995e53.txt
-TCGA-SKCM/Transcriptome_Profiling/miRNA_Expression_Quantification/mirnas.quantification.2bb82c6a-0573-4424-b5f9-261b1383ae76.txt
-TCGA-SKCM/Transcriptome_Profiling/miRNA_Expression_Quantification/mirnas.quantification.8840f36a-0c23-4fb1-9810-9a243c78cf9d.txt
+TCGA-SKCM/Transcriptome_Profiling/Isoform_Expression_Quantification/b71d3ee9-7b54-415a-89ff-3d13993d4e91.mirbase21.isoforms.quantification.65fb92ff-5b86-424c-8d3f-39444e2bf3e5.txt
+TCGA-SKCM/Transcriptome_Profiling/Isoform_Expression_Quantification/e5cdfe4b-fc44-4732-af10-3a2748b42e0c.mirbase21.isoforms.quantification.ff62bfa3-ff36-4d41-84ed-debe33e62560.txt
+TCGA-SKCM/Transcriptome_Profiling/miRNA_Expression_Quantification/b71d3ee9-7b54-415a-89ff-3d13993d4e91.mirbase21.mirnas.quantification.05f6b2f8-6aaf-468f-a5fa-96f1ab5c0d43.txt
+TCGA-SKCM/Transcriptome_Profiling/miRNA_Expression_Quantification/e5cdfe4b-fc44-4732-af10-3a2748b42e0c.mirbase21.mirnas.quantification.d20cacfb-6450-4e67-8d76-13befceb907e.txt
