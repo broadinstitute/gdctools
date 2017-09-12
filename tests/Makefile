@@ -37,7 +37,9 @@ endif
 LOADFILES_DIR=$(TEST_ROOT)/loadfiles/$(LOADFILE_SUBDIR)TCGA/latest
 FIND_LOAD_FILES=cd $(LOADFILES_DIR) && find . -name 'TCGA-*.txt'
 FILE_PREFIX_LENGTH=$(shell printf $(FILE_PREFIX) | wc -c | awk '{print $$NF}')
-VALIDATE_FILE_PATH=cd $(LOADFILES_DIR) && \
+# The goal of VALIDATE_FILE_PREFIX is to ensure that data files listed within
+# the loadfile have correct paths, either to local filesystem or cloud buckets
+VALIDATE_FILE_PREFIX=cd $(LOADFILES_DIR) && \
 	FILE_PATH=`sed -n '2,2p' TCGA-ACC.Sample.loadfile.txt | cut -f6` && \
 	ACTUAL_PREFIX=`echo $$FILE_PATH | cut -c-$(FILE_PREFIX_LENGTH)` && \
 	if [ $$ACTUAL_PREFIX != $(FILE_PREFIX) ] ; then \
@@ -129,14 +131,17 @@ test_loadfile:
 	@echo "Test $(LOADFILE_TYPE) loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
-	@# Compare names of files
+	@# First, ensure that data files are prefixed with appropriate path
+	$(VALIDATE_FILE_PREFIX)
+	@# Now compare names of files
 	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
-	@# Compare contents of files
-	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/$(LOADFILE_MD5)
+	@# Lastly, compare content: removing local file prefix first, then MD5
+	$(FIND_LOAD_FILES) -exec sed 's|$(FILE_PREFIX)/||g' {} \; \
+						| $(SORT) > $(TEST_ROOT)/load-munged.txt
+	$(MD5) $(TEST_ROOT)/load-munged.txt | sed 's|$(TEST_ROOT)/||g' \
+						> $(TEST_ROOT)/$(LOADFILE_MD5)
 	diff -b baselines/$(LOADFILE_MD5) $(TEST_ROOT)/.
-	@# Finally, ensure that data files are prefixed with appropriate path
-	$(VALIDATE_FILE_PATH)
 
 Rscript=$(shell type -P Rscript 2>/dev/null)
 test_report:

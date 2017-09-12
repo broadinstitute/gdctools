@@ -1,12 +1,1 @@
-05bab99463d3b1d7e1112a1e9f6a6aa0 ./TCGA-ACCSKCM.Sample.loadfile.txt
-0d34a8c112daac2205517a8e5be0e3cf ./TCGA-OV.Sample.loadfile.txt
-12d4b04c3b869446b1038043c81a7587 ./TCGA-SKCM.Sample.loadfile.txt
-245fcb6d4f0550a37df0982cdd969a03 ./TCGA-ACCSKCM.Sample_Set.loadfile.txt
-6b1156bc355f7cf1519fdd6dcf81ca95 ./TCGA-ACC.filtered_samples.txt
-6b1156bc355f7cf1519fdd6dcf81ca95 ./TCGA-ACCSKCM.filtered_samples.txt
-6b1156bc355f7cf1519fdd6dcf81ca95 ./TCGA-OV.filtered_samples.txt
-6b1156bc355f7cf1519fdd6dcf81ca95 ./TCGA-SKCM.filtered_samples.txt
-9e43f13c47ce1649fd98a7e528ff8b2d ./TCGA-SKCM.Sample_Set.loadfile.txt
-ac01f7a6995611dba62a4294208eaa26 ./TCGA-ACC.Sample_Set.loadfile.txt
-c1a7d1f57af1e16ae466a28f2d8d2986 ./TCGA-ACC.Sample.loadfile.txt
-ce92389a48f5ea429d517cd4731a230d ./TCGA-OV.Sample_Set.loadfile.txt
+c2b6ae936d5079c83ebfd5a621f25b04  load-munged.txt
