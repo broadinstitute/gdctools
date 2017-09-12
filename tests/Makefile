@@ -1,7 +1,7 @@
 
 include ../Makefile.inc
 
-# -------------------------- Variable definitions --------------------------
+# ---------------------------- Macro definitions ---------------------------
 
 SRC=../gdctools
 PYTHON := set -o pipefail && env PYTHONPATH=.. $(PYTHON)
@@ -11,25 +11,39 @@ CONFIG_FILE=tcgaSmoketest.cfg
 #VERBOSITY=-V
 CONFIG=--config $(CONFIG_FILE) $(VERBOSITY)
 PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV
+
+# To improve readibility of targets definitions below, we define commands to
+# encapsulate mirroring/dicing/file finding/loadfile parsing, etc operations
+PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG)
 FIND_MIRROR_FILES=cd $(TEST_ROOT)/mirror/TCGA && find TCGA-* \
 							-name '*.gz' -o -name '*.xml' -o -name '*.txt'
+PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG) $(PROJECT_SUBSET)
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
 FIND_LEGACY_FILES=cd legacy/mirror/TCGA && find TCGA-* -name '*.*' -a ! -name '*.json'
-PERFORM_MIRROR=$(PYTHON) $(SRC)/gdc_mirror.py $(CONFIG)
-PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG) $(PROJECT_SUBSET)
-PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG) $(PROJECT_SUBSET)
 PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG) $(PROJECT_SUBSET)
 
+PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG) $(PROJECT_SUBSET)
 ifeq ($(LOADFILE_TYPE),google)
    # We generate Google-bucketized loadfiles with an additional config file
    CONFIG := --config $(CONFIG_FILE) ../config/google.cfg $(VERBOSITY)
    LOADFILE_SUBDIR=google/
    LOADFILE_MD5=load-md5sums-google.txt
+   FILE_PREFIX=$(shell grep FILE_PREFIX ../config/google.cfg | awk '{print $$NF}')
 else
    LOADFILE_SUBDIR=
    LOADFILE_MD5=load-md5sums.txt
+   FILE_PREFIX=$(TEST_ROOT)
 endif
-FIND_LOAD_FILES=cd $(TEST_ROOT)/loadfiles/$(LOADFILE_SUBDIR)TCGA/latest && find . -name 'TCGA-*.txt'
+LOADFILES_DIR=$(TEST_ROOT)/loadfiles/$(LOADFILE_SUBDIR)TCGA/latest
+FIND_LOAD_FILES=cd $(LOADFILES_DIR) && find . -name 'TCGA-*.txt'
+FILE_PREFIX_LENGTH=$(shell printf $(FILE_PREFIX) | wc -c | awk '{print $$NF}')
+VALIDATE_FILE_PATH=cd $(LOADFILES_DIR) && \
+	FILE_PATH=`sed -n '2,2p' TCGA-ACC.Sample.loadfile.txt | cut -f6` && \
+	ACTUAL_PREFIX=`echo $$FILE_PATH | cut -c-$(FILE_PREFIX_LENGTH)` && \
+	if [ $$ACTUAL_PREFIX != $(FILE_PREFIX) ] ; then \
+		echo "File paths in loadfiles must begin with $(FILE_PREFIX)" ; \
+		false ; \
+	fi
 
 # --------------------------- Target definitions ---------------------------
 
@@ -115,10 +129,14 @@ test_loadfile:
 	@echo "Test $(LOADFILE_TYPE) loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
+	@# Compare names of files
 	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
+	@# Compare contents of files
 	$(FIND_LOAD_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/$(LOADFILE_MD5)
 	diff -b baselines/$(LOADFILE_MD5) $(TEST_ROOT)/.
+	@# Finally, ensure that data files are prefixed with appropriate path
+	$(VALIDATE_FILE_PATH)
 
 Rscript=$(shell type -P Rscript 2>/dev/null)
 test_report:
