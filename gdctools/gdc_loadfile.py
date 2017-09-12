@@ -48,6 +48,9 @@ class gdc_loadfile(GDCtool):
         if opts.file_prefix: config.loadfile.file_prefix = opts.file_prefix
         if opts.projects: config.projects = opts.projects
         self.validate_config(["dice.dir", "loadfile.dir"])
+        # Ensure that critical dir paths are utilized in absolute form
+        config.dice.dir = os.path.abspath(self.config.dice.dir)
+        config.loadfile.dir = os.path.abspath(self.config.loadfile.dir)
 
     def inspect_data(self):
 
@@ -403,9 +406,9 @@ def diced_file_comparator(a, b):
     FAQ entry for replicate samples: https://confluence.broadinstitute.org/display/GDAC/FAQ
     '''
 
-    # Convert files to barcodes by splitting
-    a = a.split('.')[0]
-    b = b.split('.')[0]
+    # Convert files to barcodes by splitting (removing any path prefix first)
+    a = os.path.basename(a).split('.')[0]
+    b = os.path.basename(b).split('.')[0]
 
     # Get the analytes and plates
     # TCGA-BL-A0C8-01A-11<Analyte>-<plate>-01
@@ -439,9 +442,8 @@ def diced_file_comparator(a, b):
         return -1 if a >= b else 1
 
 def choose_file(files):
-    # The files param is a list, but we first remove the path from each file to
-    # promote robustness in comparator (only sample ID value should be compared)
-    files = [os.path.basename(f) for f in files]
+    # NB: the files argument is a list of files prefixed with absolute paths
+
     # Example files value, drawn from TCGA-LUAD CNV__snp6 data:
     #  ['TCGA-44-2668-01A-01D-1549-01.6a5b9b87-ff2c-4596-b399-5a80299e50f8.txt',
     #   'TCGA-44-2668-01A-01D-A273-01.ed7bdfbc-a87a-4772-b38a-de9ed547d6db.txt',
