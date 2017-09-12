@@ -4,9 +4,9 @@
 ./TCGA-ACCSKCM.Sample.loadfile.txt
 ./TCGA-ACCSKCM.Sample_Set.loadfile.txt
 ./TCGA-ACCSKCM.filtered_samples.txt
-./TCGA-OV.Sample.loadfile.txt
-./TCGA-OV.Sample_Set.loadfile.txt
-./TCGA-OV.filtered_samples.txt
+./TCGA-ESCA.Sample.loadfile.txt
+./TCGA-ESCA.Sample_Set.loadfile.txt
+./TCGA-ESCA.filtered_samples.txt
 ./TCGA-SKCM.Sample.loadfile.txt
 ./TCGA-SKCM.Sample_Set.loadfile.txt
 ./TCGA-SKCM.filtered_samples.txt

@@ -10,7 +10,7 @@ TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF
 CONFIG_FILE=tcgaSmoketest.cfg
 #VERBOSITY=-V
 CONFIG=--config $(CONFIG_FILE) $(VERBOSITY)
-PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-OV
+PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-ESCA
 
 # To improve readibility of targets definitions below, we define commands to
 # encapsulate mirroring/dicing/file finding/loadfile parsing, etc operations
@@ -131,12 +131,14 @@ test_loadfile:
 	@echo "Test $(LOADFILE_TYPE) loadfile generation ..."
 	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
 	$(ABORT_ON_ERROR) $@.log
-	@# First, ensure that data files are prefixed with appropriate path
+	# First, ensure that data files are prefixed with appropriate path
 	$(VALIDATE_FILE_PREFIX)
-	@# Now compare names of files
+	# Now compare names of files
 	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
-	@# Lastly, compare content: removing local file prefix first, then MD5
+	# Now ensure that replicate etc filter is working
+	diff -b baselines/TCGA.filtered_samples.txt $(LOADFILES_DIR)/.
+	# Lastly, compare content: removing local file prefix first, then MD5
 	$(FIND_LOAD_FILES) -exec sed 's|$(FILE_PREFIX)/||g' {} \; \
 						| $(SORT) > $(TEST_ROOT)/load-munged.txt
 	$(MD5) $(TEST_ROOT)/load-munged.txt | sed 's|$(TEST_ROOT)/||g' \
@@ -156,7 +158,6 @@ test_report:
 									$(SORT) > $(TEST_ROOT)/report-files.txt) ; \
 		diff -b baselines/report-files.txt $(TEST_ROOT)/. ; \
 	fi
-
 
 test_cases:
 	@echo
