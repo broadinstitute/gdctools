@@ -28,7 +28,7 @@ class gdc_loadfile(GDCtool):
 
     def __init__(self):
         description = 'Create a Firehose-style loadfile from diced GDC data'
-        super(gdc_loadfile, self).__init__("0.3.2", description)
+        super(gdc_loadfile, self).__init__("0.3.3", description)
         cli = self.cli
         cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
                 ' referenced in loadfile [defaults to value of dice_dir]')
