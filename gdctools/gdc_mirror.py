@@ -30,10 +30,12 @@ class gdc_mirror(GDCtool):
 
     def __init__(self):
 
-        description = 'Create local mirror of the data from arbitrary '\
-                'programs and projects warehoused\nat the Genomic Data Commons'\
-                ' (GDC). Note that --date has no effect here.'
-        super(gdc_mirror, self).__init__("0.9.1", description)
+        description = 'Create local mirror of data from arbitrary set of '\
+            'programs/projects warehoused\nat the Genomic Data Commons (GDC)'
+
+        # Note that gdc_mirror is the only GDCtool which does not require
+        # datestamp (i.e. data version) to exist apriori, b/c it creates them
+        super(gdc_mirror, self).__init__("0.9.1", description, False)
         cli = self.cli
         cli.add_argument('-m', '--mirror-dir',
                 help='Root of mirrored data folder tree')
@@ -44,7 +46,7 @@ class gdc_mirror(GDCtool):
                 help='Download files even if already mirrored locally.'+
                 ' (DO NOT use during incremental mirroring)')
 
-        # detect if we have curl installed
+        # Detect if we have curl installed
         self.has_cURL = api.curl_exists()
 
     def config_customize(self):
