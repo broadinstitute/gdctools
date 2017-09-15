@@ -49,6 +49,7 @@ class gdc_report(GDCtool):
         # FIXME: remove TCGA hardcode
         diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
         datestamp = self.datestamp
+        logging.info("Generating report for snapshot date " + str(datestamp))
         latest = os.path.join(config.report.dir, 'latest')
         config.report.dir = os.path.join(config.report.dir,
                                           'report_' + datestamp)
