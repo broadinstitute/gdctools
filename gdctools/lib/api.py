@@ -146,15 +146,16 @@ class GDCQuery(object):
     def get(self, page_size=500):
         return self._query_paginator(page_size=page_size)
 
-def get_projects(program=None):
+def get_projects(program=[]):
     query = GDCQuery('projects')
-    if program:
-        query.add_eq_filter('program.name', program)
+    for prog in program:
+        query.add_eq_filter('program.name', prog)
     query.add_fields('project_id')
     projects = [d['project_id'] for d in query.get()]
     return sorted(projects)
 
 def get_project_from_cases(cases, program=None):
+    if not cases: return []
     query = GDCQuery('cases')
     query.add_in_filter('submitter_id', cases)
     query.add_fields('project.project_id')
