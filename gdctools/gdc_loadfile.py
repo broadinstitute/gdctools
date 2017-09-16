@@ -3,7 +3,7 @@
 
 # Front Matter {{{
 '''
-Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
+Copyright (c) 2016-2017 The Broad Institute, Inc.  All rights are reserved.
 
 gdc_mirror: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
@@ -26,16 +26,40 @@ from gdctools.GDCtool import GDCtool
 
 class gdc_loadfile(GDCtool):
 
+    formats = {
+        'firecloud' :
+        {
+        'entity_prefix' : 'entity:',
+        'membership_prefix' : 'membership:',
+        'name_of_case_identifier' : 'participant_id',
+        'create_case_loadfile' : True,
+        'prepend_program_name_to_cohort_name' : True,
+        },
+        'firehose' :
+        {
+        'entity_prefix' : '',
+        'membership_prefix' : '',
+        'name_of_case_identifier' : 'individual_id',
+        'create_case_loadfile' : False,
+        'prepend_program_name_to_cohort_name' : False,
+        }
+    }
+
     def __init__(self):
-        description = 'Create a Firehose-style loadfile from diced GDC data'
-        super(gdc_loadfile, self).__init__("0.3.3", description)
+        description = 'Create a loadfile from diced GDC data, suitable for '\
+                      'importing diced GDC data\ninto analysis pipeline '\
+                      'platforms.  The presently supported platforms are:\n\t'+\
+                      '\n\t'.join(sorted(self.formats.keys()))
+        super(gdc_loadfile, self).__init__("0.3.4", description)
         cli = self.cli
-        cli.add_argument('-f', '--file_prefix', help='Path prefix of each file'\
-                ' referenced in loadfile [defaults to value of dice_dir]')
         cli.add_argument('-d', '--dice-dir',
                 help='Dir from which diced data will be read')
+        cli.add_argument('-f', '--format', default='firecloud',
+                help='format of loadfile to generate [%(default)s]')
         cli.add_argument('-o', '--load-dir',
                 help='Where generated loadfiles will be placed')
+        cli.add_argument('-p', '--file_prefix', help='Path prefix of each file'\
+                ' referenced in loadfile [defaults to value of dice_dir]')
 
         self.program = None
 
@@ -46,9 +70,13 @@ class gdc_loadfile(GDCtool):
         if opts.dice_dir: config.dice.dir = opts.dice_dir
         if opts.load_dir: config.loadfile.dir = opts.load_dir
         if opts.file_prefix: config.loadfile.file_prefix = opts.file_prefix
+        if opts.format: config.loadfile.format = opts.format
         if opts.projects: config.projects = opts.projects
         self.validate_config(["dice.dir", "loadfile.dir"])
-        # Ensure that critical dir paths are utilized in absolute form
+        self.format = self.formats.get(config.loadfile.format, None)
+        if not self.format:
+            raise ValueError('Unsupported format: '+config.loadfile.format)
+        # Ensure that critical root directories are utilized in absolute form
         config.dice.dir = os.path.abspath(self.config.dice.dir)
         config.loadfile.dir = os.path.abspath(self.config.loadfile.dir)
 
@@ -92,7 +120,7 @@ class gdc_loadfile(GDCtool):
                 self.program = program
 
             program_dir = os.path.join(dice_dir, program)
-            annotations = set()
+            attributes = set()
 
             projnames = self.config.projects
             if not projnames:
@@ -100,7 +128,7 @@ class gdc_loadfile(GDCtool):
 
             for projname in sorted(projnames):
 
-                # Ignore metadata stored by GDCtools about program/projects
+                # Ignore metadata dir created by GDCtools during its operation
                 if projname.lower() == "metadata":
                     continue
 
@@ -110,24 +138,24 @@ class gdc_loadfile(GDCtool):
                 project = dict()
                 projpath = os.path.join(program_dir, projname)
 
-                logging.info("Inspecting data for {0} version {1}"\
+                logging.info("Inspecting data for {0} with version datestamp {1}"\
                                 .format(projname, self.datestamp))
 
                 metapath = get_diced_metadata(projname, projpath, self.datestamp)
                 with open(metapath) as metafile:
                     reader = csv.DictReader(metafile, delimiter='\t')
-                    # Stores the files and annotations for each case
+                    # Stores the files and attributes for each case
                     case_files = dict()
                     case_samples = dict()
 
                     for row in reader:
                         case_id = row['case_id']
                         annot = row['annotation']
-                        annotations.add(annot)
+                        attributes.add(annot)
 
                         filepath = row['file_name']
                         if file_prefix:
-                            filepath = filepath.replace(dice_dir,file_prefix,1)
+                            filepath = filepath.replace(dice_dir,file_prefix, 1)
 
                         # Make sure there is always an entry for this case in
                         # case samples, even if no samples will be added
@@ -145,11 +173,11 @@ class gdc_loadfile(GDCtool):
                             case_files[case_id].append((filepath, annot))
                             continue
 
-                        samp_id = sample_id(projname, row)
+                        samp_id = get_sample_id(self, projname, row)
                         case_samples[case_id].append(samp_id)
 
                         if samp_id not in project:
-                            project[samp_id] = master_load_entry(projname, row)
+                            project[samp_id] = self.sample_new(projname, row)
 
                         # Note that here each annotation has a list of potential
                         # diced files. When we generate the loadfile, we will
@@ -161,7 +189,7 @@ class gdc_loadfile(GDCtool):
 
                 # Now that all samples are known, back-fill case-level files for each
                 for case_id in case_samples:
-                    # Insert each file into each sample in master_load_dict
+                    # Insert each file into each sample descriptor
                     files = case_files.get(case_id, [])
                     samples = case_samples.get(case_id, [])
 
@@ -178,8 +206,8 @@ class gdc_loadfile(GDCtool):
                         # Is this dangerous??
                         pseudo_row['is_ffpe'] = False
 
-                        samp_id = sample_id(projname, pseudo_row)
-                        project[samp_id] = master_load_entry(projname, pseudo_row)
+                        samp_id = get_sample_id(projname, pseudo_row)
+                        project[samp_id] = self.sample_new(projname, pseudo_row)
                         samples = [samp_id]
 
                     for s in samples:
@@ -191,9 +219,76 @@ class gdc_loadfile(GDCtool):
                 # Finally, retain this project data for later loadfile generation
                 projects[projname] = project
 
-        return projects, sorted(annotations)
+        return projects, sorted(attributes)
 
-    def generate_loadfiles(self, projname, annotations, cohorts):
+    def required_headers(self, file_type):
+        format = self.format
+        if file_type == "Sample":
+            name_of_program_specific_sample_id = self.program.lower() + "_sample_id"
+            return [ 'sample_id',
+                     format['name_of_case_identifier'],     # Keep order as is
+                    'sample_type',
+                    name_of_program_specific_sample_id]
+        elif file_type == "Sample_Set":
+            return [ 'sample_set_id', 'sample_id']
+        elif file_type in ["Case", "Participant", "Individual"]:
+            return [ format['name_of_case_identifier'] ]
+        elif file_type == "filtered_samples":
+            return ["Participant Id", "Cohort", "Annotation",
+                    "Filter Reason", "Removed Samples","Chosen Sample"]
+
+        raise ValueError("Unsupported loadfile type: " + str(file_type))
+
+    def loadfile_name(self, prefix, file_type, suffix='.loadfile.txt'):
+        if file_type in ['Sample', 'Sample_Set']:
+            stem = file_type
+        elif file_type in ["Case", "Participant", "Individual"]:
+            stem = self.format['name_of_case_identifier']
+            stem = stem.replace('_id', '')
+            stem = stem[0].upper() + stem[1:]
+        elif file_type == 'filtered_samples':
+            stem = file_type
+            suffix = ".txt"
+        else:
+            raise ValueError("Unsupported loadfile type: " + str(file_type))
+
+        return prefix + '.' + stem + suffix
+
+    def sample_new(self, project, row):
+        # Fabricate a sample descriptor (dict) from a row (dict) from the
+        # timestamp-versioned metadata table (constructed by gdc_dice), using
+        # the chosen file format (dict) to customize column headers, etc
+
+        program_and_cohort = project.split("-")
+        program_name = program_and_cohort[0]
+
+        if self.format['prepend_program_name_to_cohort_name']:
+            cohort_name  = project
+        else:
+            cohort_name  = program_and_cohort[1]
+
+        # Ensure FFPE samples can be easily identified & segregated downstream
+        if row['is_ffpe'] == 'True':
+            cohort_name += 'FFPE'
+
+        gdc_case_id = row['case_id']                # <program>-<unique_barcode>
+        gdc_sample_type = row['sample_type']        # long, textual description
+
+        short_case_id = gdc_case_id.replace(program_name + '-', '')
+        our_sample_code, our_sample_type_abbrev = meta.tumor_code(gdc_sample_type)
+        our_sample_id = "-".join([cohort_name, short_case_id, our_sample_type_abbrev])
+        name_of_case_id = self.format['name_of_case_identifier']
+        name_of_program_specific_sample_id = program_name.lower() + "_sample_id"
+
+        s = dict()
+        s['sample_id'] = our_sample_id
+        s['sample_type'] = our_sample_type_abbrev
+        s[name_of_case_id] = "-".join([cohort_name, short_case_id])
+        s[name_of_program_specific_sample_id] = "-".join([gdc_case_id, our_sample_code])
+
+        return s
+
+    def generate_loadfiles(self, projname, sample_attributes, cohorts):
         # Generate a sample and sample_set loadfile for the given list of
         # cohorts (i.e. GDC projects).  Note that singleton cohorts will
         # have 1 entry in cohort list, and aggregate cohorts more than 1.
@@ -202,114 +297,147 @@ class gdc_loadfile(GDCtool):
 
         program = self.program
         datestamp = self.datestamp
+        config = self.config
 
-        logging.info("Generating loadfile for {0}".format(projname))
-        loadfile_root = os.path.abspath(self.config.loadfile.dir)
-        latest = os.path.join(loadfile_root, program, "latest")
-        loadfile_root = os.path.join(loadfile_root, program, datestamp)
-        if not os.path.isdir(loadfile_root):
-            os.makedirs(loadfile_root)
+        logging.info('Generating loadfile for {0}'.format(projname))
+        loadfile_dir = os.path.join(config.loadfile.dir, program, datestamp)
+        if not os.path.isdir(loadfile_dir):
+            latest = os.path.join(config.loadfile.dir, program, 'latest')
+            os.makedirs(loadfile_dir)
             common.silent_rm(latest)
-            os.symlink(os.path.abspath(loadfile_root), latest)
+            os.symlink(loadfile_dir, latest)
 
-        # First: the samples loadfile
-        samples_loadfile = projname + ".Sample.loadfile.txt"
-        samples_loadfile = os.path.join(loadfile_root, samples_loadfile)
-        logging.info("Writing samples loadfile to " + samples_loadfile)
-        samples_lfp = open(samples_loadfile, 'w+')
+        # First the cases/participants loadfile, if needed
+        if self.format['create_case_loadfile']:
+            cases_filename = self.loadfile_name(projname, "Case")
+            cases_filename = os.path.join(loadfile_dir, cases_filename)
+            logging.info('Writing cases loadfile to ' + cases_filename)
+            cases_filep = open(cases_filename, 'w+')
+            required_case_headers = self.required_headers("Case")
+            header = '\t'.join(required_case_headers) + '\n'
+            cases_filep.write(self.format['entity_prefix'] + header)
+        else:
+            cases_filep = None
 
-        # and the filtered samples file
-        filtered_samples_file = projname + ".filtered_samples.txt"
-        filtered_samples_file = os.path.join(loadfile_root, filtered_samples_file)
-        filtered_lfp = open(filtered_samples_file, 'w+')
+        # ... then the samples loadfile
+        samples_filename = self.loadfile_name(projname, 'Sample')
+        samples_filename = os.path.join(loadfile_dir, samples_filename)
+        logging.info('Writing samples loadfile to ' + samples_filename)
+        samples_filep = open(samples_filename, 'w+')
+        required_sample_headers = self.required_headers("Sample")
+        header = '\t'.join(required_sample_headers + sample_attributes) + '\n'
+        samples_filep.write(self.format['entity_prefix'] + header)
 
-        # ... column headers for each
-        headers =  ["sample_id", "individual_id" ]
-        headers += ["sample_type", "tcga_sample_id"] + annotations
-        samples_lfp.write("\t".join(headers) + "\n")
+        # ... and the filtered samples list file
+        filtered_filename = self.loadfile_name(projname, 'filtered_samples')
+        filtered_filename = os.path.join(loadfile_dir, filtered_filename)
+        logging.info('Writing filtered samples to ' + filtered_filename)
+        filtered_filep = open(filtered_filename, 'w+')
+        filtered_sample_headers = self.required_headers("filtered_samples")
+        filtered_filep.write('\t'.join(filtered_sample_headers) + '\n')
 
-        filtered_headers = ["Participant Id", "Tumor Type", "Annotation",
-                            "Filter Reason", "Removed Samples","Chosen Sample"]
-        filtered_lfp.write('\t'.join(filtered_headers) + "\n")
-
-        # ... then the rows (samples) for each cohort (project) in cohorts list
+        # Now populate each file in parallel, from the samples in each cohort
         for samples_in_this_cohort in cohorts:
-            write_samples(samples_lfp, filtered_lfp, headers,
+            write_samples(projname, samples_filep, filtered_filep,
+                        required_sample_headers, sample_attributes,
                         samples_in_this_cohort, self.config.missing_file_value)
 
-        # Second: now the sample set loadfile, derived from the samples loadfile
-        sset_loadfile = projname + ".Sample_Set.loadfile.txt"
-        sset_loadfile = os.path.join(loadfile_root, sset_loadfile)
-        logging.info("Writing sample set loadfile to " + sset_loadfile)
-        write_sset(samples_lfp, sset_loadfile, projname)
+        # Now do sample set & cases loadfiles by iterating over samples loadfile
+        sset_filename = self.loadfile_name(projname, 'Sample_Set')
+        sset_filename = os.path.join(loadfile_dir, sset_filename)
+        logging.info('Writing sample set loadfile to ' + sset_filename)
+        sset_filep = open(sset_filename, 'w')
+        header = '\t'.join( self.required_headers('Sample_Set')) + '\n'
+        sset_filep.write( self.format['membership_prefix'] + header)
+        write_sset_and_cases(samples_filep, sset_filep, cases_filep, projname)
 
-    def generate_master_loadfiles(self, projects, annotations):
-        # Generate master loadfiles for all samples & sample sets
-        # Do this by concatenating the individual sample(set) loadfiles
+    def generate_pan_cohort_loadfiles(self, projects, attributes):
+        # Fabricate pan-cohort aggregate loadfiles, for all samples and
+        # sample sets, by concatenating the singleton sample(set) loadfiles
         program = self.program
         datestamp = self.datestamp
+        lfname = self.loadfile_name
 
-        logging.info("Generating master loadfiles for {0}".format(program))
+        logging.info("Generating pan-cohort loadfiles for {0}".format(program))
         loadfile_root = os.path.abspath(self.config.loadfile.dir)
         loadfile_root = os.path.join(loadfile_root, program, datestamp)
         if not os.path.isdir(loadfile_root):
             os.makedirs(loadfile_root)
 
-        all_samp_loadfile = program + ".Sample.loadfile.txt"
+        all_samp_loadfile = lfname(program, 'Sample')
         all_samp_loadfile = os.path.join(loadfile_root, all_samp_loadfile)
 
-        all_sset_loadfile = program + ".Sample_Set.loadfile.txt"
+        all_sset_loadfile = lfname(program, 'Sample_Set')
         all_sset_loadfile = os.path.join(loadfile_root, all_sset_loadfile)
 
-        all_filter_file   = program + ".filtered_samples.txt"
+        all_filter_file   = lfname(program, 'filtered_samples')
         all_filter_file   = os.path.join(loadfile_root, all_filter_file)
 
+        if self.format['create_case_loadfile']:
+            write_cases = True
+            all_case_loadfile = lfname(program, 'Case')
+            all_case_loadfile = os.path.join(loadfile_root, all_case_loadfile)
+        else:
+            write_cases = False
+            all_case_loadfile = os.devnull
+
         with open(all_samp_loadfile, 'w') as aslfp, \
-             open(all_sset_loadfile, 'w') as sslfp, \
-             open(all_filter_file, 'w') as fflfp:
-            #Write headers for samples loadfile
-            headers =  ["sample_id", "individual_id" ]
-            headers += ["sample_type", "tcga_sample_id"] + sorted(annotations)
+             open(all_sset_loadfile, 'w') as asslfp, \
+             open(all_filter_file, 'w') as affp, \
+             open(all_case_loadfile, 'w') as aclfp:
+
+            # Write headers for samples, sset and filtered samples loadfiles
+            headers = self.required_headers("Sample") + sorted(attributes)
             aslfp.write("\t".join(headers) + "\n")
 
-            # Write headers for sample set loadfile
-            sslfp.write("sample_set_id\tsample_id\n")
+            headers = self.required_headers("Sample_Set")
+            asslfp.write("\t".join(headers) + "\n")
 
-            # write headers for filtered samples
-            filtered_headers = ["Participant Id", "Tumor Type", "Annotation",
-                                "Filter Reason", "Removed Samples","Chosen Sample"]
-            fflfp.write('\t'.join(filtered_headers) + "\n")
+            headers = self.required_headers("filtered_samples")
+            affp.write('\t'.join(headers) + "\n")
+
+            headers = self.required_headers("Case")
+            aclfp.write('\t'.join(headers) + "\n")
 
             # loop over each project, concatenating loadfile data from each
             for projname in sorted(projects.keys()):
                 # Write to sample file, but avoid duplicates if its an aggregate
                 if projname not in self.config.aggregates:
-                    proj_samples = projname + ".Sample.loadfile.txt"
+                    proj_samples = lfname(projname, 'Sample')
                     proj_samples = os.path.join(loadfile_root, proj_samples)
                     with open(proj_samples) as ps:
-                        # Skip header, and copy the rest of the file
+                        # Skip header, then copy rest of file
                         next(ps)
                         for line in ps:
                             aslfp.write(line)
 
-                proj_sset = projname + ".Sample_Set.loadfile.txt"
+                proj_sset = lfname(projname, 'Sample_Set')
                 proj_sset = os.path.join(loadfile_root, proj_sset)
                 with open(proj_sset) as psset:
-                    # Skip header, and copy the rest of the file
+                    # Skip header then copy rest of file
                     next(psset)
                     for line in psset:
-                        sslfp.write(line)
+                        asslfp.write(line)
 
-                # combine filtered samples, but don't do this for aggregates
-                # to avoid double counting
+                # Combine filtered samples, but again not for aggregates
                 if projname not in self.config.aggregates:
-                    proj_filtered = projname + ".filtered_samples.txt"
+                    proj_filtered = lfname(projname, 'filtered_samples')
                     proj_filtered = os.path.join(loadfile_root, proj_filtered)
                     with open(proj_filtered) as pf:
-                        # skip header, copy the rest
+                        # Skip header then copy rest of file
                         next(pf)
                         for line in pf:
-                            fflfp.write(line)
+                            affp.write(line)
+
+                # Combine cases, but once again not for aggregates
+                if write_cases and projname not in self.config.aggregates:
+                    proj_cases = lfname(projname, 'Case')
+                    proj_cases = os.path.join(loadfile_root, proj_cases)
+                    with open(proj_cases) as pc:
+                        # Skip header then copy rest of file
+                        next(pc)
+                        for line in pc:
+                            aclfp.write(line)
 
     def execute(self):
 
@@ -318,13 +446,13 @@ class gdc_loadfile(GDCtool):
 
         try:
             # Discern what data is available for given program on given datestamp
-            (projects, annotations) = self.inspect_data()
+            (projects, attributes) = self.inspect_data()
 
-            # ... then generate singleton loadfiles (one per project/cohort)
+            # ... then make singleton cohort loadfiles (one project/cohort per)
             for project in sorted(projects.keys()):
-                self.generate_loadfiles(project, annotations, [projects[project]])
+                self.generate_loadfiles(project, attributes, [projects[project]])
 
-            # ... then, generate any aggregate loadfiles (>1 project/cohort)
+            # ... and aggregate cohort loadfiles (multiple project/cohorts per)
             for aggr_name, aggr_definition in self.config.aggregates.items():
                 aggregate = []
                 for project in aggr_definition.split(","):
@@ -337,11 +465,10 @@ class gdc_loadfile(GDCtool):
                 # of the projects/cohorts in this aggregate definition were loaded
                 if aggregate:
                     print("Aggregate: {0} = {1}".format(aggr_name, aggr_definition))
-                    self.generate_loadfiles(aggr_name, annotations, aggregate)
+                    self.generate_loadfiles(aggr_name, attributes, aggregate)
 
-            # ... finally, assemble a composite loadfile for all available samples
-            # and sample sets
-            self.generate_master_loadfiles(projects, annotations)
+            # ... lastly, make pan-cohort loadfile for all samples & sample sets
+            self.generate_pan_cohort_loadfiles(projects, attributes)
         except Exception as e:
             logging.exception("Create Loadfile FAILED:")
 
@@ -356,50 +483,9 @@ def get_diced_metadata(project, project_root, datestamp):
     # sanity check
     raise ValueError("Could not find dice metadata for " + project + " on " + datestamp)
 
-def sample_id(project, row_dict):
-    '''Create a sample id from a row dict'''
-    if not project.startswith("TCGA-"):
-        raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
-
-    cohort = project.replace("TCGA-", "")
-    case_id = row_dict['case_id']
-    indiv_base = case_id.replace("TCGA-", "")
-    sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
-
-    # FFPE samples get seggregated regardless of actual sample_type
-    if row_dict['is_ffpe'] == 'True':
-        samp_id = "-".join([cohort + 'FFPE', indiv_base, sample_type_abbr])
-    else:
-        samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
-    return samp_id
-
-def master_load_entry(project, row_dict):
-    d = dict()
-    if not project.startswith("TCGA-"):
-        raise ValueError("Only TCGA data currently supported, (project = {0})".format(project))
-
-    cohort = project.replace("TCGA-", "")
-    case_id = row_dict['case_id']
-    indiv_base = case_id.replace("TCGA-", "")
-    sample_type = row_dict['sample_type']
-    sample_code, sample_type_abbr = meta.tumor_code(sample_type)
-
-    # FFPE samples get seggregated regardless of actual sample_type
-    if row_dict['is_ffpe'] == 'True':
-        samp_id = "-".join([cohort + 'FFPE', indiv_base, sample_type_abbr])
-    else:
-        samp_id = "-".join([cohort, indiv_base, sample_type_abbr])
-
-    indiv_id = "-".join([cohort, indiv_base])
-    tcga_sample_id = "-".join([case_id, sample_code])
-
-    d['sample_id'] = samp_id
-    d['individual_id'] = indiv_id
-    d['sample_type'] = sample_type_abbr
-    d['tcga_sample_id'] = tcga_sample_id
-
-    return d
+def get_sample_id(self, project, row_dict):
+    '''Discern sample id from a row dictionary'''
+    return self.sample_new(project, row_dict)['sample_id']
 
 def diced_file_comparator(a, b):
     '''Comparator function for barcodes, using the rules described in the GDAC
@@ -452,53 +538,54 @@ def choose_file(files):
     selected, ignored = preferred_order[0], preferred_order[1:]
     return selected, ignored
 
-def write_samples(samples_fp, filtered_fp, headers, samples, missing_file_value):
-    '''Loop over sample ids, filling in annotation columns for each'''
+def write_samples(cohort_name, samples_fp, filtered_fp,
+                  required_headers, attribute_names, samples, missing_file_value):
+    ''' Here each sample is output to its own row in the loadfile, with each key
+        of the sample dict corresponding to the column name/header and the value
+        for each key populating the respective cells of each row. The first N
+        columnss are required by the respective loadfile format, while the
+        remaining columns are attributes attached to each sample'''
+
     for sample_id in sorted(samples):
         sample = samples[sample_id]
+        chosen_row = "\t".join([sample[c] for c in required_headers])
 
-        # Each row must at minimum have sample_id, individual_id,
-        # sample_type, and tcga_sample_id
-        required_columns = headers[:4]
-        chosen_row = "\t".join([sample[c] for c in required_columns])
-
-        annot_columns = []
+        attrib_columns = []
         filtered_rows = []
-        for annot in headers[4:]:
-            files = sample.get(annot, None)
+        for attrib in attribute_names:
+            files = sample.get(attrib, None)
             # The missing_file_value is anlogous to NA values as used in R,
             # a placeholder so that a given cell in the table is not empty
             # This value can be configured in the [DEFAULT] config section
             if files is None:
-                annot_columns.append(missing_file_value)
+                attrib_columns.append(missing_file_value)
             else:
-                # If >1 file is a candidate for this annotation (column),
+                # If >1 file is a candidate for this attribute (column),
                 # pick the most appropriate and record the remainder of
                 # the unselected files into the replicates pile
                 chosen, ignored = choose_file(files)
-                annot_columns.append(chosen)
+                attrib_columns.append(chosen)
                 chosen_barcode = os.path.basename(chosen).split('.')[0]
                 ignored_barcodes = [os.path.basename(i).split('.')[0] for i in ignored]
                 # Create a row for each filtered barcode
                 for i in ignored_barcodes:
                     participant_id = chosen_barcode[:12]
-                    tumor_type = sample_id.split('-')[0]
                     filter_reason = "Analyte Replicate Filter"
                     removed_sample = i
-                    filtered_rows.append([participant_id, tumor_type, annot,
+                    filtered_rows.append([participant_id, cohort_name, attrib,
                                           filter_reason, removed_sample, chosen_barcode])
 
-        # Write row of chosen annotations
-        if len(annot_columns) > 0:
-            chosen_row += "\t" + "\t".join(annot_columns)
-        samples_fp.write(chosen_row + "\n")
+        # Write row of chosen attributes
+        if len(attrib_columns) > 0:
+            chosen_row += '\t' + '\t'.join(attrib_columns)
+        samples_fp.write(chosen_row + '\n')
 
         # Write row(s) of filtered barcodes
         for row in filtered_rows:
             row = "\t".join(row)
-            filtered_fp.write(row + "\n")
+            filtered_fp.write(row + '\n')
 
-def write_sset(samples_lfp, sset_filename, sset_name):
+def write_sset_and_cases(samples_filep, sset_filep, cases_fp, sset_name):
     '''
     Emit a sample set file, which is just a 2-column table where each row
     contains the ID of a sample and the name of a sample set in which that
@@ -510,24 +597,28 @@ def write_sset(samples_lfp, sset_filename, sset_name):
     '''
 
     # Rewind samples loadfile to beginning
-    samples_lfp.seek(0)
-
-    outfile = open(sset_filename, "w")
-    outfile.write("sample_set_id\tsample_id\n")
+    samples_filep.seek(0)
 
     # Iteratively write each sample to multiple sample sets:
-    #   First, to the full cohort sample set (e.g. TCGA-COAD)
-    #   Then to the respective tissue-specific sample set (e.g TCGA-COAD-TP)
-    reader = csv.DictReader(samples_lfp, delimiter='\t')
+    #    First, to the full cohort sample set (e.g. TCGA-COAD)
+    #    Then to the respective tissue-specific sample set (e.g TCGA-COAD-TP)
+    # While iterating, also accumulate the set of unique cases so that they
+    # can also be written to a cases/participants loadfile (if format allows)
+
+    reader = csv.DictReader(samples_filep, delimiter='\t')
+    sample_id_field = reader.fieldnames[0]           # See order required_headers()
+    case_id_field = reader.fieldnames[1]
+    cases = set()
+
     for sample in reader:
-        samp_id = sample['sample_id']
+        samp_id = sample[sample_id_field]
+        cases.add(sample[case_id_field])
 
         # Get the tumor type from the last field of the sample id
         # e.g. ACC-OR-A5J1-NB is in the ACC-NB sample set
         sset_type = samp_id.split('-')[-1]
-        sset_data = sset_name + "-" + sset_type + "\t" + samp_id + "\n"
 
-        # A sample is ffpe if the cohort name ends with FFPE.
+        # A sample is FFPE if the cohort name ends with FFPE
         # e.g. BRCAFFPE-A7-A0DB-TP is FFPE, ACC-OR-A5J1-NB is not
         if not samp_id.split('-')[0].endswith('FFPE'):
             # Typically samples are included in the sample-type-specific set
@@ -539,7 +630,11 @@ def write_sset(samples_lfp, sset_filename, sset_name):
             # But FFPE samples are not included in the aggregate sample set
             sset_data = sset_name + "-FFPE" + '\t' + samp_id + '\n'
 
-        outfile.write(sset_data)
+        sset_filep.write(sset_data)
+
+    if cases_fp:
+        for row in sorted(list(cases)):
+            cases_fp.write(row + '\n')
 
 def main():
     gdc_loadfile().execute()
