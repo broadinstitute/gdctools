@@ -37,7 +37,7 @@ from gdctools.GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.2")
+        super(gdc_dice, self).__init__(version="0.5.3")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -126,15 +126,12 @@ class gdc_dice(GDCtool):
                     raise ValueError("No metadata found for %s on %s" %
                                      (project, datestamp))
 
-                # Read json metadata as a dict
+                # Read metadata into a dict
                 with open(meta_file) as mf:
                     metadata = json.load(mf)
 
-                # metadata = meta.latest_metadata(latest_meta)
-
-                # If subset of cases was selected (via --case or config file),
-                # then filter out other file dicts
-                metadata = filter_by_case(metadata, config.cases)
+                # Subset data to dice by obeying constraints given in CLI/config
+                metadata = constrain(metadata, config)
 
                 diced_project_root = os.path.join(diced_prog_root, project)
                 logging.info("Dicing " + project + " to " + diced_project_root)
@@ -494,19 +491,26 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
             })
             meta_file_writer.writerow(rowdict)
 
-def filter_by_case(metadata, cases):
-    # if cases are provided, filter out file_dicts that aren't in cases
-    if cases:
-        cases = set(cases)
-        filt_meta = []
-        for fd in metadata:
-            fd_cases = {c['submitter_id'] for c in fd['cases']}
-            # If the intersection of the two sets has at least one value,
-            # then this file should be included, since one of it's cases was provided
-            if cases & fd_cases:
-                filt_meta.append(fd)
-        return filt_meta
-    return metadata
+def constrain(metadata, config):
+    cases_chosen = set(config.cases)
+    categories_chosen = config.categories
+
+    # Accept everything if no case/category constraints were specified
+    if not (cases_chosen or categories_chosen):
+        return metadata
+
+    result = []
+    for this in metadata:
+        cases = {c['submitter_id'] for c in this['cases']}
+        if cases_chosen and (cases.isdisjoint(cases_chosen)):
+            # If none of the case IDs for this have been chosen, skip
+            this = None
+        elif categories_chosen and this['data_category'] not in categories_chosen:
+            # Ditto for data category: skip if not chosen
+            this = None
+        if this:
+            result.append(this)
+    return result
 
 def _write_counts(case_data, counts_file):
     '''
