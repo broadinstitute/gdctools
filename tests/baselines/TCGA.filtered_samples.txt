@@ -1,5 +1,5 @@
-Participant Id	Tumor Type	Annotation	Filter Reason	Removed Samples	Chosen Sample
-TCGA-IG-A3YB	ESCA	miR__geneExp	Analyte Replicate Filter	TCGA-IG-A3YB-01A-11R-A24L-13	TCGA-IG-A3YB-01A-11R-A360-13
-TCGA-IG-A3YB	ESCA	miR__isoformExp	Analyte Replicate Filter	TCGA-IG-A3YB-01A-11R-A24L-13	TCGA-IG-A3YB-01A-11R-A360-13
-TCGA-L5-A4OI	ESCA	miR__geneExp	Analyte Replicate Filter	TCGA-L5-A4OI-01A-11R-A261-13	TCGA-L5-A4OI-01A-11R-A360-13
-TCGA-L5-A4OI	ESCA	miR__isoformExp	Analyte Replicate Filter	TCGA-L5-A4OI-01A-11R-A261-13	TCGA-L5-A4OI-01A-11R-A360-13
+Participant Id	Cohort	Annotation	Filter Reason	Removed Samples	Chosen Sample
+TCGA-IG-A3YB	TCGA-ESCA	miR__geneExp	Analyte Replicate Filter	TCGA-IG-A3YB-01A-11R-A24L-13	TCGA-IG-A3YB-01A-11R-A360-13
+TCGA-IG-A3YB	TCGA-ESCA	miR__isoformExp	Analyte Replicate Filter	TCGA-IG-A3YB-01A-11R-A24L-13	TCGA-IG-A3YB-01A-11R-A360-13
+TCGA-L5-A4OI	TCGA-ESCA	miR__geneExp	Analyte Replicate Filter	TCGA-L5-A4OI-01A-11R-A261-13	TCGA-L5-A4OI-01A-11R-A360-13
+TCGA-L5-A4OI	TCGA-ESCA	miR__isoformExp	Analyte Replicate Filter	TCGA-L5-A4OI-01A-11R-A261-13	TCGA-L5-A4OI-01A-11R-A360-13
