@@ -32,11 +32,12 @@ signal(SIGPIPE, SIG_DFL)
 
 class GDCtool(object):
     ''' Base class for each tool in the GDCtools suite '''
-    def __init__(self, version="", description=None):
+    def __init__(self, version="", description=None, datestamp_required=True):
         self.version = version + " (GDCtools: " + GDCT_VERSION + ")"
         self.cli = argparse.ArgumentParser( description=description,
                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
+        self.datestamp_required = datestamp_required
         self.config_add_args()
         self.cli.add_argument('--version', action='version', version=self.version)
         self.cli.add_argument('-V', '--verbose', dest='verbose',
@@ -57,26 +58,23 @@ class GDCtool(object):
         self.config_customize()
         self.config_finalize()
 
-        # Get today's datestamp, the default value
-        datestamp = time.strftime('%Y_%m_%d', time.localtime())
-
-        if self.options.datestamp:
-            # We are using an explicit datestamp, so it must match one from
-            # the datestamps file, or be the string "latest"
+        if self.datestamp_required:
             datestamp = self.options.datestamp
-            existing_stamps = self.datestamps()
+            if not datestamp:
+                datestamp = 'latest'
 
-            if datestamp == "latest":
-                if len(existing_stamps) == 0:
-                    raise ValueError("No existing datestamps,"
-                                     "cannot use 'latest' datestamp option ")
-                # already sorted, so last one is latest
-                datestamp = existing_stamps[-1]
-            elif datestamp not in existing_stamps:
-                # Timestamp not recognized, but print a combined message later
-                raise ValueError("Given datestamp not present in "
-                                 + self.config.datestamps + "\n"
-                                 + "Existing datestamps: " + repr(existing_stamps))
+            existing_dates = self.datestamps()         # ascending sort order
+            if len(existing_dates) == 0:
+                raise ValueError("No datestamps found, use upstream tool first")
+
+            if datestamp == 'latest':
+                datestamp = existing_dates[-1]
+            elif datestamp not in existing_dates:
+                raise ValueError("Requested datestamp not present in "
+                             + self.config.datestamps + "\n"
+                             + "Existing datestamps: " + repr(existing_dates))
+        else:
+            datestamp = time.strftime('%Y_%m_%d', time.localtime())
 
         self.datestamp = datestamp
         self.init_logging()
@@ -101,18 +99,20 @@ class GDCtool(object):
         cli = self.cli
         cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
                             help='One or more configuration files')
-        cli.add_argument('--date', nargs='?', dest='datestamp',
-                    help='Use data from a given dated mirror (snapshot) of '
-                    'GDC data, specified in YYYY_MM_DD form.  If omitted, '
-                    'the latest downloaded snapshot will be used.')
+
+        if self.datestamp_required:
+            cli.add_argument('--date', nargs='?', dest='datestamp',
+                help='Use data from a given dated version (snapshot) of '
+                'GDC data, specified in YYYY_MM_DD form.  If omitted, '
+                'the latest available snapshot will be used.')
         cli.add_argument('--cases', nargs='+', metavar='case_id',
-                    help='Process data only from these GDC cases')
+                help='Process data only from these GDC cases')
         cli.add_argument('--categories',nargs='+',metavar='category',
                 help='Mirror data only from these GDC data categories. '
                 'Note that many category names contain spaces, so use '
                 'quotes to delimit (e.g. \'Copy Number Variation\')')
         cli.add_argument('-L', '--log-dir',
-                    help='Directory where logfiles will be written')
+                help='Directory where logfiles will be written')
         cli.add_argument('--programs', nargs='+', metavar='program',
                     help='Process data only from these GDC programs')
         cli.add_argument('--projects', nargs='+', metavar='project',

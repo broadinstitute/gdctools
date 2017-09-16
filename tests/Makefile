@@ -21,21 +21,24 @@ PERFORM_DICE=$(PYTHON) $(SRC)/gdc_dice.py $(CONFIG) $(PROJECT_SUBSET)
 FIND_DICE_FILES=cd $(TEST_ROOT)/dice/TCGA && find TCGA-* -name '*.txt'
 FIND_LEGACY_FILES=cd legacy/mirror/TCGA && find TCGA-* -name '*.*' -a ! -name '*.json'
 PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG) $(PROJECT_SUBSET)
-
-PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(CONFIG) $(PROJECT_SUBSET)
-ifeq ($(LOADFILE_TYPE),google)
+PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(LOADFILE_FORMAT) $(CONFIG) $(PROJECT_SUBSET)
+ifeq ($(LOADFILE_DESTINATION),google)
    # We generate Google-bucketized loadfiles with an additional config file
    CONFIG := --config $(CONFIG_FILE) ../config/google.cfg $(VERBOSITY)
    LOADFILE_SUBDIR=google/
    LOADFILE_MD5=load-md5sums-google.txt
-   FILE_PREFIX=$(shell grep FILE_PREFIX ../config/google.cfg | awk '{print $$NF}')
+   FILE_PREFIX=$(shell grep FILE_PREFIX: ../config/google.cfg | awk '{print $$NF}')
+   # In this mode we also generate FireCloud-style loadfiles, including cases/participants
+   CHECK_CASES_LOADFILE=diff -b baselines/TCGA-ACCSKCM.Participant.loadfile.txt $(LOADFILES_DIR)/.
 else
    LOADFILE_SUBDIR=
    LOADFILE_MD5=load-md5sums.txt
    FILE_PREFIX=$(TEST_ROOT)
+   LOADFILE_FORMAT=--format=firehose
 endif
 LOADFILES_DIR=$(TEST_ROOT)/loadfiles/$(LOADFILE_SUBDIR)TCGA/latest
-FIND_LOAD_FILES=cd $(LOADFILES_DIR) && find . -name 'TCGA-*.txt'
+# Note: Participant loadfiles are excluded b/c they are NOT generated for legacy/firehose format
+FIND_LOAD_FILES=cd $(LOADFILES_DIR) && find . -name 'TCGA-*loadfile.txt' ! -name '*Participant*'
 FILE_PREFIX_LENGTH=$(shell printf $(FILE_PREFIX) | wc -c | awk '{print $$NF}')
 # The goal of VALIDATE_FILE_PREFIX is to ensure that data files listed within
 # the loadfile have correct paths, either to local filesystem or cloud buckets
@@ -112,7 +115,7 @@ test_choose:
 test_dice:
 	@echo
 	@echo Test dice: on subset of cohorts, to show CLI args override config file
-	$(PERFORM_DICE) 2>&1 | tee $@.log  | grep "Dicing TCGA"
+	$(PERFORM_DICE) 2>&1 | tee $@.log  | egrep "Dicing TCGA|date"
 	$(ABORT_ON_ERROR) $@.log
 	$(FIND_DICE_FILES) | $(SORT) > $(TEST_ROOT)/dice-files.txt
 	diff -b baselines/dice-files.txt $(TEST_ROOT)/.
@@ -122,23 +125,26 @@ test_dice:
 	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
 test_loadfiles:
-	$(EMAKE) test_loadfile
+	# By default GDCtools generates firecloud-style loadfiles, so exercise other
+	@$(EMAKE) test_loadfile
 	@echo
-	$(EMAKE) test_loadfile LOADFILE_TYPE=google
+	@$(EMAKE) test_loadfile LOADFILE_DESTINATION=google
 
 test_loadfile:
 	@echo
-	@echo "Test $(LOADFILE_TYPE) loadfile generation ..."
-	$(PERFORM_LOADF) 2>&1 | tee $@.log | grep Generating
+	@echo "Test $(LOADFILE_DESTINATION) loadfile generation ..."
+	$(PERFORM_LOADF) 2>&1 | tee $@.log | egrep "Generating|date"
 	$(ABORT_ON_ERROR) $@.log
 	# First, ensure that data files are prefixed with appropriate path
 	$(VALIDATE_FILE_PREFIX)
 	# Now compare names of files
 	$(FIND_LOAD_FILES) | $(SORT) > $(TEST_ROOT)/load-files.txt
 	diff -b baselines/load-files.txt $(TEST_ROOT)/.
-	# Now ensure that replicate etc filter is working
+	# Now ensure that replicate etc filter worked
 	diff -b baselines/TCGA.filtered_samples.txt $(LOADFILES_DIR)/.
-	# Lastly, compare content: removing local file prefix first, then MD5
+	# And check that case/participants loadfile is OK, if relevant
+	$(CHECK_CASES_LOADFILE)
+	# Lastly, MD5 compare content after removing local path prefix to files
 	$(FIND_LOAD_FILES) -exec sed 's|$(FILE_PREFIX)/||g' {} \; \
 						| $(SORT) > $(TEST_ROOT)/load-munged.txt
 	$(MD5) $(TEST_ROOT)/load-munged.txt | sed 's|$(TEST_ROOT)/||g' \
@@ -152,7 +158,7 @@ test_report:
 		echo "R / Rscript not installed on your system, skipping test_report" ;\
 	else \
 		echo "Test sample report generation ..." ; \
-		$(PERFORM_REPORT) 2>&1 | tee $@.log | grep Generating ; \
+		$(PERFORM_REPORT) 2>&1 | tee $@.log | egrep "Generating|date" ; \
 		$(ABORT_ON_ERROR) $@.log ; \
 		(cd $(TEST_ROOT)/reports/latest && find . -name '*.html' | \
 									$(SORT) > $(TEST_ROOT)/report-files.txt) ; \
