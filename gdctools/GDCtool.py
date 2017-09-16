@@ -16,7 +16,6 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 import sys
 import os
-import traceback
 import configparser
 import time
 import logging
@@ -181,72 +180,69 @@ class GDCtool(object):
     def config_finalize(self):
         # Here we define & enforce precedence in runtime/configuration state:
         #   1) amongst the SCOPES (sources) from which that state is gathered
-        #   2) and for the specificity of terms within that state
+        #   2) then using intersection to decide what needs to be processed
         #
         # The runtime configuration of each GDCtool comes from several SCOPES
         #   - built in defaults
         #   - configuration files
         #   - command line flags
-        # in order of increasing precedence (CLI flags highest).  We enforce
-        # that precedence here, noting the unavoidable chicken/egg problem: it
-        # cannot be enforced simply by parsing the CLI args after reading the
-        # config file, because --config is ALSO a CLI flag. So we have to give
-        # the --config CLI flag a chance to be utilized in config_initialize(),
-        # then override the config file variables (as given in named sections)
-        # here if they were ALSO set as CLI flags.
+        # in order of increasing precedence (CLI flags highest). For example,
+        # setting --cases <something> at the command line will override a
+        # CASES: entry in a configuration file.  Note we need to enforce this
+        # precedence explicitly here because of an unavoidable chicken/egg
+        # problem: namely that precdence can't be enforced simply by waiting
+        # to parse the CLI args UNTIL AFTER reading the config file, because
+        # --config is ALSO a CLI arg.  So we have to give the --config CLI flag
+        # a chance to be used in config_initialize(), then override the config
+        # file variables (as given in named sections) here if they were ALSO
+        # set as CLI flags.
         #
-        # Specificity precedence means that WITHIN A SCOPE more specific terms,
-        # such as case, have precedence over less specific terms like project.
-        # Querying by case(s) thus defines the project(s) & program(s) to be
-        # queried, with INTERSECTION used to disambiguate; so that if a project
-        # is specified but is not among the projects covered by any case that
-        # has been specified (e.g. project=TARGET-NBL, case=TCGA-XXXX), then
-        # that project is ignored.  In the future UNION semantics may be added.
-        #
-        # Finally, note that SCOPE supersedes SPECIFICITY: e.g. terms given at
-        # the CLI always supersede those given in config files. So, if case(s)
-        # are specified in a config file but projects are specified at the CLI,
-        # then the cases term is effectively erased by the projects term. Again,
-        # this may be relaxed in the future when/if UNION semantics are added,
-        # but most of this discussion is academic & given here only for clarity
-        # & completeness: because if you abide by KISS and maintain your runtime
-        # configuration in as clean and organized a manner as possible, none of
-        # these precedence concerns should ever have much impact upon you.
+        # After scoping the values of each configuration variable, we then
+        # intersect the cases/projects/programs values to ultimately decide
+        # what to process (i.e. what samples to mirror/download, dice, etc)
 
-        def enforce_precedence(From, To, highest):
+        def enforce_scope(From, To):
             if From.log_dir:    To.log_dir    = From.log_dir
             if From.workflow:   To.workflow   = From.workflow
             if From.categories: To.categories = From.categories
-            if From.programs:
-                To.programs   = From.programs
-                if highest: To.projects = To.cases = []
-            if From.projects:
-                To.projects   = From.projects
-                if highest: To.cases = []
-            if From.cases:
-                To.cases      = From.cases
+            if From.programs:   To.programs   = From.programs
+            if From.projects:   To.projects   = From.projects
+            if From.cases:      To.cases      = From.cases
 
         config = self.config
         toolname = self.__class__.__name__.split('gdc_')[-1]
-        enforce_precedence(config[toolname], config, False)
-        enforce_precedence(self.options, config, True)
+        enforce_scope(config[toolname], config)
+        enforce_scope(self.options, config)
 
-        # Ensure cases,categories,projects,programs config state are lists
-        config.cases      = self.get_values_as_list(config.cases)
-        config.categories = self.get_values_as_list(config.categories)
+        # Determine what to ultimately process, noting that
+        #
+        #  - explicitly specified cases implicitly constrain projects & programs
+        #  - explicitly specified projects implicitly constrains programs
+        #
+        # and using intersection here to adjudicate.  Also note that specifying
+        #
+        #  - only a program selects all projects & cases within that program
+        #  - only a project selects all cases for that project (w/in 1 program)
+        #
+        # but effect of the latter two is achieved downstream (not here), when
+        # the invoked tool is performing its function. Finally, nearly all
+        # GDCtools utilities need at least 1 case, project or program to be
+        # specified as a prerequisite to nominal operation.
 
-        # If individual cases have been specified then they completely define
-        # the projects & programs to be queried, and have precedence
-        if config.cases:
-            config.projects = api.get_project_from_cases(config.cases)
+        projs = set(api.get_project_from_cases(config.cases))
+        if not projs:
+            projs = set(config.projects)
+        elif config.projects:
+            projs &= set(config.projects)
 
-        # Simiarly, if projects is specified then it completely defines
-        # the programs to be queried, and has precedence
-        if config.projects:
-            config.programs = api.get_programs(config.projects)
+        progs = set(api.get_programs(projs))
+        if not progs:
+            progs = set(config.progs)
+        elif config.programs:
+            progs &= set(config.programs)
 
-        config.projects   = self.get_values_as_list(config.projects)
-        config.programs   = self.get_values_as_list(config.programs)
+        config.projects = list(projs)
+        config.programs = list(progs)
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
