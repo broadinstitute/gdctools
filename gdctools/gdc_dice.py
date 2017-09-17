@@ -77,9 +77,6 @@ class gdc_dice(GDCtool):
         # Get cohort to aggregate map
         cohort_agg_dict = self.cohort_aggregates()
 
-        # Validate early and fail if any errors exist
-        self.validate()
-
         # Programs is a list, but with only one element
         program = config.programs[0]
         diced_prog_root = os.path.join(config.dice.dir, program)
@@ -225,9 +222,11 @@ class gdc_dice(GDCtool):
     def execute(self):
         super(gdc_dice, self).execute()
         try:
+            self.validate()
             self.dice()
         except:
             logging.exception("Dicing FAILED:")
+            sys.exit(1)
 
     def cohort_aggregates(self):
         '''Invert the Aggregate->Cohort dictionary to list all aggregates for
@@ -279,22 +278,17 @@ class gdc_dice(GDCtool):
                     skip_header = True
 
     def validate(self):
-        '''Checks to see if the config options, like programs/projects are
-        properly mirrored.'''
-        # Validate programs and and projects by ensuring a folder exists for each
-        config = self.config
+        '''Validate programs & projects by ensuring a folder exists for each'''
 
+        config = self.config
         if len(config.programs) != 1:
-            logging.error("Dicer only supports dicing a single program but "
-                          + str(len(config.programs)) + " were provided.")
-            logging.error(str(config.programs))
-            sys.exit(1)
+            raise RuntimeError("Dicer only supports dicing a single program but"
+                + str(len(config.programs)) + " were provided.")
 
         possible_programs = common.immediate_subdirs(config.mirror.dir)
         program = config.programs[0]
         if program not in possible_programs:
-            logging.error("Program " + program + " not found in mirror")
-            sys.exit(1)
+            raise RuntimeError("Program " + program + " not found in mirror")
 
         prog_dir = os.path.join(config.mirror.dir, program)
         possible_projects = common.immediate_subdirs(prog_dir)
@@ -302,8 +296,7 @@ class gdc_dice(GDCtool):
         projects = config.projects
         for proj in projects:
             if proj not in possible_projects:
-                logging.error("Project " + proj + " not found in mirror")
-                sys.exit(1)
+                raise RuntimeError("Project " + proj + " not found in mirror")
 
 def _tcgaid_file_lookup(metadata, translation_dict):
     '''Builds a dictionary mapping tcga_ids to their file info,

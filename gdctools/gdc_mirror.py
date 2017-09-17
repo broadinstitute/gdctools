@@ -51,19 +51,19 @@ class gdc_mirror(GDCtool):
 
     def config_customize(self):
         opts = self.options
-        config = self.config.mirror
-        if opts.mirror_dir: config.dir = opts.mirror_dir
+        config = self.config
+        if opts.mirror_dir: config.mirror.dir = opts.mirror_dir
         self.force_download = opts.force_download
         self.workflow = opts.workflow
 
-        if config.legacy:
+        if config.mirror.legacy:
             # Legacy mode has been requested in config file, coerce to boolean
-            value = config.legacy.lower()
-            config.legacy = (value in ["1", "true", "on", "yes"])
+            value = config.mirror.legacy.lower()
+            config.mirror.legacy = (value in ["1", "true", "on", "yes"])
 
         # Allow command line flag to override config file
         if opts.legacy:
-            config.legacy = opts.legacy
+            config.mirror.legacy = opts.legacy
 
         # Legacy mode has several effects:
         #   1) Ensures that api requests are routed to the GDC legacy API
@@ -73,14 +73,10 @@ class gdc_mirror(GDCtool):
         #      extension), with no UUID inserted into names of mirrored files
         #   4) Prohibits subsequent processing, e.g. dicing: the GDCtools suite
         #      ONLY supports MIRRORING of legacy, nothing else
-        api.set_legacy(config.legacy)
+        api.set_legacy(config.mirror.legacy)
 
-    def mirror(self):
-
-        config = self.config
         projects = []
         programs = []
-
         # Validate program and project names, if specified
         if config.projects:
             all_projects = api.get_projects()
@@ -102,16 +98,23 @@ class gdc_mirror(GDCtool):
         # other tools do not need to be this stringent, because they can
         # infer programs/projects/cases from mirror or derivatives of it
         if not (programs or projects):
-            gabort(1, "Cannot determine programs or projects from config "+
+            gabort(1, "No valid programs or projects specified in config "+
                       "file or command line flags")
 
-        # Everything has validated, so let's get mirroring started
+        config.projects = projects
+        config.programs = programs
+
+    def mirror(self):
+
+        config = self.config
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
 
         logging.info("GDC Mirror Version: %s", self.version)
         logging.info("Command: " + " ".join(sys.argv))
 
+        projects = config.projects
+        programs = config.programs
         if not projects:
             logging.info("No projects specified, inferring from programs")
             projects = []
@@ -290,6 +293,7 @@ class gdc_mirror(GDCtool):
             self.mirror()
         except:
             logging.exception("Mirroring FAILED:")
+            sys.exit(1)
 
     def update_datestamps_file(self):
         """ Update the datestamps file with this mirror """

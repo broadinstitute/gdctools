@@ -234,12 +234,20 @@ class GDCtool(object):
             projs = set(config.projects)
         elif config.projects:
             projs &= set(config.projects)
+            # If this results in an empty set of projects, reset to CLI value
+            # as warning sign (by trying to induce downstream failure/exception)
+            if not projs:
+                projs = config.projects
 
         progs = set(api.get_programs(projs))
         if not progs:
             progs = set(config.progs)
         elif config.programs:
             progs &= set(config.programs)
+            # If this results in an empty set of programs, reset to CLI value
+            # as warning sign (by trying to induce downstream failure/exception)
+            if not progs:
+                progs = config.programs
 
         config.projects = list(projs)
         config.programs = list(progs)

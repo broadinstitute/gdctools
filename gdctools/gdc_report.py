@@ -18,13 +18,13 @@ from __future__ import print_function
 import subprocess
 import logging
 import os
+import sys
 from pkg_resources import resource_filename
 from glob import iglob
 
 from gdctools.lib.heatmap import draw_heatmaps
 from gdctools.lib.meta import extract_case_data
 from gdctools.lib.common import silent_rm
-
 from gdctools.GDCtool import GDCtool
 
 class gdc_report(GDCtool):
@@ -42,9 +42,7 @@ class gdc_report(GDCtool):
         mandatory_config +=  ["report.dir", "report.blacklist"]
         self.validate_config(mandatory_config)
 
-    def execute(self):
-        super(gdc_report, self).execute()
-
+    def generate_report(self):
         config = self.config
         # FIXME: remove TCGA hardcode
         diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
@@ -85,16 +83,20 @@ class gdc_report(GDCtool):
                               config.report.blacklist
                             ])
 
-        # TODO: better error handling
         logging.info("Running GDCSampleReport.R ")
         logging.info("CMD Args: " + " ".join(self.cmdArgs))
+        p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for line in p.stdout:
+            logging.info(line.rstrip())
+            p.stdout.flush()
+
+    def execute(self):
+        super(gdc_report, self).execute()
         try:
-            p = subprocess.Popen(self.cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            for line in p.stdout:
-                logging.info(line.rstrip())
-                p.stdout.flush()
+            self.generate_report()
         except:
             logging.exception("Sample report generation FAILED:")
+            sys.exit(1)
 
     def write_aggregate_definitions(self):
         '''Creates an aggregates.txt file in the reports directory. aggregates

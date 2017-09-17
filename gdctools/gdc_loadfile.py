@@ -17,6 +17,7 @@ file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 from __future__ import print_function
 import logging
 import os
+import sys
 import csv
 from functools import cmp_to_key
 
@@ -441,10 +442,10 @@ class gdc_loadfile(GDCtool):
 
     def execute(self):
 
-        super(gdc_loadfile, self).execute()
-        opts = self.options
-
         try:
+            super(gdc_loadfile, self).execute()
+            opts = self.options
+
             # Discern what data is available for given program on given datestamp
             (projects, attributes) = self.inspect_data()
 
@@ -471,6 +472,7 @@ class gdc_loadfile(GDCtool):
             self.generate_pan_cohort_loadfiles(projects, attributes)
         except Exception as e:
             logging.exception("Create Loadfile FAILED:")
+            sys.exit(1)
 
 def get_diced_metadata(project, project_root, datestamp):
     # At this point the datestamp has been vetted to be the latest HH_MM_SS
@@ -480,7 +482,6 @@ def get_diced_metadata(project, project_root, datestamp):
     mpath = os.path.join(mpath, project + '.' + datestamp + ".diced_metadata.tsv")
     if os.path.exists(mpath):
         return mpath
-    # sanity check
     raise ValueError("Could not find dice metadata for " + project + " on " + datestamp)
 
 def get_sample_id(self, project, row_dict):

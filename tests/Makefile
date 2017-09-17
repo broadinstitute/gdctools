@@ -49,6 +49,13 @@ VALIDATE_FILE_PREFIX=cd $(LOADFILES_DIR) && \
 		echo "File paths in loadfiles must begin with $(FILE_PREFIX)" ; \
 		false ; \
 	fi
+ENSURE_FAILURE_EXIT_CODE=\
+	if (($$Result)) ; then \
+		echo "Pass: aborted with exit code $$Result" ; \
+	else \
+		echo "Fail: returned 0 exit code , but should've returned non-zero" ; \
+		false ; \
+	fi
 
 # --------------------------- Target definitions ---------------------------
 
@@ -100,12 +107,24 @@ test_badcfg:
 	@echo Test that attempting to use bad config file quickly aborts with error
 	@touch bad.cfg
 	@$(PYTHON) ../gdctools/gdc_mirror.py --config bad.cfg || Result=$$? ; \
-	if (($$Result)) ; then \
-		echo "Good: failed with return code $$Result" ; \
-	else \
-		echo "Error: returned $$Result status, but should've returned non-zero" ; \
-		false ; \
-	fi
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
+	@echo Now test that given bad program/project names also quickly aborts
+	@$(PYTHON) ../gdctools/gdc_mirror.py --programs DUMMY || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
+	@$(PYTHON) ../gdctools/gdc_mirror.py --projects DUMMY || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
+	@$(PERFORM_DICE) --programs DUMMY 2>&1 | grep -i error || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
+	@$(PERFORM_LOADF) --projects DUMMY 2>&1 | grep -i error || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
+	@echo Induce failure in gdc_list, by giving bad input
+	@$(PYTHON) $(SRC)/gdc_list.py DUMMY 2>&1 || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
 
 test_choose:
 	@echo
