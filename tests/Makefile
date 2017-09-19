@@ -82,6 +82,9 @@ test_invoke:
 	@$(PYTHON) $(SRC)/GDCtool.py >/dev/null
 	@$(PYTHON) $(SRC)/gdc_mirror.py --help >/dev/null
 	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
+	@echo Test assorted features or API calls directly, instead of via tools
+	@$(PYTHON) misctests.py > $(TEST_ROOT)/misctests.txt
+	diff $(TEST_ROOT)/misctests.txt baselines/misctests.txt
 
 test_mirror:
 	@echo

@@ -207,7 +207,7 @@ class gdc_loadfile(GDCtool):
                         # Is this dangerous??
                         pseudo_row['is_ffpe'] = False
 
-                        samp_id = get_sample_id(projname, pseudo_row)
+                        samp_id = get_sample_id(self, projname, pseudo_row)
                         project[samp_id] = self.sample_new(projname, pseudo_row)
                         samples = [samp_id]
 
