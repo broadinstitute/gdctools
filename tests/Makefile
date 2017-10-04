@@ -83,10 +83,6 @@ test_invoke:
 	@$(PYTHON) $(SRC)/gdc_mirror.py --help >/dev/null
 	@$(PYTHON) $(SRC)/gdc_list.py --help >/dev/null
 	@echo Test assorted features or API calls directly, instead of via tools
-	@if [ ! -d $(TEST_ROOT) ] ; then \
-		echo creating $(TEST_ROOT) ;\
-		mkdir -p "$(TEST_ROOT)" ;\
-	fi
 	@$(PYTHON) misctests.py > $(TEST_ROOT)/misctests.txt
 	diff $(TEST_ROOT)/misctests.txt baselines/misctests.txt
 
