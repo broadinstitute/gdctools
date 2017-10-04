@@ -251,6 +251,8 @@ class GDCtool(object):
 
         config.projects = list(projs)
         config.programs = list(progs)
+        for var in ["cases", "categories", "projects", "programs"]:
+            config[var] = self.get_values_as_list(config[var])
 
     def validate_config(self, vars_to_examine, UnsetValue=None):
         '''
