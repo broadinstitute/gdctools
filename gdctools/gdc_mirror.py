@@ -75,9 +75,15 @@ class gdc_mirror(GDCtool):
         #      ONLY supports MIRRORING of legacy, nothing else
         api.set_legacy(config.mirror.legacy)
 
+    def mirror(self):
+
+        config = self.config
+        if not os.path.isdir(config.mirror.dir):
+            os.makedirs(config.mirror.dir)
+
+        # Validate program and project names, if specified
         projects = []
         programs = []
-        # Validate program and project names, if specified
         if config.projects:
             all_projects = api.get_projects()
             for proj in config.projects:
@@ -101,20 +107,9 @@ class gdc_mirror(GDCtool):
             gabort(1, "No valid programs or projects specified in config "+
                       "file or command line flags")
 
-        config.projects = projects
-        config.programs = programs
-
-    def mirror(self):
-
-        config = self.config
-        if not os.path.isdir(config.mirror.dir):
-            os.makedirs(config.mirror.dir)
-
         logging.info("GDC Mirror Version: %s", self.version)
         logging.info("Command: " + " ".join(sys.argv))
 
-        projects = config.projects
-        programs = config.programs
         if not projects:
             logging.info("No projects specified, inferring from programs")
             projects = []

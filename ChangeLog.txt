@@ -1,3 +1,5 @@
+Version 0.2.6:
+.  More spit-n-polish on the regression tests
 Version 0.2.5:
 .  gdc_miror now longer exposes --date CLI arg; it was never relevant because
    the mirror creates datestamps

@@ -71,11 +71,14 @@ help:
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
-test: test_smoke test_dice test_loadfiles test_legacy test_report echo_success
-test_smoke: echo_ver test_invoke test_mirror test_redo_mirror test_badcfg \
+test: setup test_smoke test_dice test_loadfiles test_legacy test_report echo_success
+test_smoke: setup echo_ver test_invoke test_mirror test_redo_mirror test_badcfg \
 			test_cases test_choose
 
-test_invoke:
+setup:
+	mkdir -p $(TEST_ROOT)
+
+test_invoke: setup
 	@echo
 	@echo Test runnability: invoke some tools to show nothing thrown to stderr
 	@$(PYTHON) $(SRC)/GDCcore.py >/dev/null
