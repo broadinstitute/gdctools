@@ -19,6 +19,7 @@ import os
 import logging
 import time
 import json
+import collections
 
 from gdctools.GDCcore import *
 from gdctools.GDCtool import GDCtool
@@ -159,7 +160,7 @@ class gdc_mirror(GDCtool):
             os.makedirs(dirname)
 
         md5path = savepath + ".md5"
-
+        file_status = 'cached'
         # Download if force is enabled or if the file is not on disk
         if (self.force_download or not meta.md5_matches(file_d, md5path, strict)
                 or not os.path.isfile(savepath)):
@@ -167,6 +168,7 @@ class gdc_mirror(GDCtool):
             # New file, mirror to this folder
             time = 180
             retry = 0
+            file_status = 'error'
             while retry <= retries:
                 try:
                     #Download file
@@ -200,6 +202,9 @@ class gdc_mirror(GDCtool):
                 os.rename(partialsavepath,savepath)
                 with open(md5path, 'w') as mf:
                     mf.write(md5sum + "  " + basename)
+                file_status = 'pass'
+
+        return file_status
 
     def mirror_project(self, program, project):
         '''Mirror one project folder'''
@@ -276,20 +281,18 @@ class gdc_mirror(GDCtool):
                     [case for case in file_metadata[idx]["cases"] \
                      if case["submitter_id"] in cases]
 
-        new_metadata = file_metadata
 
-        # If we aren't forcing a full mirror, check the existing metadata
-        # to see what files are new
-        if not self.force_download:
-            new_metadata = meta.files_diff(proj_dir, file_metadata,
-                                           prev_metadata, strict)
 
-        num_files = len(new_metadata)
+        num_files = len(file_metadata)
         logging.info("{0} new {1} files".format(num_files, category))
 
-        for n, file_d in enumerate(new_metadata):
-            self.__mirror_file(file_d, proj_dir, n+1, num_files)
+        status_tally = collections.Counter()
+        for n, file_d in enumerate(file_metadata):
+            file_status = self.__mirror_file(file_d, proj_dir, n+1, num_files)
+            status_tally[file_status] += 1
 
+        #TODO remove **gs**
+        print (str(status_tally))
         return file_metadata
 
     def execute(self):
