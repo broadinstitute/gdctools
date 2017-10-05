@@ -77,6 +77,9 @@ class gdc_mirror(GDCtool):
 
     def mirror(self):
 
+        #TODO remove **gs**
+        print('hello world')
+
         config = self.config
         if not os.path.isdir(config.mirror.dir):
             os.makedirs(config.mirror.dir)
@@ -147,6 +150,7 @@ class gdc_mirror(GDCtool):
         '''
         strict = not self.config.mirror.legacy
         savepath = meta.mirror_path(proj_root, file_d, strict=strict)
+        partialsavepath = savepath + '.partial'
         dirname, basename = os.path.split(savepath)
         logging.info("Mirroring file {0} | {1} of {2}".format(basename, n, total))
 
@@ -168,9 +172,9 @@ class gdc_mirror(GDCtool):
                     #Download file
                     uuid = file_d['file_id']
                     if self.has_cURL:
-                        api.curl_download_file(uuid, savepath, max_time=time)
+                        api.curl_download_file(uuid, partialsavepath, max_time=time)
                     else:
-                        api.py_download_file(uuid, savepath)
+                        api.py_download_file(uuid, partialsavepath)
                     break
                 except Exception as e:
                     logging.warning("Download failed: " + str(e) + '\nRetrying...')
@@ -182,12 +186,18 @@ class gdc_mirror(GDCtool):
             if retry > retries:
                 # A partially downloaded file will interfere with subsequent
                 # mirrors
-                common.silent_rm(savepath)
+                common.silent_rm(partialsavepath)
                 logging.error("Error downloading file {0}, too many retries ({1})".format(savepath, retries))
+                #TODO set flag **gs**
             else:
-                #Save md5 checksum on success
+                #success! First remove old md5, then rename file, then write new md5
+                #That way, if the process gets interrupted, future runs will be consider
+                # the file dirty unless each of these steps complete.
                 md5sum = file_d['md5sum']
                 md5path = savepath + ".md5"
+                if os.path.exists(md5path):
+                    os.remove(md5path)
+                os.rename(partialsavepath,savepath)
                 with open(md5path, 'w') as mf:
                     mf.write(md5sum + "  " + basename)
 
