@@ -132,16 +132,19 @@ class gdc_mirror(GDCtool):
             program_projects[prgm].append(project)
 
         # Now loop over each program, acquiring lock
+        prgm_status_tally = collections.Counter()
         for prgm in program_projects:
             projects = program_projects[prgm]
             prgm_root = os.path.abspath(os.path.join(config.mirror.dir, prgm))
 
             with common.lock_context(prgm_root, "mirror"):
                 for project in sorted(projects):
-                    self.mirror_project(prgm, project)
+                    proj_status_tally = self.mirror_project(prgm, project)
+                    prgm_status_tally.update(proj_status_tally)
 
         # Update the datestamps file with this version of the mirror
         self.update_datestamps_file()
+        logging.info(str(prgm_status_tally))
         logging.info("Mirror completed successfully.")
 
     def __mirror_file(self, file_d, proj_root, n, total, retries=3):
@@ -233,11 +236,13 @@ class gdc_mirror(GDCtool):
 
         # Mirror each category separately, recording metadata (file dicts)
         file_metadata = []
+        proj_status_tally = collections.Counter()
         for cat in sorted(categories):
-            cat_data = self.mirror_category(program, project, cat,
+            cat_data, cat_status_tally = self.mirror_category(program, project, cat,
                                             self.workflow,
                                             prev_metadata)
             file_metadata.extend(cat_data)
+            proj_status_tally.update(cat_status_tally)
 
         # Record project-level metadata
         # file dicts, counts, redactions, blacklist, etc.
@@ -251,6 +256,8 @@ class gdc_mirror(GDCtool):
         meta_json = os.path.join(stamp_folder, meta_json)
         with open(meta_json, 'w') as jf:
             json.dump(file_metadata, jf, indent=2)
+
+        return proj_status_tally
 
     def mirror_category(self, program, project, category,
                         workflow, prev_metadata):
@@ -292,8 +299,8 @@ class gdc_mirror(GDCtool):
             status_tally[file_status] += 1
 
         #TODO remove **gs**
-        print (str(status_tally))
-        return file_metadata
+        #print (str(status_tally))
+        return file_metadata, status_tally
 
     def execute(self):
         super(gdc_mirror, self).execute()
