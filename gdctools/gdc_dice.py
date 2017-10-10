@@ -81,6 +81,7 @@ class gdc_dice(GDCtool):
         program = config.programs[0]
         diced_prog_root = os.path.join(config.dice.dir, program)
         mirror_prog_root = os.path.join(config.mirror.dir, program)
+        prog_status_tally = Counter()
 
         # Ensure no simultaneous mirroring/dicing
         with common.lock_context(diced_prog_root, "dice"), \
@@ -164,17 +165,20 @@ class gdc_dice(GDCtool):
                     for tcga_id in tcga_lookup:
                         # Dice single sample files first
                         for file_d in viewvalues(tcga_lookup[tcga_id]):
-                            dice_one(file_d, trans_dict, raw_project_root,
+                            dice_one_status = dice_one(file_d, trans_dict, raw_project_root,
                                      diced_project_root, mfw,
                                      dry_run=self.options.dry_run,
                                      force=self.force)
+                            prog_status_tally[dice_one_status] += 1
 
                     #Then dice the multi_sample_files
                     for file_d in multi_sample_files:
-                        dice_one(file_d, trans_dict, raw_project_root,
+                        dice_one_status = dice_one(file_d, trans_dict, raw_project_root,
                                  diced_project_root, mfw,
                                  dry_run=self.options.dry_run,
                                  force=self.force)
+                        prog_status_tally[dice_one_status] += 1
+
 
                 # Bookkeeping code -- write some useful tables
                 # and figures needed for downstream sample reports.
@@ -217,7 +221,11 @@ class gdc_dice(GDCtool):
             _write_combined_counts(all_counts_file, all_counts, all_totals)
             _link_to_prog(all_counts_file, datestamp, diced_prog_root)
 
-        logging.info("Dicing completed successfuly")
+        logging.info(str(prog_status_tally))
+        if prog_status_tally['error'] == 0:
+            logging.info("Dicing completed successfuly")
+        else:
+            logging.warn("One or more diced files FAILED")
 
     def execute(self):
         super(gdc_dice, self).execute()
@@ -361,10 +369,11 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
     true, a debug message will be displayed instead of performing the actual
     dicing operation.
     """
+    dice_one_status = 'error'
     mirror_path = meta.mirror_path(mirror_proj_root, file_dict)
     if not os.path.isfile(mirror_path):
         # Bad, this means there are integrity issues
-        raise ValueError("Expected mirror file missing: " + mirror_path)
+        logging.warning("Expected mirror file missing: " + mirror_path)
     else:
         ## Get the right annotation and converter for this file
         annot, convert = get_annotation_converter(file_dict, translation_dict)
@@ -380,12 +389,19 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                 already_diced = all(os.path.isfile(p) for p in expected_paths)
                 if force or not already_diced:
                     logging.info("Dicing file " + mirror_path)
-                    convert(file_dict, mirror_path, dice_path)
+                    try:
+                        convert(file_dict, mirror_path, dice_path)
+                        dice_one_status = 'pass'
+                    except Exception as e:
+                        logging.warning('Dice converter failed: %s'%str(e))
                 else:
                     logging.info("Skipping file " + mirror_path + " (already diced)")
+                    dice_one_status = 'cached'
 
                 append_diced_metadata(file_dict, expected_paths,
                                       annot, meta_file_writer)
+            else:
+                dice_one_status = 'dry_run'
         else:
             # To verbose to log the entire json, log just log data_type and file_id
             warning_info = {
@@ -396,6 +412,7 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
             }
             logging.warn('Unrecognized data:\n%s' % json.dumps(warning_info,
                                                                indent=2))
+    return dice_one_status
 
 def get_annotation_converter(file_dict, translation_dict):
     k = metadata_to_key(file_dict)
