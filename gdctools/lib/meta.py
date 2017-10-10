@@ -224,7 +224,7 @@ def mirror_path(proj_root, file_dict, strict=True):
 def diced_file_path_partial(root, file_dict):
     diced_path = diced_file_path(root, file_dict)
     diced_path_partial = diced_path + '.partial'
-    return diced_file_path_partial
+    return diced_path_partial
 
 def diced_file_path(root, file_dict):
     diced_paths = diced_file_paths(root, file_dict)
