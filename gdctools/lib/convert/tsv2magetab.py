@@ -5,7 +5,7 @@ from os.path import basename
 import os
 
 from ..common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile, rearrange_columns
-from ..meta import tcga_id, diced_file_paths
+from ..meta import tcga_id, diced_file_path, diced_file_path_partial
 
 
 def process(file_dict, infile, outdir, fpkm=False, col_order=None, data_cols=None):
@@ -20,8 +20,8 @@ data_cols : list of int
     '''
 
 
-    filepath = diced_file_paths(outdir, file_dict)[0]
-    filepath_partial = filepath + '.partial'
+    filepath = diced_file_path(outdir, file_dict)
+    filepath_partial = diced_file_path_partial(outdir, file_dict)
     safeMakeDirs(outdir)
     _tcga_id = tcga_id(file_dict)
 

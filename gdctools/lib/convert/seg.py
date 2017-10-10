@@ -9,8 +9,8 @@ from .. import meta
 
 def process(file_dict, infile, outdir, dialect='seg_broad'):
     # Should only produce one outfile
-    outfile = meta.diced_file_paths(outdir, file_dict)[0]
-    outfile_partial = outfile + '.partial'
+    outfile = meta.diced_file_path(outdir, file_dict)
+    outfile_partial = meta.diced_file_path_partial(outdir, file_dict)
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
 

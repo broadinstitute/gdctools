@@ -220,6 +220,20 @@ def mirror_path(proj_root, file_dict, strict=True):
     name = file_basename(file_dict, strict)
     return os.path.join(proj_root, category, data_type, name).replace(' ', '_')
 
+
+def diced_file_path_partial(root, file_dict):
+    diced_path = diced_file_path(root, file_dict)
+    diced_path_partial = diced_path + '.partial'
+    return diced_file_path_partial
+
+def diced_file_path(root, file_dict):
+    diced_paths = diced_file_paths(root, file_dict)
+    if len(diced_paths) != 1:
+        raise ValueError("Expected one path, found %d for %s"%
+            (len(diced_paths), json.dumps(file_dict, indent=2)))
+    diced_path = diced_paths[0]
+    return diced_path
+
 def diced_file_paths(root, file_dict):
     '''Return the name of the diced file to be created'''
     _ext = dice_extension(file_dict)
