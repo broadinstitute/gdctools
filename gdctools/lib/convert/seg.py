@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import csv
+import os
 
 from ..common import safeMakeDirs, writeCsvFile
 from .. import meta
@@ -9,6 +10,7 @@ from .. import meta
 def process(file_dict, infile, outdir, dialect='seg_broad'):
     # Should only produce one outfile
     outfile = meta.diced_file_paths(outdir, file_dict)[0]
+    outfile_partial = outfile + '.partial'
     hyb_id = file_dict['file_name'].split('.',1)[0]
     tcga_id = meta.aliquot_id(file_dict)
 
@@ -19,7 +21,8 @@ def process(file_dict, infile, outdir, dialect='seg_broad'):
     seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
 
     safeMakeDirs(outdir)
-    writeCsvFile(outfile, seg_file_data)
+    writeCsvFile(outfile_partial, seg_file_data)
+    os.rename(outfile_partial, outfile)
 
     rawfile.close()
     return outfile

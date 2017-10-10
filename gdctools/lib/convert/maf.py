@@ -45,9 +45,11 @@ def process(file_dict, mafFile, outdir, is_compressed=True):
         sample_maf_filename = ".".join([sample_id, maf_uuid, "maf.txt"])
         logging.info("Writing sample MAF: " + sample_maf_filename)
         sample_maf_filename = os.path.join(outdir, sample_maf_filename)
-        with safe_open(sample_maf_filename, 'w') as smf:
+        sample_maf_filename_partial = sample_maf_filename + '.partial'
+        with safe_open(sample_maf_filename_partial, 'w') as smf:
             outwriter = csv.writer(smf, delimiter='\t')
             outwriter.writerows(tcgaSampleIdToMafLinesMap[sample_id])
+        os.rename(sample_maf_filename_partial,sample_maf_filename)
 
 
 #===============================================================================

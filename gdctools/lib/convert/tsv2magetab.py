@@ -2,6 +2,7 @@
 
 import csv
 from os.path import basename
+import os
 
 from ..common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFile, rearrange_columns
 from ..meta import tcga_id, diced_file_paths
@@ -20,6 +21,7 @@ data_cols : list of int
 
 
     filepath = diced_file_paths(outdir, file_dict)[0]
+    filepath_partial = filepath + '.partial'
     safeMakeDirs(outdir)
     _tcga_id = tcga_id(file_dict)
 
@@ -38,7 +40,8 @@ data_cols : list of int
         csvfile_with_new_column_order = csvfile_with_NAs
 
     safeMakeDirs(outdir)
-    writeCsvFile(filepath, csvfile_with_new_column_order)
+    writeCsvFile(filepath_partial, csvfile_with_new_column_order)
+    os.rename(filepath_partial, filepath)
 
     rawfile.close()
 
