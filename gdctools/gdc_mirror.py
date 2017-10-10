@@ -78,8 +78,6 @@ class gdc_mirror(GDCtool):
 
     def mirror(self):
 
-        #TODO remove **gs**
-        print('hello world')
 
         config = self.config
         if not os.path.isdir(config.mirror.dir):
@@ -145,7 +143,11 @@ class gdc_mirror(GDCtool):
         # Update the datestamps file with this version of the mirror
         self.update_datestamps_file()
         logging.info(str(prgm_status_tally))
-        logging.info("Mirror completed successfully.")
+        if prgm_status_tally['error'] == 0:
+            logging.info("Mirror completed successfully.")
+        else:
+            logging.error("Mirror FAILED downloading one or more files.")
+
 
     def __mirror_file(self, file_d, proj_root, n, total, retries=3):
         '''Mirror a file into <proj_root>/<cat>/<type>.
@@ -192,8 +194,7 @@ class gdc_mirror(GDCtool):
                 # A partially downloaded file will interfere with subsequent
                 # mirrors
                 common.silent_rm(partialsavepath)
-                logging.error("Error downloading file {0}, too many retries ({1})".format(savepath, retries))
-                #TODO set flag **gs**
+                logging.warning("Error downloading file {0}, too many retries ({1})".format(savepath, retries))
             else:
                 #success! First remove old md5, then rename file, then write new md5
                 #That way, if the process gets interrupted, future runs will be consider
