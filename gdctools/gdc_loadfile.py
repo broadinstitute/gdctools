@@ -51,7 +51,7 @@ class gdc_loadfile(GDCtool):
                       'importing diced GDC data\ninto analysis pipeline '\
                       'platforms.  The presently supported platforms are:\n\t'+\
                       '\n\t'.join(sorted(self.formats.keys()))
-        super(gdc_loadfile, self).__init__("0.3.4", description)
+        super(gdc_loadfile, self).__init__("0.3.5", description)
         cli = self.cli
         cli.add_argument('-d', '--dice-dir',
                 help='Dir from which diced data will be read')
@@ -350,7 +350,8 @@ class gdc_loadfile(GDCtool):
         sset_filep = open(sset_filename, 'w')
         header = '\t'.join( self.required_headers('Sample_Set')) + '\n'
         sset_filep.write( self.format['membership_prefix'] + header)
-        write_sset_and_cases(samples_filep, sset_filep, cases_filep, projname)
+        write_sset_and_cases(samples_filep, sset_filep, cases_filep, projname,
+                             self.format['prepend_program_name_to_cohort_name'])
 
     def generate_pan_cohort_loadfiles(self, projects, attributes):
         # Fabricate pan-cohort aggregate loadfiles, for all samples and
@@ -586,7 +587,8 @@ def write_samples(cohort_name, samples_fp, filtered_fp,
             row = "\t".join(row)
             filtered_fp.write(row + '\n')
 
-def write_sset_and_cases(samples_filep, sset_filep, cases_fp, sset_name):
+def write_sset_and_cases(samples_filep, sset_filep, cases_fp, sset_name,
+                         prepended):
     '''
     Emit a sample set file, which is just a 2-column table where each row
     contains the ID of a sample and the name of a sample set in which that
@@ -621,7 +623,7 @@ def write_sset_and_cases(samples_filep, sset_filep, cases_fp, sset_name):
 
         # A sample is FFPE if the cohort name ends with FFPE
         # e.g. BRCAFFPE-A7-A0DB-TP is FFPE, ACC-OR-A5J1-NB is not
-        if not samp_id.split('-')[0].endswith('FFPE'):
+        if not samp_id.split('-')[1 if prepended else 0].endswith('FFPE'):
             # Typically samples are included in the sample-type-specific set
             # AND the aggregate sample set: e.g. all TCGA-UCEC-*-NB samples
             # would appear in both TCGA-UCEC-NB AND TCGA-UCEC sample sets
