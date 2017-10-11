@@ -57,23 +57,64 @@ class GDCtool(object):
         self.config_customize()
         self.config_finalize()
 
+        #TODO perhaps refactor for better encapsulation, moving part to 
+        # GDCtool.config_initialize() and part to gdc_mirror.config_customize().
+        # Though it is nice to have all the logic for setting datestamp in one place.
+        #TODO variable renaming - datestamp_required and datestamp, to make them reflect current usage
+        datestamp = self.options.datestamp
         if self.datestamp_required:
-            datestamp = self.options.datestamp
-            if not datestamp:
-                datestamp = 'latest'
+            #non-gdc_mirror case
 
             existing_dates = self.datestamps()         # ascending sort order
             if len(existing_dates) == 0:
                 raise ValueError("No datestamps found, use upstream tool first")
 
+            if not datestamp:
+                #default value = 'latest'
+                datestamp = 'latest'    
+
             if datestamp == 'latest':
-                datestamp = existing_dates[-1]
+                # find last datestamp in existing_dates that is in date format
+                for d in reversed(existing_dates):
+                    if common.DATESTAMP_REGEX.match(d) is not None:
+                        datestamp = d
+                        break
+                else:
+                    #TODO make this error message more helpful
+                    raise ValueError("Looking for latest datestamp, but no datestamps found in correct format") 
             elif datestamp not in existing_dates:
                 raise ValueError("Requested datestamp not present in "
                              + self.config.datestamps + "\n"
                              + "Existing datestamps: " + repr(existing_dates))
         else:
-            datestamp = time.strftime('%Y_%m_%d', time.localtime())
+            #gdc_mirror case
+            if not datestamp:
+                # default value = today's datestamp
+                datestamp = common.datestamp()
+            elif datestamp == 'pool':
+                pass
+            else:
+                #other strings such as <yyyy-mm-dd>, 'latest', valid variable names, and everything else are not allowed  
+                raise ValueError("For gdc_mirror, date must be blank or 'pool'")
+
+        # TODO remove this old code **gs**
+        # if self.datestamp_required:
+        #     datestamp = self.options.datestamp
+        #     if not datestamp:
+        #         datestamp = 'latest'
+
+        #     existing_dates = self.datestamps()         # ascending sort order
+        #     if len(existing_dates) == 0:
+        #         raise ValueError("No datestamps found, use upstream tool first")
+
+        #     if datestamp == 'latest':
+        #         datestamp = existing_dates[-1]
+        #     elif datestamp not in existing_dates:
+        #         raise ValueError("Requested datestamp not present in "
+        #                      + self.config.datestamps + "\n"
+        #                      + "Existing datestamps: " + repr(existing_dates))
+        # else:
+        #     datestamp = time.strftime('%Y_%m_%d', time.localtime())
 
         self.datestamp = datestamp
         self.init_logging()
@@ -98,12 +139,10 @@ class GDCtool(object):
         cli = self.cli
         cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
                             help='One or more configuration files')
-
-        if self.datestamp_required:
-            cli.add_argument('--date', nargs='?', dest='datestamp',
-                help='Use data from a given dated version (snapshot) of '
-                'GDC data, specified in YYYY_MM_DD form.  If omitted, '
-                'the latest available snapshot will be used.')
+        cli.add_argument('--date', nargs='?', dest='datestamp',
+            help='Use data from a given dated version (snapshot) of '
+            'GDC data, specified in YYYY_MM_DD form.  If omitted, '
+            'the latest available snapshot will be used.')
         cli.add_argument('--cases', nargs='+', metavar='case_id',
                 help='Process data only from these GDC cases')
         cli.add_argument('--categories',nargs='+',metavar='category',
