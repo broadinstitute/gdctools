@@ -46,6 +46,8 @@ class gdc_mirror(GDCtool):
         cli.add_argument('-f', '--force-download', action='store_true',
                 help='Download files even if already mirrored locally.'+
                 ' (DO NOT use during incremental mirroring)')
+        cli.add_argument('--append', default=False, action='store_true',
+                help='')
 
         # Detect if we have curl installed
         self.has_cURL = api.curl_exists()
@@ -75,6 +77,17 @@ class gdc_mirror(GDCtool):
         #   4) Prohibits subsequent processing, e.g. dicing: the GDCtools suite
         #      ONLY supports MIRRORING of legacy, nothing else
         api.set_legacy(config.mirror.legacy)
+
+
+        # Check for append in config file, then allow commandline to override it
+        if config.mirror.append:
+            # Append mode has been requested in config file, coerce to boolean
+            # TODO also validate legal false values
+            value = config.mirror.append.lower()
+            config.mirror.append = (value in ["1", "true", "on", "yes"])
+        if opts.append:
+            config.mirror.append = opts.append
+
 
     def mirror(self):
 
@@ -228,12 +241,14 @@ class gdc_mirror(GDCtool):
         proj_dir = os.path.join(config.mirror.dir, program, project)
         logging.info("Mirroring data to " + proj_dir)
 
-        # Read the previous metadata, if present
-        prev_datestamp = meta.latest_datestamp(proj_dir, None)
-        prev_metadata = []
-        if prev_datestamp is not None:
-            prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_datestamp)
-            prev_metadata = meta.latest_metadata(prev_stamp_dir)
+        # TODO remove this old code **gs** along with the prev_metadata variable
+        # # Read the previous metadata, if present
+        # prev_datestamp = meta.latest_datestamp(proj_dir, None)
+        # prev_metadata = []
+        # if prev_datestamp is not None:
+        #     prev_stamp_dir = os.path.join(proj_dir, "metadata", prev_datestamp)
+        #     prev_metadata = meta.latest_metadata(prev_stamp_dir)
+        prev_metadata = None
 
         # Mirror each category separately, recording metadata (file dicts)
         file_metadata = []
@@ -251,12 +266,20 @@ class gdc_mirror(GDCtool):
         stamp_folder = os.path.join(meta_folder, datestamp)
         if not os.path.isdir(stamp_folder):
             os.makedirs(stamp_folder)
-
-        # Write file metadata
         meta_json = ".".join(["metadata", project, datestamp, "json" ])
         meta_json = os.path.join(stamp_folder, meta_json)
+
+        if config.mirror.append and os.path.exists(meta_json):
+            #merge current metadata with previous metadata with same datestamp
+            with open(meta_json) as jsonf:
+                output_metadata = json.load(jsonf)
+            output_metadata.update(file_metadata)
+        else:
+            output_metadata = file_metadata 
+
+        # Write file metadata
         with open(meta_json, 'w') as jf:
-            json.dump(file_metadata, jf, indent=2)
+            json.dump(output_metadata, jf, indent=2)
 
         return proj_status_tally
 
@@ -299,8 +322,6 @@ class gdc_mirror(GDCtool):
             file_status = self.__mirror_file(file_d, proj_dir, n+1, num_files)
             status_tally[file_status] += 1
 
-        #TODO remove **gs**
-        #print (str(status_tally))
         return file_metadata, status_tally
 
     def execute(self):
@@ -324,7 +345,7 @@ class gdc_mirror(GDCtool):
         # Now read the file
         datestamps_file = open(datestamps_file, 'r+')
         stamps = datestamps_file.read().strip().split('\n')
-        if stamps[-1] != self.datestamp:
+        if self.datestamp not in stamps:
             datestamps_file.write(self.datestamp + '\n')
 
 def main():
