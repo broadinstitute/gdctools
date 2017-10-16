@@ -9,6 +9,10 @@
 ./TCGA-ACC_Blacklisted_Samples.html
 ./TCGA-ACC_Redactions.html
 ./TCGA-ACC_Replicate_Samples.html
+./TCGA-BLCA.html
+./TCGA-BLCA_Blacklisted_Samples.html
+./TCGA-BLCA_Redactions.html
+./TCGA-BLCA_Replicate_Samples.html
 ./TCGA-ESCA.html
 ./TCGA-ESCA_Blacklisted_Samples.html
 ./TCGA-ESCA_Redactions.html

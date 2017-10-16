@@ -51,7 +51,7 @@ class gdc_loadfile(GDCtool):
                       'importing diced GDC data\ninto analysis pipeline '\
                       'platforms.  The presently supported platforms are:\n\t'+\
                       '\n\t'.join(sorted(self.formats.keys()))
-        super(gdc_loadfile, self).__init__("0.3.4", description)
+        super(gdc_loadfile, self).__init__("0.3.5", description)
         cli = self.cli
         cli.add_argument('-d', '--dice-dir',
                 help='Dir from which diced data will be read')
@@ -621,7 +621,7 @@ def write_sset_and_cases(samples_filep, sset_filep, cases_fp, sset_name):
 
         # A sample is FFPE if the cohort name ends with FFPE
         # e.g. BRCAFFPE-A7-A0DB-TP is FFPE, ACC-OR-A5J1-NB is not
-        if not samp_id.split('-')[0].endswith('FFPE'):
+        if not 'FFPE-' in samp_id:
             # Typically samples are included in the sample-type-specific set
             # AND the aggregate sample set: e.g. all TCGA-UCEC-*-NB samples
             # would appear in both TCGA-UCEC-NB AND TCGA-UCEC sample sets
