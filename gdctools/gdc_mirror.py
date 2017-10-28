@@ -228,17 +228,16 @@ class gdc_mirror(GDCtool):
 
     @staticmethod
     def __merge_mirror_metadata(old, new):
-        pass
         file_item_dict = {}
-        for file_item in old:
-            key = file_item['file_id'] + file_item['md5sum']
-            file_item_dict[key] = file_item
-
-        if new is not None:
-            for file_item in new:
+        if old is not None:
+            for file_item in old:
                 key = file_item['file_id'] + file_item['md5sum']
-                # TODO should there be a check whether the rest of the metadata matches?
-                file_item_dict[key] = file_item       
+                file_item_dict[key] = file_item
+
+        for file_item in new:
+            key = file_item['file_id'] + file_item['md5sum']
+            # TODO should there be a check whether the rest of the metadata matches?
+            file_item_dict[key] = file_item       
 
         file_item_list = []    
         file_item_keys = list(file_item_dict.keys())
@@ -295,12 +294,14 @@ class gdc_mirror(GDCtool):
         meta_json = os.path.join(stamp_folder, meta_json)
 
         if config.mirror.append and os.path.exists(meta_json):
-            #merge current metadata with previous metadata with same datestamp
+            #fetch previous metadata with same datestamp
             with open(meta_json) as jsonf:
                 old_metadata = json.load(jsonf)
-            output_metadata = self.__merge_mirror_metadata(old_metadata, file_metadata)
         else:
-            output_metadata = self.__merge_mirror_metadata(file_metadata, None) 
+            old_metadata = None
+
+        output_metadata = self.__merge_mirror_metadata(old_metadata, file_metadata)
+
 
         # Write file metadata
         with open(meta_json, 'w') as jf:
