@@ -141,9 +141,9 @@ class GDCtool(object):
                             help='One or more configuration files')
         cli.add_argument('--date', nargs='?', dest='datestamp',
             help='Use data from a given dated version (snapshot) of '
-            'GDC data, specified in YYYY_MM_DD form.  The special '
-            'value "pool" can be used for date agnostic snapshots, typically'
-            'along with "--append". '
+            'GDC data.  The special value "pool" can be used for date '
+            'agnostic snapshots, typically along with "--append". '
+            'For tools other than gdc_mirror, you can give a date in YYYY_MM_DD form.'
             'If omitted, the latest available snapshot will be used.')
         cli.add_argument('--cases', nargs='+', metavar='case_id',
                 help='Process data only from these GDC cases')
