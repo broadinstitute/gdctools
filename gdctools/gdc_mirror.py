@@ -40,14 +40,17 @@ class gdc_mirror(GDCtool):
         cli = self.cli
         cli.add_argument('-m', '--mirror-dir',
                 help='Root of mirrored data folder tree')
-        cli.add_argument('-l', '--legacy', default=False, action='store_true',
+        cli.add_argument('-l', '--legacy', action='store_true',
                 help='Retrieve legacy data (e.g. TCGA HG19), instead of '
                 'data harmonized at the GDC (the default)')
         cli.add_argument('-f', '--force-download', action='store_true',
                 help='Download files even if already mirrored locally.'+
                 ' (DO NOT use during incremental mirroring)')
-        cli.add_argument('--append', default=False, action='store_true',
-                help='')
+        cli.add_argument('--append', action='store_true',
+                help='Specify this if you want downstream tools like '
+                'gdc_dice and gdc_loadfile to also apply to data '
+                'downloaded in the previous mirrorring of the data '
+                'at this datestamp, in addition to the current mirroring.  ')
 
         # Detect if we have curl installed
         self.has_cURL = api.curl_exists()
