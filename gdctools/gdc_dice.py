@@ -225,7 +225,9 @@ class gdc_dice(GDCtool):
         if prog_status_tally['error'] == 0:
             logging.info("Dicing completed successfuly")
         else:
-            logging.warn("One or more diced files FAILED")
+            logging.error("One or more diced files FAILED")
+            #raise Exception("One or more diced files FAILED")
+
 
     def execute(self):
         super(gdc_dice, self).execute()
@@ -402,27 +404,34 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                                       annot, meta_file_writer)
             else:
                 dice_one_status = 'dry_run'
-        else:
-            # To verbose to log the entire json, log just log data_type and file_id
-            warning_info = {
-                'data_type' : file_dict["data_type"],
-                'data_category' : file_dict["data_category"],
-                'file_id' : file_dict["file_id"],
-                'file_name': file_dict['file_name']
-            }
-            logging.warn('Unrecognized data:\n%s' % json.dumps(warning_info,
-                                                               indent=2))
+
     return dice_one_status
 
 def get_annotation_converter(file_dict, translation_dict):
-    k = metadata_to_key(file_dict)
+    dictkey = metadata_to_dictkey(file_dict)
+    k = frozenset(dictkey.items())
     if k in translation_dict:
         return translation_dict[k]
     else:
-        # FIXME: Gracefully handle this instead of creating a new annotation type
+        warning_info = \
+"""
+    file_id: {0}
+    file_name: {1}
+
+    data_category: {data_category}
+    data_type: {data_type}
+    experimental_strategy: {experimental_strategy}
+    platform: {platform}
+    center_namespace: {center_namespace}
+    tags: {tags}
+    workflow_type: {workflow_type}
+""".format(file_dict["file_id"], file_dict['file_name'], **dictkey)
+
+        logging.warn('Unrecognized data:\n%s' % warning_info)
+
         return "UNRECOGNIZED", None
 
-def metadata_to_key(file_dict):
+def metadata_to_dictkey(file_dict):
     """Converts the file metadata in file_dict into a key in the TRANSLATION_DICT"""
     # Required fields
     data_type = file_dict.get("data_type", '')
@@ -433,7 +442,7 @@ def metadata_to_key(file_dict):
     center_namespace = file_dict['center']['namespace'] if 'center' in file_dict else ''
     workflow_type = file_dict['analysis']['workflow_type'] if 'analysis' in file_dict else ''
 
-    return frozenset({
+    return {
         "data_type"             : data_type,
         "data_category"         : data_category,
         "experimental_strategy" : experimental_strategy,
@@ -441,7 +450,7 @@ def metadata_to_key(file_dict):
         "tags"                  : tags,
         "center_namespace"      : center_namespace,
         "workflow_type"         : workflow_type
-    }.items())
+    }
 
 def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
     '''Write one or more rows for the given file_dict using meta_file_writer.
