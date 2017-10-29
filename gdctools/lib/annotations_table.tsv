@@ -11,3 +11,6 @@ mRNA__geneExp__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Q
 mRNA__geneExpNormed__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM-UQ
 mRNA__counts__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - Counts
 SNV__mutect	maf	Simple Nucleotide Variation	Masked Somatic Mutation	WXS				MuTect2 Variant Aggregation and Masking
+SNV__somaticsniper	maf	Simple Nucleotide Variation	Masked Somatic Mutation	WXS				SomaticSniper Variant Aggregation and Masking
+SNV__muse	maf	Simple Nucleotide Variation	Masked Somatic Mutation	WXS				MuSE Variant Aggregation and Masking
+SNV__varscan	maf	Simple Nucleotide Variation	Masked Somatic Mutation	WXS				VarScan2 Variant Aggregation and Masking

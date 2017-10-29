@@ -31,7 +31,10 @@ ANNOT_TO_DATATYPE = {
     'mRNA__geneExp__FPKM'       : 'mRNA',
     'mRNA__geneExpNormed__FPKM' : 'mRNA',
     'mRNA__counts__FPKM'        : 'mRNA',
-    'SNV__mutect'               : 'MAF'
+    'SNV__mutect'               : 'MAF',
+    'SNV__somaticsniper'        : 'MAF',
+    'SNV__muse'                 : 'MAF',
+    'SNV__varscan'              : 'MAF'
 }
 
 __PY3__ = sys.version_info > (3,)
