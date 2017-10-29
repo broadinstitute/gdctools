@@ -97,24 +97,6 @@ class GDCtool(object):
                 #other strings such as <yyyy-mm-dd>, 'latest', valid variable names, and everything else are not allowed  
                 raise ValueError("For gdc_mirror, date must be blank or 'pool'")
 
-        # TODO remove this old code **gs**
-        # if self.datestamp_required:
-        #     datestamp = self.options.datestamp
-        #     if not datestamp:
-        #         datestamp = 'latest'
-
-        #     existing_dates = self.datestamps()         # ascending sort order
-        #     if len(existing_dates) == 0:
-        #         raise ValueError("No datestamps found, use upstream tool first")
-
-        #     if datestamp == 'latest':
-        #         datestamp = existing_dates[-1]
-        #     elif datestamp not in existing_dates:
-        #         raise ValueError("Requested datestamp not present in "
-        #                      + self.config.datestamps + "\n"
-        #                      + "Existing datestamps: " + repr(existing_dates))
-        # else:
-        #     datestamp = time.strftime('%Y_%m_%d', time.localtime())
 
         self.datestamp = datestamp
         self.init_logging()
