@@ -149,6 +149,18 @@ test_dice:
 	$(FIND_DICE_FILES) -exec $(MD5) {} \; | $(SORT) > $(TEST_ROOT)/dice-md5sums.txt
 	diff -b baselines/dice-md5sums.txt $(TEST_ROOT)/.
 
+test_dice_error:
+	@echo
+	@echo Test that dicing throws error when mirror is corrupted
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config corrupt_mirror.cfg 
+	@rm -r ./corrupt_sandbox/mirror/TCGA/TCGA-ACC/Copy_Number_Variation
+	@$(PYTHON) ../gdctools/gdc_dice.py --config corrupt_mirror.cfg || Result=$$? ; \
+	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo Test that error goes away when mirror is fixed
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config corrupt_mirror.cfg 
+	@$(PYTHON) ../gdctools/gdc_dice.py --config corrupt_mirror.cfg 
+
+
 test_loadfiles:
 	# By default GDCtools generates firecloud-style loadfiles, so exercise other
 	@$(EMAKE) test_loadfile
