@@ -71,7 +71,7 @@ help:
 	@echo  "4. publish                  Submit to PyPI"
 	@echo
 
-test: setup test_smoke test_dice test_loadfiles test_legacy test_report echo_success
+test: setup test_smoke test_dice test_loadfiles test_legacy test_report echo_success test_dice_error test_pool
 test_smoke: setup echo_ver test_invoke test_mirror test_redo_mirror test_badcfg \
 			test_cases test_choose
 
