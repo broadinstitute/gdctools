@@ -163,6 +163,7 @@ class gdc_mirror(GDCtool):
             logging.info("Mirror completed successfully.")
         else:
             logging.error("Mirror FAILED downloading one or more files.")
+            raise Exception("Mirror FAILED downloading one or more files.")
 
 
     def __mirror_file(self, file_d, proj_root, n, total, retries=3):

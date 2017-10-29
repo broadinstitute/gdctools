@@ -226,7 +226,7 @@ class gdc_dice(GDCtool):
             logging.info("Dicing completed successfuly")
         else:
             logging.error("One or more diced files FAILED")
-            #raise Exception("One or more diced files FAILED")
+            raise Exception("One or more diced files FAILED")
 
 
     def execute(self):
