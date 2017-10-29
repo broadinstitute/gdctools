@@ -156,10 +156,37 @@ test_dice_error:
 	@rm -r ./corrupt_sandbox/mirror/TCGA/TCGA-ACC/Copy_Number_Variation
 	@$(PYTHON) ../gdctools/gdc_dice.py --config corrupt_mirror.cfg || Result=$$? ; \
 	$(ENSURE_FAILURE_EXIT_CODE)
+	@echo
 	@echo Test that error goes away when mirror is fixed
 	@$(PYTHON) ../gdctools/gdc_mirror.py --config corrupt_mirror.cfg 
 	@$(PYTHON) ../gdctools/gdc_dice.py --config corrupt_mirror.cfg 
 
+test_pool:
+	@echo
+	@echo Test that mirror metadata is appended only when --append flag present
+	@rm -r ./pool_sandbox
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool1.cfg 
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '10}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool2.cfg 
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '16}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool2.cfg --append
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '16}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool1.cfg --append
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '22}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool1.cfg 
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '10}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool2.cfg --date pool --append
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg  2>&1 | grep Counter | grep '10}'
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg  --date pool 2>&1 | grep Counter | grep '16}'
+
+	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool1.cfg --date pool --append
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '10}'
+	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg --date pool 2>&1 | grep Counter | grep '22}'
 
 test_loadfiles:
 	# By default GDCtools generates firecloud-style loadfiles, so exercise other
