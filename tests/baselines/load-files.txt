@@ -2,6 +2,8 @@
 ./TCGA-ACC.Sample_Set.loadfile.txt
 ./TCGA-ACCSKCM.Sample.loadfile.txt
 ./TCGA-ACCSKCM.Sample_Set.loadfile.txt
+./TCGA-BLCA.Sample.loadfile.txt
+./TCGA-BLCA.Sample_Set.loadfile.txt
 ./TCGA-ESCA.Sample.loadfile.txt
 ./TCGA-ESCA.Sample_Set.loadfile.txt
 ./TCGA-SKCM.Sample.loadfile.txt

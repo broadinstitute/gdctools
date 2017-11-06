@@ -10,7 +10,7 @@ TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF
 CONFIG_FILE=tcgaSmoketest.cfg
 #VERBOSITY=-V
 CONFIG=--config $(CONFIG_FILE) $(VERBOSITY)
-PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-ESCA
+PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-ESCA TCGA-BLCA
 
 # To improve readibility of targets definitions below, we define commands to
 # encapsulate mirroring/dicing/file finding/loadfile parsing, etc operations
