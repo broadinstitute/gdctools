@@ -164,7 +164,7 @@ test_dice_error:
 test_pool:
 	@echo
 	@echo Test that mirror metadata is appended only when --append flag present
-	@rm -r ./pool_sandbox
+	@rm -rf ./pool_sandbox
 	@$(PYTHON) ../gdctools/gdc_mirror.py --config pool1.cfg 
 	@$(PYTHON) ../gdctools/gdc_dice.py --config pool.cfg 2>&1 | grep Counter | grep '10}'
 
