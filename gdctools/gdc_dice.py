@@ -485,9 +485,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         if meta.has_sample(file_dict):
             sample_type = meta.sample_type(file_dict)
         tcga_barcode = meta.tcga_id(file_dict)
-        count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
-        if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
-            duplicate_detected = True
+
 
         # Write row with csv.DictWriter.writerow()
         rowdict.update({
@@ -497,8 +495,13 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
             'file_name'    : diced_path,
             'is_ffpe'      : meta.is_ffpe(file_dict)
         })
-
         meta_file_writer.writerow(rowdict)
+
+        count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
+        if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
+            duplicate_detected = True
+            logging.error('Multiple files contain data for the same sample: %s'%str(rowdict) )
+
     else:
         # Harder case, have to write a line for each unique file
         # We need to match the diced filenames back to the original samples
@@ -514,9 +517,6 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
             # case_id is the first twelve digits of the TCGA barcode
             case_id = tcga_barcode[:12]
             sample_type, is_ffpe = barcode_to_sample_dict[tcga_barcode]
-            count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
-            if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
-                duplicate_detected = True
 
             rowdict.update({
                 'case_id'      : case_id,
@@ -526,6 +526,13 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
                 'is_ffpe'      : is_ffpe
             })
             meta_file_writer.writerow(rowdict)
+
+            count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
+            if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
+                duplicate_detected = True
+                logging.error('Multiple files contain data for the same sample: %s'%str(rowdict) )
+
+
     return duplicate_detected
 
 def constrain(metadata, config):
