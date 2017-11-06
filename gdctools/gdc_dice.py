@@ -151,9 +151,10 @@ class gdc_dice(GDCtool):
                 if not os.path.isdir(diced_meta_dir):
                     os.makedirs(diced_meta_dir)
                 diced_meta_file = os.path.join(diced_meta_dir, diced_meta_fname)
+                diced_meta_file_partial = diced_meta_file + '.partial'
 
                 # Count project annotations
-                with open(diced_meta_file, 'w') as mf:
+                with open(diced_meta_file_partial, 'w') as mf:
                     # Header
                     META_HEADERS = ['case_id', 'tcga_barcode', 'sample_type',
                                     'annotation', 'file_name', 'center',
@@ -179,6 +180,9 @@ class gdc_dice(GDCtool):
                                  force=self.force)
                         prog_status_tally[dice_one_status] += 1
 
+                # move completed metadata file to final location
+                # note it may include diced files that had errors
+                os.rename(diced_meta_file_partial, diced_meta_file)
 
                 # Bookkeeping code -- write some useful tables
                 # and figures needed for downstream sample reports.
@@ -400,8 +404,10 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                     logging.info("Skipping file " + mirror_path + " (already diced)")
                     dice_one_status = 'cached'
 
-                append_diced_metadata(file_dict, expected_paths,
+                duplicate_detected = append_diced_metadata(file_dict, expected_paths,
                                       annot, meta_file_writer)
+                if duplicate_detected:
+                    dice_one_status = 'error'
             else:
                 dice_one_status = 'dry_run'
 
@@ -452,6 +458,9 @@ def metadata_to_dictkey(file_dict):
         "workflow_type"         : workflow_type
     }
 
+# globally scoped variable, for persistence
+count_by_tcga_barcode_by_annot = defaultdict(Counter)
+
 def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
     '''Write one or more rows for the given file_dict using meta_file_writer.
     The number of rows will be equal to the length of diced_paths.
@@ -459,7 +468,8 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
 
     meta_file_writer must be a csv.DictWriter
     '''
-    
+
+    duplicate_detected = False
     # These fields will be shared regardless of the number of diced files
     rowdict = {
         'annotation'   : annot,
@@ -474,11 +484,15 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
         sample_type = None
         if meta.has_sample(file_dict):
             sample_type = meta.sample_type(file_dict)
+        tcga_barcode = meta.tcga_id(file_dict)
+        count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
+        if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
+            duplicate_detected = True
 
         # Write row with csv.DictWriter.writerow()
         rowdict.update({
             'case_id'      : meta.case_id(file_dict),
-            'tcga_barcode' : meta.tcga_id(file_dict),
+            'tcga_barcode' : tcga_barcode,
             'sample_type'  : sample_type,
             'file_name'    : diced_path,
             'is_ffpe'      : meta.is_ffpe(file_dict)
@@ -500,6 +514,9 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
             # case_id is the first twelve digits of the TCGA barcode
             case_id = tcga_barcode[:12]
             sample_type, is_ffpe = barcode_to_sample_dict[tcga_barcode]
+            count_by_tcga_barcode_by_annot[tcga_barcode][annot] += 1
+            if count_by_tcga_barcode_by_annot[tcga_barcode][annot] > 1:
+                duplicate_detected = True
 
             rowdict.update({
                 'case_id'      : case_id,
@@ -509,6 +526,7 @@ def append_diced_metadata(file_dict, diced_paths, annot, meta_file_writer):
                 'is_ffpe'      : is_ffpe
             })
             meta_file_writer.writerow(rowdict)
+    return duplicate_detected
 
 def constrain(metadata, config):
     cases_chosen = set(config.cases)

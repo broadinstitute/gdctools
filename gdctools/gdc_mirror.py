@@ -293,6 +293,7 @@ class gdc_mirror(GDCtool):
             os.makedirs(stamp_folder)
         meta_json = ".".join(["metadata", project, datestamp, "json" ])
         meta_json = os.path.join(stamp_folder, meta_json)
+        meta_json_partial = meta_json + '.partial'
 
         if config.mirror.append and os.path.exists(meta_json):
             #fetch previous metadata with same datestamp
@@ -305,8 +306,9 @@ class gdc_mirror(GDCtool):
 
 
         # Write file metadata
-        with open(meta_json, 'w') as jf:
+        with open(meta_json_partial, 'w') as jf:
             json.dump(output_metadata, jf, indent=2)
+        os.rename(meta_json_partial, meta_json)
 
         return proj_status_tally
 
