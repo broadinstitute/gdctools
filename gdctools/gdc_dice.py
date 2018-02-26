@@ -30,7 +30,7 @@ from gdctools.lib.convert import py_clinical as gdac_clin
 from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
 from gdctools.lib.convert import copy as gdac_copy
-from gdctools.lib.convert import maf as mutect_maf
+from gdctools.lib.convert import maf as maf
 from gdctools.lib import common, meta
 from gdctools.GDCtool import GDCtool
 
@@ -282,7 +282,7 @@ class gdc_dice(GDCtool):
 
         config = self.config
         if len(config.programs) != 1:
-            raise RuntimeError("Dicer only supports dicing a single program but"
+            raise RuntimeError("Dicer only supports dicing a single program but "
                 + str(len(config.programs)) + " were provided.")
 
         possible_programs = common.immediate_subdirs(config.mirror.dir)
@@ -345,6 +345,7 @@ def build_translation_dict(translation_file):
             # Only add fields from the row if they are present in the row_dict
             # Give a warning if overwriting an existing tag, and don't add the new one
             key = frozenset(row.items())
+            #print("BUILD_translation_dict: entry = <%s>" % str(key))
             if key not in d:
                 d[key] = (annot, converter(converter_name))
             else:
@@ -399,7 +400,9 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
 
 def get_annotation_converter(file_dict, translation_dict):
     k = metadata_to_key(file_dict)
+    #print("\n\t\tget_annotation_converter: key=<%s>" % str(k))
     if k in translation_dict:
+        #print("\n\t\tMATCHED: entry=<%s>" % str(translation_dict[k]))
         return translation_dict[k]
     else:
         # FIXME: Gracefully handle this instead of creating a new annotation type
@@ -575,6 +578,9 @@ def _link_to_prog(prog_meta_file, datestamp, diced_prog_root):
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''
 
+    # FIXME: make smarter by allowing args (like dialect, fpkm) to be overridden
+    #        when converter is called, w/o intermediate funcs like seg_wxs etc
+
     # Needed when the source files are compressed
     def _unzip(file_dict, mirror_path, dice_path, _converter):
         # First unzip the mirror_path, which points to a .gz
@@ -591,7 +597,7 @@ def converter(converter_name):
         os.remove(uncompressed)
         return diced
 
-    # Specialized converters when we need to supply additional arugemnts
+    # Specialized converters when we need to supply additional arguments
     def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
         _unzip(file_dict, mirror_path, dice_path, gdac_tsv2idtsv.process)
 
@@ -605,15 +611,22 @@ def converter(converter_name):
         gdac_tsv2magetab.process(file_dict, mirror_path, dice_path,
                                  col_order=[0,2,3,4,5,6,7,8,9,10,1], data_cols=[1])
 
-
     def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
         return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
+
+    def seg_wxs(file_dict, mirror_path, dice_path):
+        gdac_seg.process(file_dict, mirror_path, dice_path, dialect='seg_wxs_washu')
+
+    def maf_uncompressed(file_dict, mirror_path, dice_path):
+        maf.process(file_dict, mirror_path, dice_path, is_compressed=False)
 
     CONVERTERS = {
         'clinical' : gdac_clin.process,
         'copy' : gdac_copy.process,
-        'maf': mutect_maf.process,
+        'maf': maf.process,                             # mutect, compressed
+        'maf_uncompressed': maf_uncompressed,
         'seg_broad': gdac_seg.process,
+        'seg_wxs_washu': seg_wxs,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,
         'tsv2magetab': gdac_tsv2magetab.process,

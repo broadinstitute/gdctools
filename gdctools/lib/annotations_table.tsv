@@ -3,6 +3,7 @@ clinical__biospecimen	clinical	Biospecimen	Biospecimen Supplement
 clinical__primary	clinical	Clinical	Clinical Supplement					
 CNV__unfiltered__snp6	seg_broad	Copy Number Variation	Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
 CNV__snp6	seg_broad	Copy Number Variation	Masked Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
+CNV__wxs	seg_wxs_washu	Copy Number Variation	Masked Copy Number Segment	DNASeqC	WashU_CNV_WXS			DNAcopy
 methylation__HM27	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 27			Liftover
 methylation__HM450	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 450			Liftover
 miR__geneExp	tsv2magetab	Transcriptome Profiling	miRNA Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
@@ -11,3 +12,4 @@ mRNA__geneExp__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Q
 mRNA__geneExpNormed__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM-UQ
 mRNA__counts__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - Counts
 SNV__mutect	maf	Simple Nucleotide Variation	Masked Somatic Mutation	WXS				MuTect2 Variant Aggregation and Masking
+SNV__varscan	maf_uncompressed	Simple Nucleotide Variation	Masked Somatic Mutation	WXS	WashU_Somatic_WXS			VarScan2 Variant Aggregation and Masking

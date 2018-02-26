@@ -118,6 +118,16 @@ def seg_harvardlowpass(row, tcga_id, hyb_id):
 
     return [Sample, Chromosome, Start, End, Num_Probes, Segment_Mean]
 
+def seg_wxs_washu(row, tcga_id, hyb_id):
+    Sample       = tcga_id
+    Chromosome   = fix_chromosome(row['Chromosome'])
+    Start        = row['Start']
+    End          = row['End']
+    Num_Probes   = row['Num_Probes']
+    Segment_Mean = row['Segment_Mean']
+
+    return [Sample, Chromosome, Start, End, Num_Probes, Segment_Mean]
+
 def fix_chromosome(chrom):
     chrom = chrom.lower()
     chrom = chrom.lstrip("chr")

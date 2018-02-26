@@ -159,11 +159,14 @@ def map_sample_ids_to_MAF_lines(mafFilename, sample_ids):
     # lines
     tcgaSampleIdToMafLinesMap     = {s:[header] for s in sample_ids}
 
+    lineno = 0
     for line in mafReader:
+        lineno += 1
         # Skip blank and commented out lines
         if line == [] or line[0].startswith('#'):
             continue
 
+        print("\nMAF line %d: <%s>" % (lineno, line))
         # tcgaSampleId is the 15 digit barcode containing the sample type
         # (i.e. TCGA-44-2657-01). The sampleBarcode is a generic name for
         # whatever barcode is in the MAF - it may range from 12 to 28
