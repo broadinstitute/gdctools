@@ -618,7 +618,11 @@ def converter(converter_name):
         gdac_seg.process(file_dict, mirror_path, dice_path, dialect='seg_wxs_washu')
 
     def maf_uncompressed(file_dict, mirror_path, dice_path):
-        maf.process(file_dict, mirror_path, dice_path, is_compressed=False)
+        # Tolerate pathogical case when file shouldn't be compressed, but is
+        # FIXME: maf.process should handle uncompression itself, transparently,
+        #        instead of needing to be be told from here (with extra code)
+        compressed = mirror_path.endswith('.gz')
+        maf.process(file_dict, mirror_path, dice_path, is_compressed=compressed)
 
     CONVERTERS = {
         'clinical' : gdac_clin.process,
