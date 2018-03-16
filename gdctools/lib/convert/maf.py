@@ -122,6 +122,9 @@ def map_sample_ids_to_MAF_lines(mafFilename, sample_ids):
     if necessary to match a common format
     '''
 
+    # Prevent choking on abberrant files with enormous (and likely wrong) mutations
+    original_field_size_limit = csv.field_size_limit(sys.maxsize)
+
     # Open MAF file for reading
     mafFile   = open(mafFilename)
     mafReader = csv.reader(mafFile,dialect='excel-tab')
@@ -166,7 +169,14 @@ def map_sample_ids_to_MAF_lines(mafFilename, sample_ids):
         if line == [] or line[0].startswith('#'):
             continue
 
-        print("\nMAF line %d: <%s>" % (lineno, line))
+        # Filter abberrant genes/lines with enormous (and likely wrong) mutations
+        sequence_length = len(line[10])
+        if sequence_length >= original_field_size_limit:
+            logging.warning('Omitting gene %s mutation (line %d): nucleotide ' \
+                'sequence is very long (%d) and probably incorrectly called' % \
+                (line[0], lineno, sequence_length))
+            continue
+
         # tcgaSampleId is the 15 digit barcode containing the sample type
         # (i.e. TCGA-44-2657-01). The sampleBarcode is a generic name for
         # whatever barcode is in the MAF - it may range from 12 to 28
@@ -237,6 +247,10 @@ def map_sample_ids_to_MAF_lines(mafFilename, sample_ids):
     if len(unmatched_sample_barcodes) > 0:
         logging.warning("Unmatched sample barcodes found in MAF:\n"
                         + "\n".join(sorted(unmatched_sample_barcodes)))
+
+    # Reset CSV reader buffer size back to original value
+    csv.field_size_limit(original_field_size_limit)
+
     mafFile.close()
     return tcgaSampleIdToMafLinesMap
 
