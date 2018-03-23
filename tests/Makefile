@@ -24,10 +24,10 @@ PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG) $(PROJECT_SUBSET)
 PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(LOADFILE_FORMAT) $(CONFIG) $(PROJECT_SUBSET)
 ifeq ($(LOADFILE_DESTINATION),google)
    # We generate Google-bucketized loadfiles with an additional config file
-   CONFIG := --config $(CONFIG_FILE) ../config/google.cfg $(VERBOSITY)
+   CONFIG := --config $(CONFIG_FILE) ../gdctools/config/google.cfg $(VERBOSITY)
    LOADFILE_SUBDIR=google/
    LOADFILE_MD5=load-md5sums-google.txt
-   FILE_PREFIX=$(shell grep FILE_PREFIX: ../config/google.cfg | awk '{print $$NF}')
+   FILE_PREFIX=$(shell grep FILE_PREFIX: ../gdctools/config/google.cfg | awk '{print $$NF}')
    # In this mode we also generate FireCloud-style loadfiles, including cases/participants
    CHECK_CASES_LOADFILE=diff -b baselines/TCGA-ACCSKCM.Participant.loadfile.txt $(LOADFILES_DIR)/.
 else
