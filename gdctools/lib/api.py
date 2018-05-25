@@ -203,9 +203,12 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
                      # For aliquot-level data
                      'cases.samples.portions.analytes.aliquots.submitter_id')
 
-    # Avoid pathology reports & images (can be huge), only retrieve XML for now
-    if data_category == "Clinical":
-        query.add_eq_filter("data_format", "BCR XML")
+    # Avoid path reports/images (Data Type: Slide Image) in Biospecimen data,
+    # as they can be huge; retrieve only BCR XML for now, but note that this
+    # is better done with a config file (see issue #73)
+    if data_category == "Biospecimen":
+        print("Avoiding SLIDE IMAGES ...")
+        query.add_eq_filter("data_type", "Biospecimen Supplement")
 
     query.add_expansions('cases', 'annotations', 'cases.samples')
     return query.get(page_size=page_size)
