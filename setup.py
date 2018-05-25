@@ -42,6 +42,8 @@ setup(
     		'gdc_report = gdctools.gdc_report:main'
 		]
 	},
+    # Put cfg files in bin, but better may be to look in pkg_data config subdir
+    data_files = [('bin', ['gdctools/config/tcga.cfg','gdctools/config/google.cfg' ])],
     package_data = {'gdctools': [
                         'config/*.cfg',
                         'lib/annot*.tsv',
