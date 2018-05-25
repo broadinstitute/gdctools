@@ -1,3 +1,7 @@
+Version 0.2.8:
+.  Install .cfg files to bin dir
+.  Avoid mirroring pathology slides for now, as they are extremely large; issue
+   #73 created so that this avoidance can happen via config files, instead
 Version 0.2.6:
 .  More spit-n-polish on the regression tests
 .  Better segregation of FFPE samples by gdc_loadfile when creating sample sets
