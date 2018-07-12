@@ -54,10 +54,10 @@ setup(
                     },
     test_suite   = 'nose.collector',
     install_requires = [
-    	'requests',
-    	'fasteners',
-    	'matplotlib',
-		'future',
-		'configparser',
+        'requests',
+        'fasteners',
+        'matplotlib==2.1.1', # v2.1.1 avoids hardcoded dependency on bz2 module
+        'future',
+        'configparser',
     ],
 )

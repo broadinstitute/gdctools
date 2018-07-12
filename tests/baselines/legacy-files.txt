@@ -1,5 +1,15 @@
 TCGA-SKCM/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-D3-A3C7.xml
 TCGA-SKCM/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-D3-A3C7.xml.md5
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_drug_skcm.txt
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_drug_skcm.txt.md5
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_follow_up_v2.0_skcm.txt
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_follow_up_v2.0_skcm.txt.md5
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_patient_skcm.txt
+TCGA-SKCM/Clinical/Clinical_data/nationwidechildrens.org_clinical_patient_skcm.txt.md5
+TCGA-SKCM/Clinical/Pathology_report/TCGA-D3-A3C7.9FABC766-7052-4352-8DC7-5160C9D768AB.pdf
+TCGA-SKCM/Clinical/Pathology_report/TCGA-D3-A3C7.9FABC766-7052-4352-8DC7-5160C9D768AB.pdf.md5
+TCGA-SKCM/Clinical/Tissue_slide_image/TCGA-D3-A3C7-06A-01-TSA.BD173A32-627A-4926-B505-16D1BFD0233D.svs
+TCGA-SKCM/Clinical/Tissue_slide_image/TCGA-D3-A3C7-06A-01-TSA.BD173A32-627A-4926-B505-16D1BFD0233D.svs.md5
 TCGA-SKCM/Gene_expression/Exon_junction_quantification/unc.edu.75838292-c5fe-45f1-8fa5-94403cfc3bdf.1234280.junction_quantification.txt
 TCGA-SKCM/Gene_expression/Exon_junction_quantification/unc.edu.75838292-c5fe-45f1-8fa5-94403cfc3bdf.1234280.junction_quantification.txt.md5
 TCGA-SKCM/Gene_expression/Exon_quantification/unc.edu.75838292-c5fe-45f1-8fa5-94403cfc3bdf.1758520.bt.exon_quantification.txt
