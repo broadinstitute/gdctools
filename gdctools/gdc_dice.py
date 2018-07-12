@@ -380,7 +380,11 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                 already_diced = all(os.path.isfile(p) for p in expected_paths)
                 if force or not already_diced:
                     logging.info("Dicing file " + mirror_path)
-                    convert(file_dict, mirror_path, dice_path)
+                    try:
+                        convert(file_dict, mirror_path, dice_path)
+                    except Exception as e:
+                        logging.info("Skipping file " + mirror_path + " (ERROR during dicing)")
+                        logging.info(e)
                 else:
                     logging.info("Skipping file " + mirror_path + " (already diced)")
 
@@ -574,7 +578,6 @@ def _link_to_prog(prog_meta_file, datestamp, diced_prog_root):
 ## Converter mappings
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''
-
     # Needed when the source files are compressed
     def _unzip(file_dict, mirror_path, dice_path, _converter):
         # First unzip the mirror_path, which points to a .gz
@@ -613,7 +616,7 @@ def converter(converter_name):
         'clinical' : gdac_clin.process,
         'copy' : gdac_copy.process,
         'maf': mutect_maf.process,
-        'seg_broad': gdac_seg.process,
+        'segfile_snp6': gdac_seg.process_snp6,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,
         'tsv2magetab': gdac_tsv2magetab.process,
