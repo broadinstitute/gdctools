@@ -6,7 +6,7 @@ from ..common import safeMakeDirs, writeCsvFile
 from .. import meta
 
 
-def process(file_dict, infile, outdir, dialect='seg_broad'):
+def process_snp6(file_dict, infile, outdir):
     # Should only produce one outfile
     outfile = meta.diced_file_paths(outdir, file_dict)[0]
     hyb_id = file_dict['file_name'].split('.',1)[0]
@@ -14,8 +14,8 @@ def process(file_dict, infile, outdir, dialect='seg_broad'):
 
     rawfile = open(infile, 'r')
     csvfile = csv.DictReader(rawfile, dialect='excel-tab')
+    converter = find_converter(csvfile)
 
-    converter = find_converter(dialect)
     seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
 
     safeMakeDirs(outdir)
@@ -24,23 +24,15 @@ def process(file_dict, infile, outdir, dialect='seg_broad'):
     rawfile.close()
     return outfile
 
-def find_converter(dialect):
+def find_converter(segfile):
     """
-    Given a dialect (eg, seg_broad), return the corresponding converter.
-
-    This script defines a number of functions to convert different seg
-    file dialects to a common format.
-
-    find_converters() gathers a list of all converters defined in this
-    script and returns the one corresponding to the specified dialect.
+    Inspect header of open seg file reader & return corresponding converter
     """
-    # List all variables in this script.
-    global_vars = globals()
 
-    if dialect not in global_vars:
-        raise Exception('unexpected segfile dialect: %s' % dialect)
-
-    return global_vars[dialect]
+    if segfile.fieldnames[0] == 'GDC_Aliquot':
+        return seg_gdc
+    else:
+        return seg_broad
 
 def generate_seg_file(csvdict, converter, tcga_id, hyb_id):
     yield ['Sample', 'Chromosome', 'Start', 'End', 'Num_Probes', 'Segment_Mean']
@@ -89,6 +81,16 @@ def seg_broad(row, tcga_id, hyb_id):
     if row['Sample'] != hyb_id:
         raise Exception('unexpected hybridization id mismatch... expected %s, found %s in file' % (hyb_id, row['Sample']))
 
+    Sample       = tcga_id
+    Chromosome   = fix_chromosome(row['Chromosome'])
+    Start        = row['Start']
+    End          = row['End']
+    Num_Probes   = row['Num_Probes']
+    Segment_Mean = row['Segment_Mean']
+
+    return [Sample, Chromosome, Start, End, Num_Probes, Segment_Mean]
+
+def seg_gdc(row, tcga_id, hyb_id):
     Sample       = tcga_id
     Chromosome   = fix_chromosome(row['Chromosome'])
     Start        = row['Start']

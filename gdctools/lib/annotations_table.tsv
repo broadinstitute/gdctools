@@ -1,8 +1,8 @@
 Firehose_annotation	converter	data_category	data_type	experimental_strategy	platform	center_namespace	tags	workflow_type
 clinical__biospecimen	clinical	Biospecimen	Biospecimen Supplement					
 clinical__primary	clinical	Clinical	Clinical Supplement					
-CNV__unfiltered__snp6	seg_broad	Copy Number Variation	Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
-CNV__snp6	seg_broad	Copy Number Variation	Masked Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
+CNV__unfiltered__snp6	segfile_snp6	Copy Number Variation	Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
+CNV__snp6	segfile_snp6	Copy Number Variation	Masked Copy Number Segment	Genotyping Array	Affymetrix SNP 6.0			DNAcopy
 methylation__HM27	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 27			Liftover
 methylation__HM450	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 450			Liftover
 miR__geneExp	tsv2magetab	Transcriptome Profiling	miRNA Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling

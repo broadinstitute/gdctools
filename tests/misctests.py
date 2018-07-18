@@ -1,5 +1,7 @@
 
 from __future__ import print_function
 import gdctools.lib.api as api
+import json
 
-print('All projects in TCGA program:{0}'.format(api.get_projects('TCGA')))
+projects = [ json.dumps(s) for s in api.get_projects('TCGA')]
+print('All projects in TCGA program:{}'.format(projects))
