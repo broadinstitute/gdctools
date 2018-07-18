@@ -429,4 +429,5 @@ def tumor_code(tumor_type):
     return _TUMOR_CODES[tumor_type]
 
 def _check_dict_array_size(d, name, size=1):
-    assert len(d[name]) == size, 'Array "%s" should be length %d' % (name, size)
+    assert len(d[name]) == size, 'File %s, expected len(%s) array to be %d' % \
+                                 (d['file_name'], name, size)
