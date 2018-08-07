@@ -254,6 +254,19 @@ def has_multiple_samples(file_dict):
     samples = [s for c in cases for s in c.get('samples',[])]
     return len(samples) > 1
 
+def portion_id(file_dict):
+    '''Return the portion associated with the file. Raise an exception if more
+    than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+        _check_dict_array_size(file_dict['cases'][0]['samples'][0], 'portions')
+    except:
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
+        raise
+
+    return file_dict['cases'][0]['samples'][0]['portions'][0]['submitter_id']
+
 def aliquot_id(file_dict):
     '''Return the aliquot associated with the file. Raise an exception if more
     than one exists.'''
