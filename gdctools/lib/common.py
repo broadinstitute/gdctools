@@ -27,6 +27,7 @@ ANNOT_TO_DATATYPE = {
     'CNV__wxs'      : 'CN',
     'methylation__HM27' : 'Methylation',
     'methylation__HM450' : 'Methylation',
+    'methylation__EPIC' : 'Methylation',
     'miR__geneExp'              : 'miR',
     'miR__isoformExp'           : 'miR',
     'mRNA__geneExp__FPKM'       : 'mRNA',
