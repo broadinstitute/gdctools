@@ -6,7 +6,7 @@ CNV__snp6	seg_broad	Copy Number Variation	Masked Copy Number Segment	Genotyping 
 CNV__wxs	seg_wxs_washu	Copy Number Variation	Masked Copy Number Segment	DNASeqC	WashU_CNV_WXS			DNAcopy
 methylation__HM27	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 27			Liftover
 methylation__HM450	usc_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Human Methylation 450			Liftover
-methylation__EPIC   washu_meth2magetab    DNA Methylation Methylation Beta Value  Methylation Array   Illumina Methylation EPIC           Bioconductor - methylationArrayAnalysis
+methylation__EPIC	washu_meth2magetab	DNA Methylation	Methylation Beta Value	Methylation Array	Illumina Methylation EPIC			Bioconductor - methylationArrayAnalysis
 miR__geneExp	tsv2magetab	Transcriptome Profiling	miRNA Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
 miR__isoformExp	tsv2idtsv	Transcriptome Profiling	Isoform Expression Quantification	miRNA-Seq				BCGSC miRNA Profiling
 mRNA__geneExp__FPKM	unzip_fpkm2magetab	Transcriptome Profiling	Gene Expression Quantification	RNA-Seq				HTSeq - FPKM
