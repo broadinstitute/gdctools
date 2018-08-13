@@ -12,24 +12,28 @@ else
     PythonExe=python
 fi
 
-# For convenience, give precedence to well-known directories @ Broad Institute
-BroadDirs="/local/firebrowse/latest /xchip/tcga/Tools/gdac/latest"
-for dir in $BroadDirs ; do
-    if [ -d $dir ] ; then
-        InstallDir=$dir
-        break
-    fi
-done
-
-if [ -z "$InstallDir" ] ; then
-    if [ -n "$VIRTUAL_ENV" ] ; then
+# If there is an active python virtual environment, give it precedence
+if [ -n "$VIRTUAL_ENV" ] ; then
       InstallDir=$VIRTUAL_ENV
-    else
-      Python=`type -P $PythonExe`
-      if [ -n "$Python" ]; then
+fi
+
+# For convenience, 2nd precedence given to well-known directories @ Broad
+if [ -z "$InstallDir" ] ; then
+    BroadDirs="/local/firebrowse/latest /xchip/tcga/Tools/gdac/latest"
+    for dir in $BroadDirs ; do
+        if [ -d $dir ] ; then
+            InstallDir=$dir
+            break
+        fi
+    done
+fi
+
+# Finally, check existing user $PATH
+if [ -z "$InstallDir" ] ; then
+    Python=`type -P $PythonExe`
+    if [ -n "$Python" ]; then
         InstallDir=`dirname $Python`
         InstallDir=`dirname $InstallDir`
-      fi
     fi
 fi
 
