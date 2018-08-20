@@ -403,9 +403,9 @@ def main_tumor_sample_type(proj_id):
     '''The sample type used by most analyses in a project.
     'Primary Tumor' for everything except LAML and SKCM.
     '''
-    if proj_id == 'TCGA-LAML':
+    if proj_id in ('TCGA-LAML', 'CPTAC3-AML'):
         stype = "Primary Blood Derived Cancer - Peripheral Blood"
-    elif proj_id == 'TCGA-SKCM':
+    elif proj_id in ('TCGA-SKCM', 'CPTAC3-CM'):
         stype = 'Metastatic'
     else:
         stype = 'Primary Tumor'
