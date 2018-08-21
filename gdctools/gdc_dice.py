@@ -648,7 +648,7 @@ def converter(converter_name):
         'usc_meth2magetab': usc_meth2magetab,
         'washu_meth2magetab': washu_meth2magetab,
         'unzip_tsv2magetab': unzip_tsv2magetab,
-        'fpkm2magetab': gdac_tsv2magetab.process,
+        'fpkm2magetab': fpkm2magetab,
         'unzip_fpkm2magetab': unzip_fpkm2magetab,
     }
 
