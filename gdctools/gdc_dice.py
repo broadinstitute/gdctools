@@ -345,9 +345,6 @@ def build_translation_dict(translation_file):
             # Only add fields from the row if they are present in the row_dict
             # Give a warning if overwriting an existing tag, and don't add the new one
             key = frozenset(row.items())
-            # FIXME: remove print stmt here when merging from cptac branch to master; they can
-            #        be uncommented as diagnostic aid when adding support for new datatypes
-            #print("BUILD_translation_dict: entry = <%s>" % str(key))
             if key not in d:
                 d[key] = (annot, converter(converter_name))
             else:
@@ -406,11 +403,7 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
 
 def get_annotation_converter(file_dict, translation_dict):
     k = metadata_to_key(file_dict)
-    # FIXME: remove print stmts here when merging from cptac branch to master; they can
-    #        be uncommented as diagnostic aid when adding support for new datatypes
-    #print("\n\t\tget_annotation_converter: key=<%s>" % str(k))
     if k in translation_dict:
-        #print("\n\t\tMATCHED: entry=<%s>" % str(translation_dict[k]))
         return translation_dict[k]
     else:
         # FIXME: Gracefully handle this instead of creating a new annotation type
@@ -632,7 +625,7 @@ def converter(converter_name):
 
     def maf_uncompressed(file_dict, mirror_path, dice_path):
         # Tolerate pathogical case when file shouldn't be compressed, but is
-        # FIXME: maf.process should handle uncompression itself, transparently,
+        # FIXME: maf.process could handle uncompression itself, transparently,
         #        instead of needing to be be told from here (with extra code)
         compressed = mirror_path.endswith('.gz')
         maf.process(file_dict, mirror_path, dice_path, is_compressed=compressed)
