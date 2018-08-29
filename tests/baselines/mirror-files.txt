@@ -1,3 +1,9 @@
+TCGA-ACC/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-OR-A5K2.3fa736a9-2fc0-4942-93af-986ccdedb05d.xml
+TCGA-ACC/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-OR-A5L1.f7b24eea-4a80-4304-827f-abe143000ada.xml
+TCGA-ACC/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-OR-A5K2.a2e4dcd8-9cd0-4b3e-a551-4267a9da7248.xml
+TCGA-ACC/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-OR-A5L1.ea0f478e-e149-4e4b-9420-29628e7fb1d1.xml
+TCGA-ACC/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-OR-A5K2.a04bd70d-dc86-48c9-aeee-1336d881453e.xml
+TCGA-ACC/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-OR-A5L1.b0294729-31e1-4ea2-9bb3-971267c788ef.xml
 TCGA-ACC/Copy_Number_Variation/Copy_Number_Segment/BLAIN_p_TCGA_282_304_b2_N_GenomeWideSNP_6_D05_1348482.grch38.seg.v2.029517fe-0995-43d5-b61e-cd968073f39c.txt
 TCGA-ACC/Copy_Number_Variation/Copy_Number_Segment/BLAIN_p_TCGA_282_304_b2_N_GenomeWideSNP_6_D06_1348572.grch38.seg.v2.08c898e1-be4a-4d68-852e-6a665d25bd8a.txt
 TCGA-ACC/Copy_Number_Variation/Copy_Number_Segment/GAMED_p_TCGA_B_312_313_314_NSP_GenomeWideSNP_6_E06_1361784.grch38.seg.v2.5dfae645-caa6-4021-8f29-54e3cf043d33.txt
@@ -16,6 +22,15 @@ TCGA-ACC/Transcriptome_Profiling/Gene_Expression_Quantification/26ac18a6-1e88-4a
 TCGA-ACC/Transcriptome_Profiling/Gene_Expression_Quantification/26ac18a6-1e88-4a29-a514-05c2e0078aec.htseq.counts.76bfb639-1e16-4cf0-b280-a17305da2e13.gz
 TCGA-ACC/Transcriptome_Profiling/Isoform_Expression_Quantification/df305143-0a9e-48c4-a394-a122b76102b6.mirbase21.isoforms.quantification.9532d362-fa8d-47a2-851e-4f2a80a26469.txt
 TCGA-ACC/Transcriptome_Profiling/miRNA_Expression_Quantification/df305143-0a9e-48c4-a394-a122b76102b6.mirbase21.mirnas.quantification.db7a6124-4fda-4e1c-aa66-98b9a47444f1.txt
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-BL-A0C8.57af4f89-af41-46ea-9fb0-e66809f13fa4.xml
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-BL-A13I.ac80d70d-1f7b-489e-b121-fa7a40c4b707.xml
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-BL-A13J.7cc2eae7-b2e8-4c2c-8fe8-c427d0ffa367.xml
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-BL-A0C8.4ce47a47-f17a-48f5-93d9-7b1548a41063.xml
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-BL-A13I.d14af2a9-9a93-4a41-938f-1e6fc5c07cfa.xml
+TCGA-BLCA/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-BL-A13J.9ab80028-9fbc-43e4-9473-3800dd30a1ac.xml
+TCGA-BLCA/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-BL-A0C8.199989a2-01a1-43bf-97db-f02b704bf617.xml
+TCGA-BLCA/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-BL-A13I.833baeaa-e9f9-4cf9-81c5-471090457680.xml
+TCGA-BLCA/Clinical/Clinical_Supplement/nationwidechildrens.org_clinical.TCGA-BL-A13J.c187fe3e-62a2-4a25-a123-b77a998788ff.xml
 TCGA-BLCA/Copy_Number_Variation/Copy_Number_Segment/AMAZE_p_TCGASNP_b86_87_88_N_GenomeWideSNP_6_A10_735526.grch38.seg.v2.947fde1c-31c2-40b4-a998-adae2ff8a02b.txt
 TCGA-BLCA/Copy_Number_Variation/Copy_Number_Segment/AMAZE_p_TCGASNP_b86_87_88_N_GenomeWideSNP_6_C11_735468.grch38.seg.v2.53c4d4c7-79a2-434e-8b98-2eb98c908b0d.txt
 TCGA-BLCA/Copy_Number_Variation/Copy_Number_Segment/AMAZE_p_TCGASNP_b86_87_88_N_GenomeWideSNP_6_D01_735568.grch38.seg.v2.7323d5c7-6db3-4e2d-a8eb-f206149e46cd.txt
