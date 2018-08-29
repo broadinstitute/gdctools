@@ -1,2 +1,4 @@
-TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-EE-A3J8.b6b16c1b-e0c3-4e43-83dd-3d450ed53c33.xml
-TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-EE-A3J8.b6b16c1b-e0c3-4e43-83dd-3d450ed53c33.xml.md5
+TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-EE-A3J8.0dc0eb62-2491-492b-9542-13fbe90e4d99.xml
+TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_biospecimen.TCGA-EE-A3J8.0dc0eb62-2491-492b-9542-13fbe90e4d99.xml.md5
+TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-EE-A3J8.93ea3c92-a345-4022-8aef-414f9ed4cd86.xml
+TCGA-SKCM/Biospecimen/Biospecimen_Supplement/nationwidechildrens.org_ssf.TCGA-EE-A3J8.93ea3c92-a345-4022-8aef-414f9ed4cd86.xml.md5

@@ -42,6 +42,10 @@ class GDCQuery(object):
         self._filters.append(_eq_filter(field, value))
         return self
 
+    def add_neq_filter(self, field, value):
+        self._filters.append(_neq_filter(field, value))
+        return self
+
     def add_in_filter(self, field, values):
         self._filters.append(_in_filter(field,values))
 
@@ -203,9 +207,15 @@ def get_project_files(project_id, data_category, workflow_type=None, cases=None,
                      # For aliquot-level data
                      'cases.samples.portions.analytes.aliquots.submitter_id')
 
-    # Avoid pathology reports & images (can be huge), only retrieve XML for now
-    if data_category == "Clinical":
-        query.add_eq_filter("data_format", "BCR XML")
+    # Prune Clinical/Biospecimen data, by avoiding download/mirror of
+    #   - path reports/images (Data Type: Slide Image), as they can be huge
+    #   - Biotab files, as redundant with BCR XML (and incomplete from TCGA)
+    # But note that this is better done with a config file (see issue 73)
+    if data_category == "Biospecimen":
+        query.add_eq_filter("data_type", "Biospecimen Supplement")
+        query.add_neq_filter("data_format", "BCR Biotab")
+    elif data_category == "Clinical":
+        query.add_neq_filter("data_format", "BCR Biotab")
 
     query.add_expansions('cases', 'annotations', 'cases.samples')
     return query.get(page_size=page_size)
@@ -287,6 +297,9 @@ def _log_warnings(r_json, r_url):
 
 def _eq_filter(field, value):
     return {"op" : "=", "content" : {"field" : field, "value" : [value]}}
+
+def _neq_filter(field, value):
+    return {"op" : "!=", "content" : {"field" : field, "value" : [value]}}
 
 def _and_filter(filters):
     return {"op" : "and", "content" : filters}

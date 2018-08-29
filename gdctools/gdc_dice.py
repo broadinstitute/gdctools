@@ -383,7 +383,11 @@ def dice_one(file_dict, translation_dict, mirror_proj_root, diced_root,
                 already_diced = all(os.path.isfile(p) for p in expected_paths)
                 if force or not already_diced:
                     logging.info("Dicing file " + mirror_path)
-                    convert(file_dict, mirror_path, dice_path)
+                    try:
+                        convert(file_dict, mirror_path, dice_path)
+                    except Exception as e:
+                        logging.info("Skipping file " + mirror_path + " (ERROR during dicing)")
+                        logging.info(e)
                 else:
                     logging.info("Skipping file " + mirror_path + " (already diced)")
 
@@ -584,10 +588,8 @@ def converter(converter_name):
 
     # FIXME: make smarter by allowing args (like dialect, fpkm) to be overridden
     #        when converter is called, w/o intermediate funcs like seg_wxs etc
-
-    # Needed when the source files are compressed
     def _unzip(file_dict, mirror_path, dice_path, _converter):
-        # First unzip the mirror_path, which points to a .gz
+        # When original mirror_path files are compressed, uncompress first
         if not mirror_path.endswith('.gz'):
             raise ValueError('Unexpected gzip filename: ' +
                              os.path.basename(mirror_path))
@@ -640,7 +642,7 @@ def converter(converter_name):
         'copy' : gdac_copy.process,
         'maf': maf.process,                             # mutect, compressed
         'maf_uncompressed': maf_uncompressed,
-        'seg_broad': gdac_seg.process,
+        'segfile_snp6': gdac_seg.process_snp6,
         'seg_wxs_washu': seg_wxs,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,

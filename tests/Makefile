@@ -3,13 +3,13 @@ include ../Makefile.inc
 
 # ---------------------------- Macro definitions ---------------------------
 
+# Recall that TEST_ROOT and TEST_CONFIG_FILE are defined in Makefile.inc
+
 SRC=../gdctools
 PYTHON := set -o pipefail && env PYTHONPATH=.. $(PYTHON)
 SORT=env LC_COLLATE=C sort
-TEST_ROOT=$(ROOT)/tests/$(shell grep ROOT_DIR: $(CONFIG_FILE) | awk '{print $$NF}')
-CONFIG_FILE=tcgaSmoketest.cfg
 #VERBOSITY=-V
-CONFIG=--config $(CONFIG_FILE) $(VERBOSITY)
+CONFIG=--config $(TEST_CONFIG_FILE) $(VERBOSITY)
 PROJECT_SUBSET=--projects TCGA-ACC TCGA-SKCM TCGA-ESCA TCGA-BLCA
 
 # To improve readibility of targets definitions below, we define commands to
@@ -24,7 +24,7 @@ PERFORM_REPORT=$(PYTHON) $(SRC)/gdc_report.py $(CONFIG) $(PROJECT_SUBSET)
 PERFORM_LOADF=$(PYTHON) $(SRC)/gdc_loadfile.py $(LOADFILE_FORMAT) $(CONFIG) $(PROJECT_SUBSET)
 ifeq ($(LOADFILE_DESTINATION),google)
    # We generate Google-bucketized loadfiles with an additional config file
-   CONFIG := --config $(CONFIG_FILE) ../gdctools/config/google.cfg $(VERBOSITY)
+   CONFIG := --config $(TEST_CONFIG_FILE) ../gdctools/config/google.cfg $(VERBOSITY)
    LOADFILE_SUBDIR=google/
    LOADFILE_MD5=load-md5sums-google.txt
    FILE_PREFIX=$(shell grep FILE_PREFIX: ../gdctools/config/google.cfg | awk '{print $$NF}')
@@ -239,4 +239,4 @@ clean:
 	rm -rf build dist *.egg-info *~ test_*.log bad.cfg
 
 rclean: clean
-	\rm -rf sandbox GDCtool gdctools_tmp onlycases legacy
+	\rm -rf $(TEST_ROOT) GDCtool gdctools_tmp onlycases legacy
