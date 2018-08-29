@@ -1,3 +1,11 @@
+Version 0.2.10:
+.  Initial support for CPTAC3
+.  Updated regression test baselines to reflect latest GDC data
+.  The --help output for gdc_list now gives several usage examples
+Version 0.2.9:
+.  Support new V2 seg files from GDC; update regression tests to latest data
+   GDC data release, and ensure they are downloaded outside of repo directory
+   tree so as to not slow down builds/installs
 Version 0.2.8:
 .  Install .cfg files to bin dir
 .  Avoid mirroring pathology slides for now, as they are extremely large; issue
