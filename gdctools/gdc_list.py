@@ -106,12 +106,23 @@ class gdc_list(GDCtool):
 
     def __init__(self):
 
-        description = 'List/query operational features of GDCtools, EITHER '\
-            'from a local instance\n(e.g. what projects or files have been '\
-            'mirrored or diced?) OR from\nmetadata available at toplevel '\
-            'GDC endpoints.'
+        description = 'Quicklook tool for examining datasets available at the '\
+            'GDC, following the\nsyntax of portal.gdc.cancer.gov/query.  '\
+            'Examples:\n\n'\
+            '    # Show datasets exposed via the GDC public API\n' \
+            '    gdc_list programs\n\n' \
+            '    # Show all datasets submitted to GDC, including non-public\n' \
+            '    gdc_list submitted\n\n' \
+            '    # Shows patient cases in the TCGA adrenocortical cohort\n'\
+            '    gdc_list cases project.project_id=TCGA-ACC\n\n' \
+            '    # Shows metadata of all files in TCGA uveal melanoma cohort\n'\
+            '    gdc_list files cases.project.project_id=TCGA-UVM\n\n' \
+            '    # Show what queries may be performed, in summary form\n'\
+            '    gdc_list what\n\n' \
+            '    # Show open-accss clinical data in TCGA ovarian cohort\n'\
+            '    gdc_list files cases.project.project_id=TCGA-OV files.data_category=Clinical files.access=open'
 
-        super(gdc_list, self).__init__("0.1.1", description)
+        super(gdc_list, self).__init__("0.1.2", description)
         cli = self.cli
         #cli.add_argument('-e', '--expand', nargs='+',
         #    help='Expand these nested fields')
