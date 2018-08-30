@@ -254,6 +254,19 @@ def has_multiple_samples(file_dict):
     samples = [s for c in cases for s in c.get('samples',[])]
     return len(samples) > 1
 
+def portion_id(file_dict):
+    '''Return the portion associated with the file. Raise an exception if more
+    than one exists.'''
+    try:
+        _check_dict_array_size(file_dict, 'cases')
+        _check_dict_array_size(file_dict['cases'][0], 'samples')
+        _check_dict_array_size(file_dict['cases'][0]['samples'][0], 'portions')
+    except:
+        logging.exception(json.dumps(file_dict['cases'], indent=2))
+        raise
+
+    return file_dict['cases'][0]['samples'][0]['portions'][0]['submitter_id']
+
 def aliquot_id(file_dict):
     '''Return the aliquot associated with the file. Raise an exception if more
     than one exists.'''
@@ -390,9 +403,9 @@ def main_tumor_sample_type(proj_id):
     '''The sample type used by most analyses in a project.
     'Primary Tumor' for everything except LAML and SKCM.
     '''
-    if proj_id == 'TCGA-LAML':
+    if proj_id in ('TCGA-LAML', 'CPTAC3-AML'):
         stype = "Primary Blood Derived Cancer - Peripheral Blood"
-    elif proj_id == 'TCGA-SKCM':
+    elif proj_id in ('TCGA-SKCM', 'CPTAC3-CM'):
         stype = 'Metastatic'
     else:
         stype = 'Primary Tumor'

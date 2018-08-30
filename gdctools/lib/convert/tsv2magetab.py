@@ -7,7 +7,7 @@ from ..common import safeMakeDirs, getTabFileHeader, map_blank_to_na, writeCsvFi
 from ..meta import tcga_id, diced_file_paths
 
 
-def process(file_dict, infile, outdir, fpkm=False, col_order=None, data_cols=None):
+def process(file_dict, infile, outdir, fpkm=False, col_order=None, data_cols=None, id_func=tcga_id):
     '''
 col_order : list of int
     E.g.: col_order = [0, 2, 3, 1] will cause column 1 of the input to be column 3 of the output. 
@@ -21,7 +21,7 @@ data_cols : list of int
 
     filepath = diced_file_paths(outdir, file_dict)[0]
     safeMakeDirs(outdir)
-    _tcga_id = tcga_id(file_dict)
+    _tcga_id = id_func(file_dict)
 
     hdr1, hdr2 = generate_headers(infile, _tcga_id, fpkm, data_cols)
 
