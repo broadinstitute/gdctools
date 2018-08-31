@@ -35,7 +35,7 @@ class gdc_mirror(GDCtool):
 
         # Note that gdc_mirror is the only GDCtool which does not require
         # datestamp (i.e. data version) to exist apriori, b/c it creates them
-        super(gdc_mirror, self).__init__("0.9.1", description, False)
+        super(gdc_mirror, self).__init__("0.9.2", description, False)
         cli = self.cli
         cli.add_argument('-m', '--mirror-dir',
                 help='Root of mirrored data folder tree')
@@ -96,7 +96,13 @@ class gdc_mirror(GDCtool):
             all_programs = api.get_programs()
             for prog in config.programs:
                 if prog not in all_programs:
-                    gprint("Program " + prog + " not found in GDC, ignoring")
+                    # Special handling for certain data not yet exposed by GDC:
+                    #    exit with zero status code, so that downstream tools
+                    #    (e.g. gdc_dice) run in a shell script or Makefile can
+                    #    still be executed, if desired, upon mocked-up data
+                    if prog in ["CPTAC3",]:
+                        gabort(0, "Nothing to mirror yet for %s, exiting gracefully" % prog)
+                    gprint("Program %s not found in GDC, ignoring" % prog)
                 else:
                     programs.append(prog)
 
@@ -286,7 +292,7 @@ class gdc_mirror(GDCtool):
         super(gdc_mirror, self).execute()
         try:
             self.mirror()
-        except:
+        except Exception:
             logging.exception("Mirroring FAILED:")
             sys.exit(1)
 
