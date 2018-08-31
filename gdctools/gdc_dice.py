@@ -37,7 +37,7 @@ from gdctools.GDCtool import GDCtool
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.4")
+        super(gdc_dice, self).__init__(version="0.5.5")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -621,7 +621,7 @@ def converter(converter_name):
         return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
 
     def seg_wxs(file_dict, mirror_path, dice_path):
-        gdac_seg.process(file_dict, mirror_path, dice_path, dialect='seg_wxs_washu')
+        gdac_seg.process(file_dict, mirror_path, dice_path, platform='seg_wxs_washu')
 
     def maf_uncompressed(file_dict, mirror_path, dice_path):
         # Tolerate pathogical case when file shouldn't be compressed, but is
@@ -635,7 +635,7 @@ def converter(converter_name):
         'copy' : gdac_copy.process,
         'maf': maf.process,                             # mutect, compressed
         'maf_uncompressed': maf_uncompressed,
-        'segfile_snp6': gdac_seg.process_snp6,
+        'segfile_snp6': gdac_seg.process,
         'seg_wxs_washu': seg_wxs,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,

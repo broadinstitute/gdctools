@@ -1,3 +1,5 @@
+Version 0.2.11:
+.  Updated CPTAC3 to re-enable WXS-based segfile converter isolated during merge
 Version 0.2.10:
 .  Initial support for CPTAC3
 .  Updated regression test baselines to reflect latest GDC data

@@ -6,7 +6,7 @@ from ..common import safeMakeDirs, writeCsvFile
 from .. import meta
 
 
-def process_snp6(file_dict, infile, outdir):
+def process(file_dict, infile, outdir, platform=None):
     # Should only produce one outfile
     outfile = meta.diced_file_paths(outdir, file_dict)[0]
     hyb_id = file_dict['file_name'].split('.',1)[0]
@@ -14,7 +14,7 @@ def process_snp6(file_dict, infile, outdir):
 
     rawfile = open(infile, 'r')
     csvfile = csv.DictReader(rawfile, dialect='excel-tab')
-    converter = find_converter(csvfile)
+    converter = find_converter(csvfile, platform)
 
     seg_file_data = generate_seg_file(csvfile, converter, tcga_id, hyb_id)
 
@@ -24,12 +24,20 @@ def process_snp6(file_dict, infile, outdir):
     rawfile.close()
     return outfile
 
-def find_converter(segfile):
+def find_converter(segfile, platform=None):
     """
-    Inspect header of open seg file reader & return corresponding converter
+    Determine what to invoke for reading seg file, either by:
+        - looking for function with given platform name
+        - OR inspecting header of open seg file
     """
 
-    if segfile.fieldnames[0] == 'GDC_Aliquot':
+    if platform:
+        global_vars = globals()
+        if platform in global_vars:
+            return global_vars[platform]
+        else:
+            raise Exception('Unsupported seg file platform: %s' % platform)
+    elif segfile.fieldnames[0] == 'GDC_Aliquot':
         return seg_gdc
     else:
         return seg_broad
