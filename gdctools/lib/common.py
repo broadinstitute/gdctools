@@ -24,14 +24,17 @@ ANNOT_TO_DATATYPE = {
     'clinical__biospecimen'     : 'BCR',
     'CNV__unfiltered__snp6'                 : 'CN',
     'CNV__snp6'     : 'CN',
+    'CNV__wxs'      : 'CN',
     'methylation__HM27' : 'Methylation',
     'methylation__HM450' : 'Methylation',
+    'methylation__EPIC' : 'Methylation',
     'miR__geneExp'              : 'miR',
     'miR__isoformExp'           : 'miR',
     'mRNA__geneExp__FPKM'       : 'mRNA',
     'mRNA__geneExpNormed__FPKM' : 'mRNA',
     'mRNA__counts__FPKM'        : 'mRNA',
-    'SNV__mutect'               : 'MAF'
+    'SNV__mutect'               : 'MAF',
+    'SNV__varscan'              : 'MAF'
 }
 
 __PY3__ = sys.version_info > (3,)

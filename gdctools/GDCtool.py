@@ -241,7 +241,7 @@ class GDCtool(object):
 
         progs = set(api.get_programs(projs))
         if not progs:
-            progs = set(config.progs)
+            progs = set(config.programs)
         elif config.programs:
             progs &= set(config.programs)
             # If this results in an empty set of programs, reset to CLI value

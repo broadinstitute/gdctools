@@ -218,6 +218,8 @@ getSampleTypeMap <- function(refDir) {
           sampleType      = sampleTypeTable$Definition[i]
           sampleTypeMap[[shortLetterCode]] = sampleType
       }
+  } else {
+      stop(sprintf("Could not find sample type table: %s", sampleTypePath))
   }
 
   return(sampleTypeMap)
@@ -633,6 +635,10 @@ generateTumorTypeSampleCountsTable <- function(tumorType, tumorCountsPath, tumor
   last <- nrow(tumorTable.df) - 1
   for (r in 1:last) {
     sampleType <- tumorTable.df[r,1]
+	if (length(sampleType) < 1) {
+		print("Skipping zero-sized sampleType: is sample counts table empty?")
+		next
+	}
     sampleTypeLong <- sampleTypeMap[[sampleType]]
     #FIXME:  Hack for FFPE's, must be a better way to write this...
     if (sampleType == "FFPE") {
@@ -1037,8 +1043,11 @@ getFFPETable <- function (reportDir, datestamp){
   return(NULL)
 }
 getFilterTable <- function (reportDir, datestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
-  filtered.file <- paste("TCGA", "filtered_samples.txt", sep=".")
-  filtered.file <- file.path(reportDir, filtered.file)
+  filtered.file <- "*.filtered_samples.txt"
+  filtered_samples_files <- Sys.glob( file.path(reportDir, filtered.file))
+  if (length(filtered_samples_files) != 1)
+		print("Warning: more than 1 filtered_samples.txt file, choosing first")
+  filtered.file <- filtered_samples_files[1]
   filterTableRaw <- read.table(filtered.file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   if (!is.null(tumor.type)){
     # Split

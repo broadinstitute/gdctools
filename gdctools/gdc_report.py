@@ -32,7 +32,7 @@ class gdc_report(GDCtool):
     def __init__(self):
         description = 'Generate a sample report for a snapshot of data ' + \
                 'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
-        super(gdc_report, self).__init__("0.3.2", description)
+        super(gdc_report, self).__init__("0.3.3", description)
 
         # FIXME: add options for each config setting
 
@@ -42,27 +42,22 @@ class gdc_report(GDCtool):
         mandatory_config +=  ["report.dir", "report.blacklist"]
         self.validate_config(mandatory_config)
 
-    def generate_report(self):
+    def generate_report(self, program):
         config = self.config
-        # FIXME: remove TCGA hardcode
-        diced_prog_root = os.path.join(config.dice.dir, 'TCGA')
+        diced_prog_root = os.path.join(config.dice.dir, program)
         datestamp = self.datestamp
         logging.info("Generating report for snapshot date " + str(datestamp))
         latest = os.path.join(config.report.dir, 'latest')
-        config.report.dir = os.path.join(config.report.dir,
-                                          'report_' + datestamp)
+        config.report.dir = os.path.join(config.report.dir, 'report_'+datestamp)
         if not os.path.isdir(config.report.dir):
             os.makedirs(config.report.dir)
             silent_rm(latest)
             os.symlink(os.path.abspath(config.report.dir), latest)
 
-        # Now infer certain values from the diced data directory
+        # Now infer remaining values from the diced data directory
         logging.info("Obtaining diced metadata...")
         get_diced_metadata(diced_prog_root, config.report.dir, datestamp)
-
-        # FIXME: remove TCGA hardcode
-        link_loadfile_metadata(config.loadfile.dir, "TCGA", config.report.dir,
-                               datestamp)
+        link_loadfile_metadata(config.loadfile.dir, program, config.report.dir, datestamp)
 
         if config.aggregates:
             logging.info("Writing aggregate cohort definitions to report dir...")
@@ -93,7 +88,8 @@ class gdc_report(GDCtool):
     def execute(self):
         super(gdc_report, self).execute()
         try:
-            self.generate_report()
+            for program in self.config.programs:
+                self.generate_report(program)
         except:
             logging.exception("Sample report generation FAILED:")
             sys.exit(1)

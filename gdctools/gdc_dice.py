@@ -30,14 +30,14 @@ from gdctools.lib.convert import py_clinical as gdac_clin
 from gdctools.lib.convert import tsv2idtsv as gdac_tsv2idtsv
 from gdctools.lib.convert import tsv2magetab as gdac_tsv2magetab
 from gdctools.lib.convert import copy as gdac_copy
-from gdctools.lib.convert import maf as mutect_maf
+from gdctools.lib.convert import maf as maf
 from gdctools.lib import common, meta
 from gdctools.GDCtool import GDCtool
 
 class gdc_dice(GDCtool):
 
     def __init__(self):
-        super(gdc_dice, self).__init__(version="0.5.3")
+        super(gdc_dice, self).__init__(version="0.5.4")
         cli = self.cli
 
         desc =  'Dice data from a Genomic Data Commons (GDC) mirror'
@@ -282,7 +282,7 @@ class gdc_dice(GDCtool):
 
         config = self.config
         if len(config.programs) != 1:
-            raise RuntimeError("Dicer only supports dicing a single program but"
+            raise RuntimeError("Dicer only supports dicing a single program but "
                 + str(len(config.programs)) + " were provided.")
 
         possible_programs = common.immediate_subdirs(config.mirror.dir)
@@ -578,9 +578,11 @@ def _link_to_prog(prog_meta_file, datestamp, diced_prog_root):
 ## Converter mappings
 def converter(converter_name):
     '''Returns the file conversion function by name, using dictionary lookup'''
-    # Needed when the source files are compressed
+
+    # FIXME: make smarter by allowing args (like dialect, fpkm) to be overridden
+    #        when converter is called, w/o intermediate funcs like seg_wxs etc
     def _unzip(file_dict, mirror_path, dice_path, _converter):
-        # First unzip the mirror_path, which points to a .gz
+        # When original mirror_path files are compressed, uncompress first
         if not mirror_path.endswith('.gz'):
             raise ValueError('Unexpected gzip filename: ' +
                              os.path.basename(mirror_path))
@@ -594,7 +596,7 @@ def converter(converter_name):
         os.remove(uncompressed)
         return diced
 
-    # Specialized converters when we need to supply additional arugemnts
+    # Specialized converters when we need to supply additional arguments
     def unzip_tsv2idtsv(file_dict, mirror_path, dice_path):
         _unzip(file_dict, mirror_path, dice_path, gdac_tsv2idtsv.process)
 
@@ -608,21 +610,40 @@ def converter(converter_name):
         gdac_tsv2magetab.process(file_dict, mirror_path, dice_path,
                                  col_order=[0,2,3,4,5,6,7,8,9,10,1], data_cols=[1])
 
+    def washu_meth2magetab(file_dict, mirror_path, dice_path):
+        gdac_tsv2magetab.process(file_dict, mirror_path, dice_path,
+                                 col_order=[0,2,3,4,25,26,27,13,5,6,7,8,9,10,
+                                            11,12,14,15,16,17,18,19,20,21,22,
+                                            23,24,28,29,30,31,32,33,34,35,36,1],
+                                 data_cols=[1], id_func=meta.portion_id)
 
     def unzip_fpkm2magetab(file_dict, mirror_path, dice_path):
         return _unzip(file_dict, mirror_path, dice_path, fpkm2magetab)
 
+    def seg_wxs(file_dict, mirror_path, dice_path):
+        gdac_seg.process(file_dict, mirror_path, dice_path, dialect='seg_wxs_washu')
+
+    def maf_uncompressed(file_dict, mirror_path, dice_path):
+        # Tolerate pathogical case when file shouldn't be compressed, but is
+        # FIXME: maf.process could handle uncompression itself, transparently,
+        #        instead of needing to be be told from here (with extra code)
+        compressed = mirror_path.endswith('.gz')
+        maf.process(file_dict, mirror_path, dice_path, is_compressed=compressed)
+
     CONVERTERS = {
         'clinical' : gdac_clin.process,
         'copy' : gdac_copy.process,
-        'maf': mutect_maf.process,
+        'maf': maf.process,                             # mutect, compressed
+        'maf_uncompressed': maf_uncompressed,
         'segfile_snp6': gdac_seg.process_snp6,
+        'seg_wxs_washu': seg_wxs,
         'tsv2idtsv' : gdac_tsv2idtsv.process,
         'unzip_tsv2idtsv': unzip_tsv2idtsv,
         'tsv2magetab': gdac_tsv2magetab.process,
         'usc_meth2magetab': usc_meth2magetab,
+        'washu_meth2magetab': washu_meth2magetab,
         'unzip_tsv2magetab': unzip_tsv2magetab,
-        'fpkm2magetab': gdac_tsv2magetab.process,
+        'fpkm2magetab': fpkm2magetab,
         'unzip_fpkm2magetab': unzip_fpkm2magetab,
     }
 
