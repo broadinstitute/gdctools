@@ -51,7 +51,7 @@ class gdc_loadfile(GDCtool):
                       'importing diced GDC data\ninto analysis pipeline '\
                       'platforms.  The presently supported platforms are:\n\t'+\
                       '\n\t'.join(sorted(self.formats.keys()))
-        super(gdc_loadfile, self).__init__("0.3.5", description)
+        super(gdc_loadfile, self).__init__("0.3.6", description)
         cli = self.cli
         cli.add_argument('-d', '--dice-dir',
                 help='Dir from which diced data will be read')
@@ -94,131 +94,128 @@ class gdc_loadfile(GDCtool):
         # Note that "project" is effectively a proxy term for "disease cohort,"
         # or more simply "cohort".
         #
-        # The map created here is later used to generate so-called loadfiles.
+        # The map created here is later used to generate so-called loadfiles,
         # which are TSV tables where the first column of each row describes a
         # unique tissue sample collected for a case (e.g. primary solid tumor,
         # blood normal, etc) and each subsequent column points to a file of data
         # derived from that tissue sample (e.g. copy number, gene expression,
         # miR expression, etc).
         #
-        # Loadfiles are intentionally described in a Firehose-agnostic way, b/c
-        # loadfile generation may indeed be something of value to others outside
-        # of Broad/Firehose context; because they are essentially equivalent to
-        # sample freezelists as used in TCGA AWGs, for example.
+        # Although loadfiles were initially used in the context of Firehose and
+        # then in FireCloud, they're described here in an agnostic manner; b/c
+        # they and their generation should in principle be of value to others
+        # outside of Broad/Firehose/Firecloud, as loadfiles are essentially
+        # sample freezelists (e.g. as used in analysis working groups)
 
+        config = self.config
+        if not config.programs:
+            raise ValueError("No data specified, use config file or --programs")
+        elif len(config.programs) > 1:
+            raise ValueError("Loadfiles cannot span more than 1 data program")
+
+        self.program = config.programs[0]
+        dice_dir = config.dice.dir
+        file_prefix = config.loadfile.file_prefix
+        program_dir = os.path.join(dice_dir, self.program)
         projects = dict()
-        dice_dir = self.config.dice.dir
-        file_prefix = self.config.loadfile.file_prefix
+        attributes = set()
 
-        # FIXME: this should respect PROGRAM setting(s) from config file or CLI
-        for program in common.immediate_subdirs(dice_dir):
+        projnames = config.projects
+        if not projnames:
+            projnames = common.immediate_subdirs(program_dir)
 
-            # Auto-generated loadfiles should not mix data across >1 program
-            if self.program:
-                if program != self.program:
-                        raise ValueError("Loadfiles cannot span >1 program")
-            else:
-                self.program = program
+        for projname in sorted(projnames):
 
-            program_dir = os.path.join(dice_dir, program)
-            attributes = set()
+            # Ignore metadata dir created by GDCtools during its operation
+            if projname.lower() == "metadata":
+                continue
 
-            projnames = self.config.projects
-            if not projnames:
-                projnames = common.immediate_subdirs(program_dir)
+            # Each project dict contains all the loadfile rows for the
+            # given project/cohort.  Keys are the entity_ids, values are
+            # dictionaries for the columns in a loadfile
+            project = dict()
+            projpath = os.path.join(program_dir, projname)
 
-            for projname in sorted(projnames):
+            logging.info("Inspecting data for {0} with version datestamp {1}"\
+                            .format(projname, self.datestamp))
 
-                # Ignore metadata dir created by GDCtools during its operation
-                if projname.lower() == "metadata":
-                    continue
+            metapath = get_diced_metadata(projname, projpath, self.datestamp)
+            with open(metapath) as metafile:
+                reader = csv.DictReader(metafile, delimiter='\t')
+                # Stores the files and attributes for each case
+                case_files = dict()
+                case_samples = dict()
 
-                # Each project dict contains all the loadfile rows for the
-                # given project/cohort.  Keys are the entity_ids, values are
-                # dictionaries for the columns in a loadfile
-                project = dict()
-                projpath = os.path.join(program_dir, projname)
+                for row in reader:
+                    case_id = row['case_id']
+                    annot = row['annotation']
+                    attributes.add(annot)
 
-                logging.info("Inspecting data for {0} with version datestamp {1}"\
-                                .format(projname, self.datestamp))
+                    filepath = row['file_name']
+                    if file_prefix:
+                        filepath = filepath.replace(dice_dir,file_prefix, 1)
 
-                metapath = get_diced_metadata(projname, projpath, self.datestamp)
-                with open(metapath) as metafile:
-                    reader = csv.DictReader(metafile, delimiter='\t')
-                    # Stores the files and attributes for each case
-                    case_files = dict()
-                    case_samples = dict()
+                    # Make sure there is always an entry for this case in
+                    # case samples, even if no samples will be added
+                    case_samples[case_id] = case_samples.get(case_id, [])
 
-                    for row in reader:
-                        case_id = row['case_id']
-                        annot = row['annotation']
-                        attributes.add(annot)
+                    if row['sample_type'] == '':
+                        # This file exists only at the case-level (e.g.
+                        # clinical data) and so does not have a tissue
+                        # sample type (e.g. Primary Tumor).  Therefore
+                        # it will be attached to every sample of every
+                        # tissue type for this case; but that can only
+                        # be done after we know what those are, so we
+                        # save these files for now and back-fill later
+                        case_files[case_id] = case_files.get(case_id, [])
+                        case_files[case_id].append((filepath, annot))
+                        continue
 
-                        filepath = row['file_name']
-                        if file_prefix:
-                            filepath = filepath.replace(dice_dir,file_prefix, 1)
+                    samp_id = get_sample_id(self, projname, row)
+                    case_samples[case_id].append(samp_id)
 
-                        # Make sure there is always an entry for this case in
-                        # case samples, even if no samples will be added
-                        case_samples[case_id] = case_samples.get(case_id, [])
+                    if samp_id not in project:
+                        project[samp_id] = self.sample_new(projname, row)
 
-                        if row['sample_type'] == '':
-                            # This file exists only at the case-level (e.g.
-                            # clinical data) and so does not have a tissue
-                            # sample type (e.g. Primary Tumor).  Therefore
-                            # it will be attached to every sample of every
-                            # tissue type for this case; but that can only
-                            # be done after we know what those are, so we
-                            # save these files for now and back-fill later
-                            case_files[case_id] = case_files.get(case_id, [])
-                            case_files[case_id].append((filepath, annot))
-                            continue
+                    # Note that here each annotation has a list of potential
+                    # diced files. When we generate the loadfile, we will
+                    # choose the correct file based on the barcode
+                    if annot not in project[samp_id]:
+                        project[samp_id][annot] = [filepath]
+                    else:
+                        project[samp_id][annot].append(filepath)
 
-                        samp_id = get_sample_id(self, projname, row)
-                        case_samples[case_id].append(samp_id)
+            # Now that all samples are known, back-fill case-level files for each
+            for case_id in case_samples:
+                # Insert each file into each sample descriptor
+                files = case_files.get(case_id, [])
+                samples = case_samples.get(case_id, [])
 
-                        if samp_id not in project:
-                            project[samp_id] = self.sample_new(projname, row)
+                # Here we have a problem, there is no data on this case besides
+                # clinical or biospecimen. We therefore cannot assign the BCR/clin
+                # data to any row in the master load table. Instead, we must create
+                # a new master load entry with a default sample type
+                # (whatever the default analysis type is)
+                if len(samples) == 0:
+                    pseudo_row = dict()
+                    pseudo_row['case_id'] = case_id
+                    default_type = meta.main_tumor_sample_type(projname)
+                    pseudo_row['sample_type'] = default_type
+                    # Is this dangerous??
+                    pseudo_row['is_ffpe'] = False
 
-                        # Note that here each annotation has a list of potential
-                        # diced files. When we generate the loadfile, we will
-                        # choose the correct file based on the barcode
-                        if annot not in project[samp_id]:
-                            project[samp_id][annot] = [filepath]
-                        else:
-                            project[samp_id][annot].append(filepath)
+                    samp_id = get_sample_id(self, projname, pseudo_row)
+                    project[samp_id] = self.sample_new(projname, pseudo_row)
+                    samples = [samp_id]
 
-                # Now that all samples are known, back-fill case-level files for each
-                for case_id in case_samples:
-                    # Insert each file into each sample descriptor
-                    files = case_files.get(case_id, [])
-                    samples = case_samples.get(case_id, [])
+                for s in samples:
+                    for f, annot in files:
+                        # Must be a list of files for congruity, although
+                        # there should always be exactly one here.
+                        project[s][annot] = [f]
 
-                    # Here we have a problem, there is no data on this case besides
-                    # clinical or biospecimen. We therefore cannot assign the BCR/clin
-                    # data to any row in the master load table. Instead, we must create
-                    # a new master load entry with a default sample type
-                    # (whatever the default analysis type is)
-                    if len(samples) == 0:
-                        pseudo_row = dict()
-                        pseudo_row['case_id'] = case_id
-                        default_type = meta.main_tumor_sample_type(projname)
-                        pseudo_row['sample_type'] = default_type
-                        # Is this dangerous??
-                        pseudo_row['is_ffpe'] = False
-
-                        samp_id = get_sample_id(self, projname, pseudo_row)
-                        project[samp_id] = self.sample_new(projname, pseudo_row)
-                        samples = [samp_id]
-
-                    for s in samples:
-                        for f, annot in files:
-                            # Must be a list of files for congruity, although
-                            # there should always be exactly one here.
-                            project[s][annot] = [f]
-
-                # Finally, retain this project data for later loadfile generation
-                projects[projname] = project
+            # Finally, retain this project data for later loadfile generation
+            projects[projname] = project
 
         return projects, sorted(attributes)
 
