@@ -32,7 +32,7 @@ class gdc_report(GDCtool):
     def __init__(self):
         description = 'Generate a sample report for a snapshot of data ' + \
                 'mirrored & diced\nfrom the Genomic Data Commons (GDC)'
-        super(gdc_report, self).__init__("0.3.3", description)
+        super(gdc_report, self).__init__("0.3.4", description)
 
         # FIXME: add options for each config setting
 
