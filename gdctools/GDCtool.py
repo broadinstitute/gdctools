@@ -3,13 +3,13 @@
 
 # Front Matter {{{
 '''
-Copyright (c) 2016 The Broad Institute, Inc.  All rights are reserved.
+Copyright (c) 2016-2018 The Broad Institute, Inc.  All rights are reserved.
 
 GDCtool.py: this file is part of gdctools.  See the <root>/COPYRIGHT
 file for the SOFTWARE COPYRIGHT and WARRANTY NOTICE.
 
 @author: Michael S. Noble, Timothy DeFreitas, David I. Heiman
-@date:  2016-05-20
+@date:  2018-10-04
 '''
 
 # }}}
@@ -57,6 +57,16 @@ class GDCtool(object):
         self.config_customize()
         self.config_finalize()
 
+        if self.options.show:
+            for key,val in self.config.iteritems():
+                if isinstance(val, dict):
+                    key += ':'
+                    val = ''.join(['\n\t%s=%s' % (k,v) for k,v in val.iteritems()])
+                else:
+                    val = '=' + str(val)
+                print('%s%s' % (key,val))
+            sys.exit(0)
+
         if self.datestamp_required:
             datestamp = self.options.datestamp
             if not datestamp:
@@ -98,6 +108,8 @@ class GDCtool(object):
         cli = self.cli
         cli.add_argument('--config', nargs='+', type=argparse.FileType('r'),
                             help='One or more configuration files')
+        cli.add_argument('--show', default=False, action='store_true',
+                        help='Show key=value configuration state, then exit')
 
         if self.datestamp_required:
             cli.add_argument('--date', nargs='?', dest='datestamp',
