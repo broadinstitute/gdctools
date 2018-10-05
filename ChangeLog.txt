@@ -1,3 +1,5 @@
+Version 0.2.12:
+.  gdc_report now gracefully tolerates absence of a sample filter list
 Version 0.2.11:
 .  Updated CPTAC3 to re-enable WXS-based segfile converter isolated during merge
 Version 0.2.10:

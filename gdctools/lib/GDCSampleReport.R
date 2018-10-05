@@ -1,9 +1,11 @@
 #!/usr/bin/env Rscript
 
-# William Mallard / Redactions Report / April 2012
-# Dan DiCara / Updated to Samples Summary Report / January 2013
-# Tim DeFreitas / Updated for GDC + GDAN era / June 2016
-# Michael S. Noble / More GDC + GDAN updates / March 2017
+# William Mallard / Redactions Report / 2012_04
+# Dan DiCara / Updated to Samples Summary Report / 2013_01
+# Tim DeFreitas / Updated for GDC + GDAN era / 2016_06
+# Michael S. Noble / More GDC + GDAN updates / 2017_03, 2018_10
+#
+# Version: 2.1.1
 
 if(!require(Nozzle.R1)){
     install.packages("Nozzle.R1", repos='https://cloud.r-project.org/')
@@ -1045,6 +1047,11 @@ getFFPETable <- function (reportDir, datestamp){
 getFilterTable <- function (reportDir, datestamp, aggregateNameToTumorTypesMap=NULL,tumor.type=NULL){
   filtered.file <- "*.filtered_samples.txt"
   filtered_samples_files <- Sys.glob( file.path(reportDir, filtered.file))
+  if (length(filtered_samples_files) == 0){
+		print("No sample filter list was found, zero samples will be filtered")
+		return(list(NULL, 0))
+  }
+
   if (length(filtered_samples_files) != 1)
 		print("Warning: more than 1 filtered_samples.txt file, choosing first")
   filtered.file <- filtered_samples_files[1]
