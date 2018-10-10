@@ -1,5 +1,6 @@
-Version 0.2.13: (not released yet, and VERSION file still needs to be updated)
+Version 0.2.13: (not released yet)
 .  All tools now offer --show flag, to display key=value configuration state
+.  CPTAC clinical files now processed with tsv2magetab in dicer to add sample ID
 Version 0.2.12:
 .  gdc_report now gracefully tolerates absence of a sample filter list
 Version 0.2.11:
