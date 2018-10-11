@@ -43,3 +43,13 @@ TCGA-THYM	Thymoma
 TCGA-UCEC	Uterine Corpus Endometrial Carcinoma
 TCGA-UCS	Uterine Carcinosarcoma
 TCGA-UVM	Uveal Melanoma
+CPTAC3-SAR	Sarcoma
+CPTAC3-PDA	Pancreatic Ductal Adenocarcinoma
+CPTAC3-HNSCC	Head and Neck Squamous Cell Carcinoma
+CPTAC3-CM	Cutaneous Melanoma
+CPTAC3-LSCC	Lung Squamous Cell Carcinoma
+CPTAC3-LUAD	Lung Adenocarcinoma
+CPTAC3-UCEC	Uterine Corpus Endometrial Carcinoma
+CPTAC3-CCRCC	Clear Cell Renal Cell Carcinoma
+CPTAC3-AML	Acute Myeloid Leukemia
+CPTAC3-GBM	Glioblastoma Multiforme
